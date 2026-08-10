@@ -7,9 +7,11 @@ const app = express();
 app.use(cors());
 
 const server = http.createServer(app);
+
+// CORS Policy ለሁሉም (ወይም ለተወሰኑ) እንዲፈቅድ ማድረግ
 const io = new Server(server, {
   cors: {
-    origin: "*", // በሊቭ ሰርቨር ላይ የ Vercel URLህን እዚህ ማድረግ ትችላለህ
+    origin: "*", // ወይም ["https://ethio-gebeta.onrender.com", "https://ethio-gebeta.vercel.app"]
     methods: ["GET", "POST"]
   }
 });
