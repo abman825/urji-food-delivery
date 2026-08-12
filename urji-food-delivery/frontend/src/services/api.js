@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://urji-food-delivery1.onrender.com';
 
 export const fetchMenuItems = async () => {
   const res = await fetch(`${API_BASE}/menu`);
