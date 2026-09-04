@@ -95,7 +95,8 @@ export const initiateChapaPayment = async (req, res) => {
     }
 
     const tx_ref = `tx-${Date.now()}`;
-    const clientHost = req.headers.origin || 'http://localhost:5173';
+    // መስመር 98 አካባቢ የሚገኘውን ይሄንን፦
+const clientHost = req.headers.origin || 'https://urji-food-delivery.vercel.app';
     const finalReturnUrl = returnUrl || `${clientHost}/?trx_id=${tx_ref}&status=success`;
 
     const chapaPayload = {
