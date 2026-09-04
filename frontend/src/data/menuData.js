@@ -1,8 +1,9 @@
-export const getImageUrl = (imgSrc) => {
+
+ export const getImageUrl = (imgSrc) => {
   if (!imgSrc) return 'https://via.placeholder.com/300?text=No+Image';
   if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://')) return imgSrc;
   if (imgSrc.startsWith('/uploads') || imgSrc.startsWith('uploads')) {
-   return `https://urji-food-delivery-1.onrender.com${imgSrc.startsWith('/') ? '' : '/'}${imgSrc}`;
+    return `http://localhost:5000${imgSrc.startsWith('/') ? '' : '/'}${imgSrc}`;
   }
   return imgSrc;
 };
@@ -15,7 +16,7 @@ export const menuItems = [
     category: "ምግብ",
     img: "tebs.png",
     hasVariants: false,
-    name: { am: "ጥብስ", om: "Xibsii Noormaali", en: "Beef Cubes" },
+    name: { am: "ጥብስ ", om: "Xibsii Noormaali", en: "Beef Cubes" },
     price: 400
   },
   {
@@ -25,15 +26,15 @@ export const menuItems = [
     hasVariants: true,
     name: { am: "ፍርፍር", om: "Firfir", en: "Firfir" },
     variants: [
-      { name: { am: "ፍርፍር በስጋ", om: "Firfirii Fooniin Guutuu", en: "Full Meat Firfir" }, price: 400 },
+      { name: { am: "ፍርፍር በስጋ (Firfirii Fooniin Guutuu)", om: "Firfirii Fooniin Guutuu", en: "Full Meat Firfir" }, price: 400 },
       { name: { am: "ግማሽ ፍርፍር በስጋ", om: "Firfirii Fooniin ½", en: "Half Meat Firfir" }, price: 230 },
       { name: { am: "ጥብስ ፍርፍር በስጋ", om: "Firfirii Xibsii Guutuu", en: "Full Tibs Firfir" }, price: 500 },
       { name: { am: "ግማሽ ጥብስ ፍርፍር", om: "Firfirii Xibsii ½", en: "Half Tibs Firfir" }, price: 250 },
       { name: { am: "ቋንጣ ፍርፍር", om: "Firfirii Qanxaa Guutuu", en: "Full Quanta Firfir" }, price: 500 },
       { name: { am: "ግማሽ ቋንጣ ፍርፍር", om: "Firfirii Qanxaa ½", en: "Half Quanta Firfir" }, price: 250 },
-      { name: { am: "ፍርፍር በቅቤ", om: "Firfirii Dhadhaan", en: "Butter Firfir" }, price: 200 },
+      { name: { am: "ፍርፍር በቅቤ (Firfirii Dhadhaan)", om: "Firfirii Dhadhaan", en: "Butter Firfir" }, price: 200 },
       { name: { am: "ግማሽ ፍርፍር በቅቤ", om: "Firfirii Dhadhaan ½", en: "Half Butter Firfir" }, price: 150 },
-      { name: { am: "መደበኛ ፍርፍር", om: "Firfirii Noormaali Guutuu", en: "Full Normal Firfir" }, price: 200 },
+      { name: { am: "መደበኛ ፍርፍር (Firfirii Noormaali)", om: "Firfirii Noormaali Guutuu", en: "Full Normal Firfir" }, price: 200 },
       { name: { am: "ግማሽ መደበኛ ፍርፍር", om: "Firfirii Noormaali ½", en: "Half Normal Firfir" }, price: 130 }
     ]
   },
@@ -42,10 +43,10 @@ export const menuItems = [
     category: "ምግብ",
     img: "afagn.png",
     hasVariants: true,
-    name: { am: "አፋኝ", om: "Afaanyii", en: "Afanyi" },
+    name: { am: "አፋኚ", om: "Afaanyii", en: "Afanyi" },
     variants: [
-      { name: { am: "አፋኝ ሙሉ", om: "Afaanyii Guutuu", en: "Full Afanyi" }, price: 500 },
-      { name: { am: "አፋኝ ግማሽ", om: "Afaanyii ½", en: "Half Afanyi" }, price: 250 }
+      { name: { am: "አፋኚ ሙሉ", om: "Afaanyii Guutuu", en: "Full Afanyi" }, price: 500 },
+      { name: { am: "አፋኚ ግማሽ", om: "Afaanyii ½", en: "Half Afanyi" }, price: 250 }
     ]
   },
   {
@@ -61,12 +62,12 @@ export const menuItems = [
     category: "ምግብ",
     img: "shro.png",
     hasVariants: true,
-    name: { am: "ሺሮ", om: "Shiroo", en: "Shiro" },
+    name: { am: "ሽሮ", om: "Shiroo", en: "Shiro" },
     variants: [
-      { name: { am: "ቦዘና ሺሮ", om: "Boozanaa Shiroo", en: "Bozena Shiro" }, price: 300 },
+      { name: { am: "ቦዘና ሽሮ", om: "Boozanaa Shiroo", en: "Bozena Shiro" }, price: 300 },
       { name: { am: "ተጋቢኖ", om: "Tagaabiinoo", en: "Tegabino Shiro" }, price: 200 },
-      { name: { am: "ሺሮ በቅቤ", om: "Shiroo Dhadhaadhaan", en: "Butter Shiro" }, price: 200 },
-      { name: { am: "ሺሮ ፈሰስ", om: "Shiroo Fesesi", en: "Feses Shiro" }, price: 180 }
+      { name: { am: "ሽሮ በቅቤ", om: "Shiroo Dhadhaadhaan", en: "Butter Shiro" }, price: 200 },
+      { name: { am: "ሽሮ ፈሰስ", om: "Shiroo Fesesi", en: "Feses Shiro" }, price: 180 }
     ]
   },
   {
@@ -74,56 +75,58 @@ export const menuItems = [
     category: "ምግብ",
     img: "pasta.png",
     hasVariants: true,
-    name: { am: "ፓስታ", om: "Paastaa", en: "Pasta" },
+    name: { am: "ፓስታ ", om: "Paastaa ", en: "Pasta " },
     variants: [
       { name: { am: "ፓስታ በስጋ", om: "Paastaa Fooniin", en: "Pasta with Meat" }, price: 350 },
-      { name: { am: "ፓስታ እንቁላል", om: "Paastaa Hanqaaquu", en: "Pasta with Egg" }, price: 200 },
-      { name: { am: "ፓስታ በሳንድዊች", om: "Paastaa Saandouchiin", en: "Pasta Sandwich" }, price: 200 },
-      { name: { am: "ፓስታ በአትክልት", om: "Paastaa Ataaklitiidhaan", en: "Vegetables Pasta" }, price: 200 }
+      { name: { am: "ፓስታ እንቁለል", om: "Paastaa Hanqaaquu", en: "Pasta with Egg" }, price: 200 },
+      { name: { am: "ፓስታ በሳንዶውች", om: "Paastaa Saandouchiin", en: "Pasta Sandwich" }, price: 200 },
+      { name: { am: "ፓስታ በአትክልት", om: "Paastaa Ataaklitiidhaan", en: "Vegetables Pasta" }, price: 200 },
     ]
   },
-  {
+
+{
     id: "gomn",
     category: "ምግብ",
     img: "gomn.png",
     hasVariants: false,
-    name: { am: "ጎመን", om: "raafuu", en: "Cabbage" },
-    price: 180
+    name: { am: "gomn", om: "raafuu", en: " cabag" }, price:180
   },
+
   {
     id: "Timaatimi Labbi",
     category: "ምግብ",
     img: "tam.png",
     hasVariants: false,
-    name: { am: "ቲማቲም ለብለብ", om: "Timaatimi Labbi", en: "Tomato Special" },
-    price: 170
+    name: { am: "ቲማቲም ለብለብ", om: "Timaatimi Labbi", en: "Tomato Special" }, price: 170 
   },
-  {
-    id: "በእንቁላል",
+
+{
+     id: "በሃንቃቁ",
     category: "ምግብ",
-    img: "enkulal.png",
-    hasVariants: true,
-    name: { am: "በእንቁላል", om: "Hanqaaquu", en: "Egg" },
+    img: "/enkulal.png",
+    hasVariants: false,
+    name: { am: "በሃንቃቁ", om: "Hanqaaquu", en: " Egg" }, 
     variants: [
       { name: { am: "እራፎ", om: "Raafoo", en: "Rafoo / Spinach" }, price: 170 },
-      { name: { am: "ቢቅል", om: "Biqilaa", en: "Biqila" }, price: 170 },
+      { name: { am: "ቢቂል", om: "Biqilaa", en: "Biqila" }, price: 170 },
       { name: { am: "እንጀራ", om: "Bideen Walakkaa", en: "Injera Special" }, price: 80 },
       { name: { am: "ፎንዪ", om: "Foonyii", en: "Fonyi" }, price: 200 }
     ]
   },
+
   {
     id: "እንጀራ",
     category: "ምግብ",
     img: "enjera.png",
     hasVariants: true,
-    name: { am: "እንጀራ", om: "Bideen", en: "Injera" },
+    name: { am: "እንጀራ", om: "Bideen ", en: "Injera" },
     variants: [
       { name: { am: "እንጀራ ሙሉ", om: "Bideen Guutuu", en: "Full Injera" }, price: 50 },
       { name: { am: "እንጀራ ግማሽ", om: "Bideen ½", en: "Half Injera" }, price: 25 }
     ]
   },
 
-  // ================= 2. Fast Food =================
+  // ================= 2. Fast Food / ፉድ =================
   {
     id: "burger",
     category: "Fast Food",
@@ -142,24 +145,27 @@ export const menuItems = [
     category: "Fast Food",
     img: "ftira.png",
     hasVariants: true,
-    name: { am: "ፈቲራ", om: "Fatiiraa", en: "Fetira" },
+    name: { am: "ፈቲራ", om: "Fatiiraa ", en: "Fetira " },
     variants: [
       { name: { am: "ኡርጂ ፈቲራ", om: "Urjii Fatiiraa", en: "Urjii Special Fetira" }, price: 500 },
       { name: { am: "ፈቲራ ስፔሻል", om: "Fatiiraa Ispeeshaal", en: "Special Fetira" }, price: 350 },
       { name: { am: "ፈቲራ መደበኛ", om: "Fatiiraa Noormaali", en: "Normal Fetira" }, price: 280 }
     ]
   },
-  {
+
+{
     id: "Saandouchii",
     category: "Fast Food",
     img: "sanduch.png",
     hasVariants: true,
-    name: { am: "ሳንድዊች", om: "Saandouchii", en: "Sandwich" },
+    name: { am: "ሳንዶውች", om:  "Saandouchii", en: "Sandwich" },
     variants: [
-      { name: { am: "አትክልት ሳንድዊች", om: "Ataakliti Saandouch", en: "Veggie Sandwich" }, price: 220 },
-      { name: { am: "ሳንድዊች በእንቁላል", om: "Saandouchii Hanqaaquudhaan", en: "Egg Sandwich" }, price: 250 }
+      { name: { am: "አትክልት ሳንዶውች", om: "Ataakliti Saandouch", en: "Veggie Sandwich" }, price: 220 },
+      { name: { am: "ሳንዶውች በሃንቃቁ", om: "Saandouchii Hanqaaquudhaan", en: "Egg Sandwich" }, price: 250 },
+      
     ]
   },
+
   {
     id: "caccabsaa",
     category: "Fast Food",
@@ -180,33 +186,33 @@ export const menuItems = [
     price: 170
   },
 
-  // ================= 3. ትኩስ መጠጥ / Hot Drinks =================
+  // ================= 3. Waan Ho'aa / ትኩስ መጠጥ =================
   {
     id: "Maakiyaatoo",
     category: "ትኩስ መጠጥ",
     img: "makito.png",
     hasVariants: false,
     name: { am: "ማኪያቶ", om: "Maakiyaatoo", en: "Macchiato" },
-    price: 60
-  },
-  {
+     price: 60 },
+
+{
     id: "በወተት",
     category: "ትኩስ መጠጥ",
     img: "milk.png",
     hasVariants: false,
-    name: { am: "ወተት", om: "Aannan Lawuziidhaan", en: "Milk with Peanut" },
-    price: 80
-  },
+    name: { am: "ወተት", om: "Aannan Lawuziidhaan", en: "Milk with Peanut" }, price: 80 },
+
   {
     id: "hot_drinks",
     category: "ትኩስ መጠጥ",
     img: "tea.png",
     hasVariants: true,
-    name: { am: "ሻይ", om: "Shaayi", en: "Tea" },
+    name: { am: "ሻይ ", om: "Shaayi", en: "Tea" },
     variants: [
       { name: { am: "ሻይ ስፔሻል", om: "Shaayi Speeshaali", en: "Special Tea" }, price: 100 },
       { name: { am: "አናናስ ሻይ", om: "Anaanaas", en: "Pineapple Tea" }, price: 70 },
-      { name: { am: "ለውዝ ሻይ", om: "Lawuzii", en: "Peanut Tea" }, price: 70 },
+      { name: { am: "ለዉዝ ሻይ", om: "Lawuzii", en: "Peanut Tea" }, price: 70 },
+
       { name: { am: "ሻይ በቅመም", om: "Shaayi Ispiisii", en: "Spiced Tea" }, price: 50 },
       { name: { am: "ብርቱካን ሻይ", om: "Birtukaan Shaayi", en: "Orange Tea" }, price: 70 },
       { name: { am: "ማንጎ ሻይ", om: "Shaayi Maangoo", en: "Mango Tea" }, price: 70 },
@@ -214,11 +220,11 @@ export const menuItems = [
       { name: { am: "ሎሚ ሻይ", om: "Shaayi Loomii", en: "Lemon Tea" }, price: 50 },
       { name: { am: "ሻይ በወተት", om: "Shaayi Aannan", en: "Milk Tea" }, price: 70 },
       { name: { am: "ሻይ በካራሜል", om: "Shaayi Naachiraal", en: "Caramel Tea" }, price: 50 },
-      { name: { am: "አንን በወተት", om: "Aannan Lawuziidhaan", en: "Milk with Peanut" }, price: 80 }
+      { name: { am: "አንን በወተት", om: "Aannan Lawuziidhaan", en: "Milk with Peanut" }, price: 80 },
+      
     ]
   },
-  {
-    id: "Coffee",
+    {id: "Coffee",
     category: "ትኩስ መጠጥ",
     img: "coffi.png",
     hasVariants: true,
@@ -229,7 +235,7 @@ export const menuItems = [
     ]
   },
 
-  // ================= 4. ቀዝቃዛ መጠጥ / Cold Drinks =================
+  // ================= 4. Waan Qorraa / ቀዝቃዛ መጠጥ =================
   {
     id: "ማልት",
     category: "ቀዝቃዛ መጠጥ",
@@ -237,28 +243,36 @@ export const menuItems = [
     hasVariants: true,
     name: { am: "ማልት", om: "Malt", en: "Malt" },
     variants: [
+      
       { name: { am: "ሶፊ ማልት", om: "Sooffii", en: "Soffi Malt" }, price: 100 },
-      { name: { am: "ሲንግ ማልት", om: "Singii", en: "Singi Malt" }, price: 100 },
+      { name: { am: "ሲንጊ ማልት", om: "Singii", en: "Singi Malt" }, price: 100 },
       { name: { am: "ኑጉስ ማልት", om: "Nugus", en: "Nugus Malt" }, price: 100 },
-      { name: { am: "በክላር", om: "Baklaar", en: "Bakler" }, price: 100 }
+     { name: { am: "በክላር", om: "Baklaar", en: "bakler" },
+    price: 100}
+      
     ]
   },
+
   {
     id: "Ambooxaa",
     category: "ቀዝቃዛ መጠጥ",
     img: "amboha.png",
     hasVariants: false,
     name: { am: "አምቦ ውሃ", om: "Ambooxaa", en: "Ambo Mineral Water" },
-    price: 60
+    price: 60 
   },
+
   {
     id: "soft_drinks",
     category: "ቀዝቃዛ መጠጥ",
     img: "lslasa.png",
     hasVariants: false,
     name: { am: "ለስላሳ", om: "Lallaafaa", en: "Soft Drink" },
-    price: 70
+    price: 70 
   },
+
+  
+
   {
     id: "water",
     category: "ቀዝቃዛ መጠጥ",
@@ -272,7 +286,7 @@ export const menuItems = [
     ]
   },
 
-  // ================= 5. Juice =================
+  // ================= 5. Juusiilwan / ጁስ =================
   {
     id: "juices",
     category: "Juice",
@@ -287,3 +301,4 @@ export const menuItems = [
     ]
   }
 ];
+

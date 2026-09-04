@@ -1,35 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search } from 'lucide-react';
-import { menuItems as staticMenuItems } from '../data/menuData';
+import { menuItems } from '../data/menuData';
 import MenuItemCard from './MenuItemCard';
 
 export default function MenuSection({ lang = 'am', t }) {
   const [activeCategory, setActiveCategory] = useState('UVP');
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // 1. Dynamic Menu State (ከ LocalStorage ወይም ከ Static Data የሚመጣ)
-  const [items, setItems] = useState(() => {
-    const savedMenu = localStorage.getItem('customMenuItems');
-    return savedMenu ? JSON.parse(savedMenu) : staticMenuItems;
-  });
-
-  // 2. Admin በኩል Change/Toggle ሲደረግ በሪል ታይም ገፁ እንዲታደስ
-  useEffect(() => {
-    const syncMenuItems = () => {
-      const savedMenu = localStorage.getItem('customMenuItems');
-      if (savedMenu) {
-        setItems(JSON.parse(savedMenu));
-      }
-    };
-
-    window.addEventListener('storage', syncMenuItems);
-    window.addEventListener('menuUpdated', syncMenuItems);
-
-    return () => {
-      window.removeEventListener('storage', syncMenuItems);
-      window.removeEventListener('menuUpdated', syncMenuItems);
-    };
-  }, []);
 
   const categories = [
     { id: 'UVP', label: { am: 'UVP', om: 'UVP', en: 'UVP' } },
@@ -41,7 +17,7 @@ export default function MenuSection({ lang = 'am', t }) {
   ];
 
   // Search filter logic
-  const filteredItems = items.filter((item) => {
+  const filteredItems = menuItems.filter((item) => {
     const itemName = typeof item.name === 'object' 
       ? (item.name[lang] || item.name.am || '').toLowerCase() 
       : item.name.toLowerCase();
@@ -91,11 +67,11 @@ export default function MenuSection({ lang = 'am', t }) {
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
         {filteredItems.length > 0 ? (
           filteredItems.map((item) => (
-            <MenuItemCard key={item.id || item._id} item={item} lang={lang} t={t} />
+            <MenuItemCard key={item.id} item={item} lang={lang} t={t} />
           ))
         ) : (
           <div className="col-span-full text-center py-12 text-zinc-500">
-            {lang === 'am' ? " ምንም ዓይነት ምግብ አልተገኘም" : "No items found"}
+            {lang === 'am' ? "ምንም አይነት ምግብ አልተገኘም" : "No items found"}
           </div>
         )}
       </div>
