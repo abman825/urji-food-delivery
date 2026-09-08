@@ -35,7 +35,7 @@ export default function AdminDashboard({ isOpen, onClose, menuItems = [], setMen
     noScreenshot: { am: "💵 በካሽ የሚከፈል (ስክሪንሾት የለውም)", om: "💵 Kaffaltii Harkaa (Nagahee hin qabu)", en: "💵 Cash Payment (No screenshot)" },
     total: { am: "ጠቅላላ፡", om: "Walii Galaa:", en: "Total:" },
     confirmDeleteOrder: { am: "ይህንን ትዕዛዝ ማጥፋት ይፈልጋሉ?", om: "Ajaja kana haquu ni barbaadduu?", en: "Are you sure you want to delete this order?" },
-    confirmClearAll: { am: "ሁሉንም ትዕዛዞች ማጽዳት ይፈልጋሉ?", om: "Ajajawwan hunda qulqulleessuu ni barbaadduu?", en: "Are you sure you want to clear all orders?" },
+    confirmClearAll: { am: "ሁሉንም ትዕዛዞች ማፅዳት ይፈልጋሉ?", om: "Ajajawwan hunda qulqulleessuu ni barbaadduu?", en: "Are you sure you want to clear all orders?" },
     confirmDeleteItem: { am: "ይህንን ምግብ ማጥፋት እርግጠኛ ነዎት?", om: "Nyaata kana haquuf mirkanaa'aadhaa?", en: "Are you sure you want to delete this item?" },
     fillRequired: { am: "እባክዎን ስም እና ዋጋ (ወይም አማራጮችን) ያስገቡ!", om: "Maaloo maqaa fi gatii (ykn filannoowwan) galchaa!", en: "Please enter name and price (or variants)!" },
     cash: { am: "በካሽ (Cash)", om: "Kaffaltii Harkaa (Cash)", en: "Cash" },
@@ -79,23 +79,31 @@ export default function AdminDashboard({ isOpen, onClose, menuItems = [], setMen
 
   const categories = ['ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
-  const loadOrders = () => {
+  // ሰርቨሩ ላይ ከ RAM የመጡትን ነባር ትዕዛዞች በሙሉ የማውረጃ ፈንክሽን
+  const loadOrders = async () => {
     try {
-      const savedOrders = localStorage.getItem('adminOrders');
-      if (savedOrders) {
-        setOrders(JSON.parse(savedOrders));
-      } else {
-        setOrders([]);
+      const res = await fetch(`${BACKEND_URL}/api/orders`);
+      const data = await res.json();
+      if (data.success && data.orders) {
+        setOrders(data.orders);
+        localStorage.setItem('adminOrders', JSON.stringify(data.orders));
       }
     } catch (e) {
-      console.error("Failed to load admin orders:", e);
+      console.error("Failed to load server orders, fallback to localStorage:", e);
+      const savedOrders = localStorage.getItem('adminOrders');
+      if (savedOrders) setOrders(JSON.parse(savedOrders));
     }
   };
 
   useEffect(() => {
     if (isOpen) {
+      // 1. ሰርቨሩ ላይ አድሚን መሆናችንን ማሳወቅ
+      socket.emit('joinAdmin');
+
+      // 2. ነባር ትዕዛዞችን ከሰርቨር ማምጣት
       loadOrders();
 
+      // 3. አዲስ ትዕዛዝ ሲመጣ በ Real-time መቀበል
       const handleNewOrder = (incomingOrder) => {
         setOrders(prevOrders => {
           const exists = prevOrders.some(o => 
@@ -121,10 +129,8 @@ export default function AdminDashboard({ isOpen, onClose, menuItems = [], setMen
       };
 
       socket.on('newOrder', handleNewOrder);
-      const interval = setInterval(loadOrders, 4000);
 
       return () => {
-        clearInterval(interval);
         socket.off('newOrder', handleNewOrder);
       };
     }
@@ -191,22 +197,19 @@ export default function AdminDashboard({ isOpen, onClose, menuItems = [], setMen
     return t.cash[lang] || t.cash.am;
   };
 
-  // 🔑 የምግቦችን Availability (ለዛሬ አለ / አልቋል) የመቆጣጠሪያ Function
+  // የምግቦችን Availability (ለዛሬ አለ / አልቋል) የመቆጣጠሪያ Function
   const toggleAvailability = (itemId) => {
     setMenuItems(prev => {
       const updated = prev.map(item => {
         if ((item.id || item._id) === itemId) {
-          // isAvailable true ከሆነ false ያደርገዋል (ለዛሬ አልቋል)፤ false ከሆነ true ያደርገዋል (አለ)
           const currentStatus = item.isAvailable !== false;
           return { ...item, isAvailable: !currentStatus };
         }
         return item;
       });
       
-      // LocalStorage ላይ ሴቭ ማድረግ
       localStorage.setItem('customMenuItems', JSON.stringify(updated));
       
-      // Socket.io ካለ ለሁሉም ተጠቃሚዎች በሪልታይም እንዲደርስ መላክ
       if (socket) {
         socket.emit('updateMenu', updated);
       }

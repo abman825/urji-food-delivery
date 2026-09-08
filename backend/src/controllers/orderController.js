@@ -3,6 +3,9 @@ import axios from 'axios';
 import fs from 'fs';
 import { CHAPA_SECRET_KEY } from '../config/constants.js';
 
+// ትዕዛዞችን በሰርቨሩ Memory (RAM) ውስጥ መዝግቦ መያዣ Array (ያለ Database ይሰራል)
+export let globalOrders = [];
+
 // የምግቦች ዝርዝር ቅርፅ ማስተካከያ
 const formatOrderItems = (items) => {
   if (!items) return '• ምንም የተመረጠ ምግብ የለም';
@@ -69,6 +72,27 @@ ${formattedItems}
       console.error('⚠️ Chapa Telegram Notification Failed:', telegramErr.message);
     }
 
+    const orderData = {
+      id: receiptId,
+      name: pendingOrder?.name || 'እንግዳ',
+      phone: pendingOrder?.phone || '-',
+      tableNo: displayTableNo,
+      orderType: currentOrderType,
+      totalPrice: pendingOrder?.totalPrice || '0',
+      items: typeof pendingOrder?.items === 'string' ? JSON.parse(pendingOrder.items) : pendingOrder?.items,
+      paymentMethod: 'Chapa Online Payment',
+      status: 'Pending',
+      createdAt: new Date()
+    };
+
+    // በ Memory Array ውስጥ መመዝገብ
+    globalOrders.unshift(orderData);
+
+    // ለ Admin Room ብቻ መላክ
+    if (req.io) {
+      req.io.to('adminRoom').emit('newOrder', orderData);
+    }
+
     return res.status(200).json({ 
       success: true, 
       receiptId,
@@ -96,7 +120,6 @@ export const initiateChapaPayment = async (req, res) => {
 
     const tx_ref = `tx-${Date.now()}`;
     
-    // Dynamically Frontend URL ይወስዳል (ለ Live እና Local እንዲሆን)
     const clientHost = req.headers.origin || process.env.CLIENT_URL || 'http://localhost:5173';
     const finalReturnUrl = returnUrl || `${clientHost}/?trx_id=${tx_ref}&status=success`;
 
@@ -233,11 +256,16 @@ ${formattedItems}
       items: typeof items === 'string' ? JSON.parse(items) : items,
       paymentMethod: payMethodText,
       screenshot: screenshotBase64,
+      status: 'Pending',
       createdAt: new Date()
     };
 
+    // አዲሱን ትዕዛዝ በ Global Array ውስጥ መመዝገብ
+    globalOrders.unshift(orderData);
+
+    // ለ Admin Room ብቻ አዲስ ትዕዛዝ መድረሱን ማሳወቅ
     if (req.io) {
-      req.io.emit('newOrder', orderData);
+      req.io.to('adminRoom').emit('newOrder', orderData);
     }
 
     return res.status(200).json({ 
@@ -256,7 +284,12 @@ ${formattedItems}
   }
 };
 
-// 4. Toggle Availability Handler
+// 4. አድሚን ከየትኛውም ስልክ ሲገባ የተቀመጡ ትዕዛዞችን ማምጫ API
+export const getAllOrders = (req, res) => {
+  return res.status(200).json({ success: true, orders: globalOrders });
+};
+
+// 5. Toggle Availability Handler
 export const toggleAvailability = async (req, res) => {
   try {
     const { id } = req.params;

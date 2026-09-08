@@ -1,6 +1,4 @@
 import axios from 'axios';
-
-// Local ላይም ሆነ Vercel ላይ በራሱ Environment Variable ይመርጣል
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const API_BASE = `${BACKEND_URL}/api`;
 
@@ -13,12 +11,10 @@ export const fetchMenuItems = async () => {
     return [];
   }
 };
-
 export const initiateChapaPay = async (paymentData) => {
   const res = await axios.post(`${API_BASE}/chapa-pay`, paymentData);
   return res.data;
 };
-
 export const verifyChapaPayment = async (pendingOrder, trx_id) => {
   const res = await axios.post(`${API_BASE}/chapa-success-notify`, {
     pendingOrder,
