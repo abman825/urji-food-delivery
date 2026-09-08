@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// Backend የሚሰራበት Base URL
-const API_BASE = 'http://localhost:5000/api';
+// Local ላይም ሆነ Vercel ላይ በራሱ Environment Variable ይመርጣል
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const API_BASE = `${BACKEND_URL}/api`;
 
 export const fetchMenuItems = async () => {
   try {

@@ -95,7 +95,9 @@ export const initiateChapaPayment = async (req, res) => {
     }
 
     const tx_ref = `tx-${Date.now()}`;
-    const clientHost = req.headers.origin || 'http://localhost:5173';
+    
+    // Dynamically Frontend URL ይወስዳል (ለ Live እና Local እንዲሆን)
+    const clientHost = req.headers.origin || process.env.CLIENT_URL || 'http://localhost:5173';
     const finalReturnUrl = returnUrl || `${clientHost}/?trx_id=${tx_ref}&status=success`;
 
     const chapaPayload = {
@@ -145,10 +147,8 @@ export const submitOrderFormData = async (req, res) => {
     const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod } = req.body;
     const file = req.file;
 
-    // 1. Order Type ማረጋገጫ
     const currentOrderType = orderType || 'Dine-In';
 
-    // 2. Dine-In ከሆነ ብቻ ነው የወንበር ቁጥር መኖሩን ቼክ የሚያደርገው
     if (currentOrderType === 'Dine-In' && (!tableNo || !tableNo.trim())) {
       return res.status(400).json({ 
         success: false, 
@@ -156,9 +156,7 @@ export const submitOrderFormData = async (req, res) => {
       });
     }
 
-    // 3. Takeaway ከሆነ የወንበር ቁጥር 'Takeaway' ይሆናል
     const displayTableNo = currentOrderType === 'Takeaway' ? 'Takeaway' : (tableNo || '-');
-
     const formattedItems = formatOrderItems(items);
     const orderId = `REC-${Date.now().toString().slice(-6)}`;
     
@@ -194,7 +192,6 @@ ${formattedItems}
 
     let screenshotBase64 = null;
 
-    // Telegram መልእክት እና ምስል መላኪያ
     if (file) {
       const fileBuffer = file.buffer || (file.path ? fs.readFileSync(file.path) : null);
 
@@ -226,7 +223,6 @@ ${formattedItems}
       }
     }
 
-    // 4. ወደ Admin Dashboard በ Socket.io የሚላክ Realtime መረጃ
     const orderData = {
       id: orderId,
       name: name || 'እንግዳ',
@@ -281,5 +277,4 @@ export const toggleAvailability = async (req, res) => {
   }
 };
 
-// 5. Alias Export
 export const createScreenshotOrder = submitOrderFormData;

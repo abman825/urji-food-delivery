@@ -1,8 +1,10 @@
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 export const getImageUrl = (imgSrc) => {
   if (!imgSrc) return 'https://via.placeholder.com/300?text=No+Image';
   if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://')) return imgSrc;
   if (imgSrc.startsWith('/uploads') || imgSrc.startsWith('uploads')) {
-    return `http://localhost:5000${imgSrc.startsWith('/') ? '' : '/'}${imgSrc}`;
+    return `${BACKEND_URL}${imgSrc.startsWith('/') ? '' : '/'}${imgSrc}`;
   }
   return imgSrc;
 };
