@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { X, CheckCircle, Clock, ChefHat, Utensils } from 'lucide-react';
 import { io } from 'socket.io-client';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const socket = io(BACKEND_URL);
 
 export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCurrentOrder, lang = 'am' }) {

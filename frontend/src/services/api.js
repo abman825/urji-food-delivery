@@ -1,32 +1,34 @@
-const API_BASE = ['http://localhost:5000'];
+import axios from 'axios';
+
+// Backend የሚሰራበት Base URL
+const API_BASE = 'http://localhost:5000/api';
 
 export const fetchMenuItems = async () => {
-  const res = await fetch(`${API_BASE}/menu`);
-  return res.json();
+  try {
+    const res = await axios.get(`${API_BASE}/menu-items`);
+    return res.data;
+  } catch (err) {
+    console.error("Error fetching menu:", err);
+    return [];
+  }
 };
 
-export const verifyChapaPayment = async (pendingOrder, transactionId) => {
-  const res = await fetch(`${API_BASE}/chapa-success-notify`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...pendingOrder, transactionId })
-  });
-  return res.json();
+export const initiateChapaPay = async (paymentData) => {
+  const res = await axios.post(`${API_BASE}/chapa-pay`, paymentData);
+  return res.data;
 };
 
-export const initiateChapaPay = async (payload) => {
-  const res = await fetch(`${API_BASE}/chapa-pay`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+export const verifyChapaPayment = async (pendingOrder, trx_id) => {
+  const res = await axios.post(`${API_BASE}/chapa-success-notify`, {
+    pendingOrder,
+    trx_id
   });
-  return res.json();
+  return res.data;
 };
 
 export const submitOrderFormData = async (formData) => {
-  const res = await fetch(`${API_BASE}/orders`, {
-    method: 'POST',
-    body: formData
+  const res = await axios.post(`${API_BASE}/orders`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
   });
-  return res.json();
+  return res.data;
 };

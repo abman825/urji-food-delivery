@@ -8,34 +8,26 @@ import apiRoutes from './src/routes/apiRoutes.js';
 const app = express();
 const httpServer = createServer(app);
 
-// Cors Config
-app.use(cors({
-  origin: "*", 
-  credentials: true
-}));
-
-app.use(express.json());
-
-// Socket.io Config
+// Socket.io Config ከ CORS ጋር
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", 
-    methods: ["GET", "POST", "PATCH"]
+    origin: "*", // ወይም Frontend URL e.g. "http://localhost:5173"
+    methods: ["GET", "POST"]
   }
 });
 
-// Health check endpoint (Render ሰርቨሩ መነሳቱን ለማረጋገጥ)
-app.get('/', (req, res) => {
-  res.send('Urji Food Delivery Backend is Running Live!');
-});
+// Middlewares
+app.use(cors());
+app.use(express.json());
 
-// API Routes
+// API Routes Integration
 app.use('/api', apiRoutes);
 
 // Socket.io Real-time Connection Logic
 io.on('connection', (socket) => {
   console.log('⚡ Client connected:', socket.id);
 
+  // 1. ደንበኛው አዲስ ትዕዛዝ ሲልክ (ለ Admin Dashboard ማሳወቅ)
   socket.on('newOrder', (orderData) => {
     console.log('📦 New Order received:', orderData);
     io.emit('newOrder', orderData);
@@ -46,16 +38,18 @@ io.on('connection', (socket) => {
     io.emit('orderReceived', orderData);
   });
 
+  // 2. የአድሚኑ በተን ሲነካ Status ን በ Real-time ለሁሉም/ለደንበኛው ማሰራጨት (Pending/In Progress/Completed)
   socket.on('updateOrderStatus', (data) => {
     console.log(`🔄 Order ${data.receiptId} status updated to: ${data.status}`);
     io.emit('orderStatusUpdated', data);
   });
 
+  // 3. አድሚኑ ትዕዛዝ ሲቀበል የሚላክ Notification
   socket.on('adminAcceptOrder', (data) => {
     console.log(`✅ Order accepted by admin: ${data.receiptId}`);
     io.emit('orderAcceptedNotification', {
       receiptId: data.receiptId,
-      message: 'ትዕዛዝዎ ደርሶናል! በፍጥነት እናደርሳለን። በካፌያችን ስለተጠቀሙ እናመሰግናለን!'
+      message: 'ትዕዛዝዎ ደርሶናል! በፍጥነት እናደርሳለን፤ በካፌያችን ስለተገለገሉ እናመሰግናለን!'
     });
   });
 
@@ -64,9 +58,9 @@ io.on('connection', (socket) => {
   });
 });
 
-// Port Setting for Production (Render auto assigns process.env.PORT)
+// Port Setting & Server Listening
 const PORT = process.env.PORT || CONSTANT_PORT || 5000;
 
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

@@ -1,4 +1,5 @@
 export const translations = {
+ 
   am: {
     // Hero & General
     heroBadge: "አዲስ ተጨምሯል",

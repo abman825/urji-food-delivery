@@ -1,198 +1,446 @@
-import React from 'react';
-import { X, ShoppingBag, Utensils, CreditCard, Image, Camera } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Upload, CreditCard, Utensils, CheckSquare, Square, Smartphone, Building2 } from 'lucide-react';
 
-export default function CheckoutModal({ 
-  isOpen, 
-  onClose, 
-  customerInfo, 
-  setCustomerInfo, 
-  paymentMethod, 
-  setPaymentMethod, 
-  selectedFile, 
-  setSelectedFile, 
-  totalPrice, 
+export default function CheckoutModal({
+  isOpen,
+  onClose,
+  customerInfo,
+  setCustomerInfo,
+  paymentMethod,
+  setPaymentMethod,
+  selectedFile,
+  setSelectedFile,
+  totalPrice,
   handleOrder,
-  lang 
+  cartItems,
+  lang = 'am'
 }) {
+  const [checkoutType, setCheckoutType] = useState('table'); 
+  const [isSelfPickUp, setIsSelfPickUp] = useState(false);
+
   if (!isOpen) return null;
 
-  // የቋንቋዎች ተርጓሚ ዳታ (Translations)
   const modalText = {
     am: {
-      title1: "ትዕዛዝዎን",
-      title2: "ያረጋግጡ",
-      takeaway: "ለታሸገ",
-      dineIn: "እዚሁ",
-      chapa: "Chapa",
-      photo: "ፎቶ",
-      namePlaceholder: "ሙሉ ስምዎን እዚህ ያስገቡ",
-      phonePlaceholder: "ስልክ ቁጥር ያስገቡ",
-      timeText: "ምግብ እንዲደርስ የሚፈልጉበት ሰዓት",
-      addressPlaceholder: "ትክክለኛ አድራሻ",
-      uploadReceipt: "የከፈሉበትን ደረሰኝ እዚህ ያያይዙ",
-      telebirrNote: "0947493716 telebirr ከፍለው ደረሰኝ ይላኩ",
-      totalPayment: "ጠቅላላ ክፍያ",
-      payChapa: "በ Chapa ይክፈሉ",
-      sendOrder: "ትዕዛዝ ይላኩ"
+      title: "ትዕዛዝዎን ያጠናቅቁ",
+      orderByTable: "በወንበር ቁጥር ለማዘዝ",
+      orderByPayment: "በክፍያ ለማዘዝ",
+      dineIn: "እዚሁ (Dine-in)",
+      takeaway: "ይዞ ለመሄድ (Takeaway)",
+      tableNumber: "የወንበር/ጠረጴዛ ቁጥር",
+      tablePlaceholder: "ምሳሌ: 5",
+      phone: "ስልክ ቁጥር",
+      optionalTag: "(ግዴታ አይደለም)",
+      requiredTag: "(ግዴታ ነው)",
+      phonePlaceholder: "09...",
+      uploadReceipt: "የክፍያ ስክሪንሾት",
+      uploadNote: "💡 በቴሌብር ወይም በባንክ የከፈሉበትን ደረሰኝ/ስክሪንሾት እዚህ ማያያዝ ይችላሉ።",
+      uploadBtn: "ስክሪንሾት አያይዝ",
+      fullName: "ሙሉ ስም",
+      namePlaceholder: "ስምዎን ያስገቡ",
+      pickupTime: "የመቀበያ ሰዓት",
+      selfPickup: "መጥቼ እወስዳለሁ (Self Pick-up)",
+      address: "አድራሻ",
+      addressPlaceholder: "ቦታ/አድራሻ ያስገቡ",
+      totalPrice: "ጠቅላላ ዋጋ",
+      submitOrder: "ትዕዛዝ ላክ",
+      payChapa: "በ Chapa ክፈል",
+      paymentAccounts: "የክፍያ ሂሳብ ቁጥሮች",
+      selectPaymentMethod: "የክፍያ መንገድ",
+      payWithChapa: "በ Chapa (ኦንላይን)"
     },
     om: {
-      title1: "Ajaja Keessan",
-      title2: "Mirkaneessaa",
-      takeaway: "Gara Manaatti",
-      dineIn: "Asumaa",
-      chapa: "Chapa",
-      photo: "Fakkii",
-      namePlaceholder: "Maqaa Guutuu Asitti Galchaa",
-      phonePlaceholder: "Lakkoofsa Bilbilaa Galchaa",
-      timeText: "Sa'aatii nyaanni akka isin ga'u barbaaddan",
-      addressPlaceholder: "Teessoo Sirrii",
-      uploadReceipt: "Nagahee Kaffaltii Asitti Maxxansaa",
-      telebirrNote: "0947493716 telebirr kaffaltanii nagahee ergaa",
-      totalPayment: "Gatii Dimshaasha",
+      title: "Ajaja Keessan Xumuraa",
+      orderByTable: "Lakkoofsa Minjaalaan",
+      orderByPayment: "Kaffaltiidhaan Ajajuuf",
+      dineIn: "Asumaa (Dine-in)",
+      takeaway: "Fudhatanii Deemuuf",
+      tableNumber: "Lakkoofsa Barcumaa/Minjaala",
+      tablePlaceholder: "Fakkeenya: 5",
+      phone: "Lakkoofsa Bilbilaa",
+      optionalTag: "(Dirqama Mitii)",
+      requiredTag: "(Dirqama)",
+      phonePlaceholder: "09...",
+      uploadReceipt: "Nagahee Kaffaltii",
+      uploadNote: "💡 Nagahee kaffaltii Telebirr fi Baankiin kaffaltan asitti maxxansuu drossuu.",
+      uploadBtn: "Nagahee Maxxansaa",
+      fullName: "Maqaa Guutuu",
+      namePlaceholder: "Maqaa Keessan Galchaa",
+      pickupTime: "Sa'aatii Fudhannaa",
+      selfPickup: "Ofii Koof Dhufeen Fadha",
+      address: "Teessoo",
+      addressPlaceholder: "Teessoo Galchaa",
+      totalPrice: "Gatii Dimshaasha",
+      submitOrder: "Ajaja Ergaa",
       payChapa: "Chapa'n Kaffalaa",
-      sendOrder: "Ajaja Ergaa"
+      paymentAccounts: "Lakkoofsa Akkaawuntii Kaffaltii",
+      selectPaymentMethod: "Filannoo Kaffaltii",
+      payWithChapa: "Chapa (Online)"
     },
     en: {
-      title1: "Confirm Your",
-      title2: "Order",
-      takeaway: "Takeaway",
+      title: "Complete Your Order",
+      orderByTable: "Order by Table",
+      orderByPayment: "Order by Payment",
       dineIn: "Dine-in",
-      chapa: "Chapa",
-      photo: "Photo",
-      namePlaceholder: "Enter your full name here",
-      phonePlaceholder: "Enter phone number",
-      timeText: "Time you want the food delivered",
-      addressPlaceholder: "Exact Address",
-      uploadReceipt: "Attach your payment receipt here",
-      telebirrNote: "Pay to 0947493716 telebirr and send receipt",
-      totalPayment: "Total Payment",
+      takeaway: "Takeaway",
+      tableNumber: "Table Number",
+      tablePlaceholder: "e.g., 5",
+      phone: "Phone Number",
+      optionalTag: "(Optional)",
+      requiredTag: "(Required)",
+      phonePlaceholder: "09...",
+      uploadReceipt: "Payment Receipt",
+      uploadNote: "💡 You can attach the receipt/screenshot of your Telebirr or Bank transfer here.",
+      uploadBtn: "Upload Screenshot",
+      fullName: "Full Name",
+      namePlaceholder: "Enter your name",
+      pickupTime: "Pickup Time",
+      selfPickup: "Self Pick-up",
+      address: "Delivery Address",
+      addressPlaceholder: "Enter address",
+      totalPrice: "Total Price",
+      submitOrder: "Submit Order",
       payChapa: "Pay with Chapa",
-      sendOrder: "Send Order"
+      paymentAccounts: "Payment Accounts",
+      selectPaymentMethod: "Payment Method",
+      payWithChapa: "Chapa (Online)"
     }
   };
 
   const t = modalText[lang] || modalText.am;
 
+  const onCheckoutTypeChange = (type) => {
+    setCheckoutType(type);
+    if (type === 'table') {
+      setPaymentMethod('Screenshot');
+      setCustomerInfo(prev => ({ ...prev, orderType: 'Dine-in' }));
+    } else {
+      setPaymentMethod('Chapa');
+    }
+  };
+
+  const handleOrderTypeChange = (type) => {
+    setCustomerInfo(prev => ({ ...prev, orderType: type }));
+    // Takeaway ከሆነ ክፍያው ቀጥታ Chapa ይሆናል
+    if (type === 'Takeaway') {
+      setPaymentMethod('Chapa');
+    }
+  };
+
+  const onSubmitClick = () => {
+    // 1. በወንበር ቁጥር ለማዘዝ ወይም Dine-in ሲሆን
+    if (checkoutType === 'table' || (checkoutType === 'online' && customerInfo.orderType === 'Dine-in')) {
+      if (!customerInfo.tableNo || !customerInfo.tableNo.trim()) {
+        alert(lang === 'am' ? 'እባክዎን የወንበር ቁጥር ያስገቡ!' : 'Please enter table number!');
+        return;
+      }
+    }
+
+    // 2. በ Takeaway ሲሆን (Chapa ብቻ ነው የሚሆነው)
+    if (checkoutType === 'online' && customerInfo.orderType === 'Takeaway') {
+      if (!customerInfo.name || !customerInfo.name.trim()) {
+        alert(lang === 'am' ? 'እባክዎን ሙሉ ስምዎን ያስገቡ!' : 'Please enter your name!');
+        return;
+      }
+      if (!customerInfo.phone || !customerInfo.phone.trim()) {
+        alert(lang === 'am' ? 'እባክዎን ስልክ ቁጥርዎን ያስገቡ!' : 'Please enter your phone number!');
+        return;
+      }
+      if (!customerInfo.time) {
+        alert(lang === 'am' ? 'እባክዎን የመቀበያ ሰዓት ይምረጡ!' : 'Please select pickup time!');
+        return;
+      }
+      if (!isSelfPickUp && (!customerInfo.address || !customerInfo.address.trim())) {
+        alert(lang === 'am' ? 'እባክዎን አድራሻ ያስገቡ ወይም "መጥቼ እወስዳለሁ" የሚለውን ይምረጡ!' : 'Please enter address or check self pick-up!');
+        return;
+      }
+    }
+
+    handleOrder();
+  };
+
   return (
-    <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl relative overflow-y-auto max-h-[94vh]">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
         
         {/* Close Button */}
-        <button onClick={onClose} className="absolute top-8 right-8 text-gray-400 hover:text-gray-900 transition-colors bg-gray-100 p-2.5 rounded-full">
-          <X size={24} />
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-full transition-all cursor-pointer"
+        >
+          <X size={20} />
         </button>
 
-        {/* Title */}
-        <div className="text-center mb-10">
-          <h3 className="text-3xl font-black text-gray-900 leading-tight">
-            {t.title1} <span className="text-orange-600">{t.title2}</span>
-          </h3>
-        </div>
+        <h2 className="text-2xl font-black mb-6 text-center text-orange-500 tracking-wide">
+          {t.title}
+        </h2>
 
-        {/* Takeaway / Dine-in Buttons */}
-        <div className="grid grid-cols-2 gap-5 mb-10">
-          <button 
-            onClick={() => setCustomerInfo({...customerInfo, orderType: 'Takeaway'})} 
-            className={`flex flex-col items-center gap-3 py-6 rounded-[2rem] border-2 transition-all font-black ${customerInfo.orderType === 'Takeaway' ? 'border-orange-600 bg-orange-50 text-orange-600' : 'border-gray-100 text-gray-400'}`}
+        {/* 1. Main Order Type Selection */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <button
+            type="button"
+            onClick={() => onCheckoutTypeChange('table')}
+            className={`p-3.5 rounded-2xl border font-bold text-xs sm:text-sm flex flex-col items-center gap-2 transition-all cursor-pointer ${
+              checkoutType === 'table'
+                ? 'bg-orange-600 border-orange-500 text-white shadow-lg shadow-orange-600/30'
+                : 'bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:bg-zinc-800'
+            }`}
           >
-            <ShoppingBag size={30} /> {t.takeaway}
+            <Utensils size={22} />
+            {t.orderByTable}
           </button>
 
-          <button 
-            onClick={() => setCustomerInfo({...customerInfo, orderType: 'Dine-in'})} 
-            className={`flex flex-col items-center gap-3 py-6 rounded-[2rem] border-2 transition-all font-black ${customerInfo.orderType === 'Dine-in' ? 'border-orange-600 bg-orange-50 text-orange-600' : 'border-gray-100 text-gray-400'}`}
+          <button
+            type="button"
+            onClick={() => onCheckoutTypeChange('online')}
+            className={`p-3.5 rounded-2xl border font-bold text-xs sm:text-sm flex flex-col items-center gap-2 transition-all cursor-pointer ${
+              checkoutType === 'online'
+                ? 'bg-orange-600 border-orange-500 text-white shadow-lg shadow-orange-600/30'
+                : 'bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:bg-zinc-800'
+            }`}
           >
-            <Utensils size={30} /> {t.dineIn}
-          </button>
-        </div>
-
-        {/* Payment Method Tabs */}
-        <div className="flex gap-4 mb-10 p-2 bg-gray-100 rounded-[1.5rem]">
-          <button 
-            onClick={() => setPaymentMethod('Chapa')} 
-            className={`flex-1 py-4 rounded-2xl font-black transition-all ${paymentMethod === 'Chapa' ? 'bg-white text-blue-600 shadow-md' : 'text-gray-500'}`}
-          >
-            <CreditCard size={18} className="inline mr-2" /> {t.chapa}
-          </button>
-          <button 
-            onClick={() => setPaymentMethod('Screenshot')} 
-            className={`flex-1 py-4 rounded-2xl font-black transition-all ${paymentMethod === 'Screenshot' ? 'bg-white text-blue-600 shadow-md' : 'text-gray-500'}`}
-          >
-            <Image size={18} className="inline mr-2" /> {t.photo}
+            <CreditCard size={22} />
+            {t.orderByPayment}
           </button>
         </div>
 
-        {/* Input Fields */}
-        <div className="space-y-5">
-          <input 
-            type="text" 
-            placeholder={t.namePlaceholder} 
-            className="w-full p-5 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:bg-white focus:border-orange-500 transition-all font-bold" 
-            value={customerInfo.name || ''}
-            onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} 
-          />
-
-          <input 
-            type="tel" 
-            placeholder={t.phonePlaceholder} 
-            className="w-full p-5 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:bg-white focus:border-orange-500 transition-all font-bold" 
-            value={customerInfo.phone || ''}
-            onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} 
-          />
-
-          <div className="relative">
-            <input 
-              type="time" 
-              className="w-full p-5 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:bg-white focus:border-orange-500 transition-all font-bold" 
-              onClick={(e) => e.target.showPicker()} 
-              value={customerInfo.time || ''}
-              onChange={(e) => setCustomerInfo({...customerInfo, time: e.target.value})} 
-            />
-            <span className="absolute right-14 top-5 text-gray-400 text-xs font-medium pointer-events-none">
-              {t.timeText}
-            </span>
-          </div>
-
-          {customerInfo.orderType === 'Takeaway' && (
-            <input 
-              type="text" 
-              placeholder={t.addressPlaceholder} 
-              className="w-full p-5 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-orange-500 font-bold" 
-              value={customerInfo.address || ''}
-              onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})} 
-            />
-          )}
-
-          {paymentMethod === 'Screenshot' && (
-            <div className="border-2 border-dashed border-orange-200 rounded-[2rem] p-8 bg-orange-50/30 text-center cursor-pointer">
-              <label className="cursor-pointer flex flex-col items-center gap-4">
-                <Camera size={45} className="text-orange-600" />
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-black text-gray-700 uppercase">
-                    {selectedFile ? selectedFile.name : t.uploadReceipt}
-                  </span>
-                  <span className="text-[10px] text-gray-500 font-bold">
-                    {t.telebirrNote}
-                  </span>
+        {/* ----------------- ሀ) በወንበር ቁጥር ለማዘዝ (Dine-In) ----------------- */}
+        {checkoutType === 'table' && (
+          <div className="space-y-4">
+            <div className="bg-zinc-800/70 border border-zinc-700/60 rounded-2xl p-3.5 space-y-2">
+              <p className="text-[11px] font-bold text-orange-400 uppercase tracking-wider">{t.paymentAccounts}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-2 bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800">
+                  <Smartphone size={16} className="text-blue-400 shrink-0" />
+                  <div>
+                    <span className="text-zinc-400 text-[10px] block">Telebirr</span>
+                    <span className="font-mono font-bold text-white tracking-wide">0912345678</span>
+                  </div>
                 </div>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  onChange={(e) => setSelectedFile(e.target.files[0])} 
+
+                <div className="flex items-center gap-2 bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800">
+                  <Building2 size={16} className="text-purple-400 shrink-0" />
+                  <div>
+                    <span className="text-zinc-400 text-[10px] block">CBE (ንግድ ባንክ)</span>
+                    <span className="font-mono font-bold text-white tracking-wide">1000123456789</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-zinc-300">
+                {t.tableNumber} <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder={t.tablePlaceholder}
+                value={customerInfo.tableNo || ''}
+                onChange={(e) => setCustomerInfo({ ...customerInfo, tableNo: e.target.value })}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-zinc-300">
+                {t.phone} <span className="text-zinc-500 font-normal text-[11px] ml-1">{t.optionalTag}</span>
+              </label>
+              <input
+                type="tel"
+                placeholder={t.phonePlaceholder}
+                value={customerInfo.phone || ''}
+                onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+            {/* በወንበር ቁጥር ሲሆን የስክሪንሾት ማያያዣ (Optional) */}
+            <div>
+              <label className="block text-xs font-bold mb-1 text-zinc-300">
+                {t.uploadReceipt} <span className="text-zinc-500 font-normal text-[11px] ml-1">{t.optionalTag}</span>
+              </label>
+              <p className="text-[11px] text-zinc-400 mb-2 leading-relaxed">
+                {t.uploadNote}
+              </p>
+              <label className="flex items-center justify-center gap-2 border border-dashed border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-300 py-3 rounded-xl cursor-pointer text-xs font-semibold transition-all">
+                <Upload size={16} className="text-orange-500" />
+                <span>{selectedFile ? selectedFile.name : t.uploadBtn}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  className="hidden"
                 />
               </label>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Action Button */}
-        <button 
-          onClick={handleOrder} 
-          className="w-full mt-12 py-6 bg-orange-600 text-white rounded-[2rem] font-black text-2xl hover:bg-orange-700 active:scale-95 transition-all shadow-2xl shadow-orange-100 tracking-widest uppercase flex flex-col items-center justify-center gap-1"
-        >
-          <span className="text-sm opacity-80 font-bold">{t.totalPayment}: {totalPrice} ETB</span>
-          <span>{paymentMethod === 'Chapa' ? t.payChapa : t.sendOrder}</span>
-        </button>
+        {/* ----------------- ለ) በክፍያ ለማዘዝ (Dine-in / Takeaway) ----------------- */}
+        {checkoutType === 'online' && (
+          <div className="space-y-4">
+            <div className="flex gap-2 p-1 bg-zinc-800 rounded-xl">
+              <button
+                type="button"
+                onClick={() => handleOrderTypeChange('Dine-in')}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  customerInfo.orderType === 'Dine-in'
+                    ? 'bg-orange-600 text-white shadow'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                {t.dineIn}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOrderTypeChange('Takeaway')}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  customerInfo.orderType === 'Takeaway'
+                    ? 'bg-orange-600 text-white shadow'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                {t.takeaway}
+              </button>
+            </div>
+
+            {/* Takeaway ሲሆን Chapa ብቻ እንደሆነ ለማሳወቅ የሚወጣ ባጅ */}
+            {customerInfo.orderType === 'Takeaway' && (
+              <div>
+                <label className="block text-xs font-bold mb-1.5 text-zinc-300">
+                  {t.selectPaymentMethod}
+                </label>
+                <div className="p-3 rounded-xl border border-orange-500/50 bg-orange-600/10 text-orange-400 text-xs font-bold flex items-center justify-between">
+                  <span>{t.payWithChapa}</span>
+                  <CreditCard size={18} />
+                </div>
+              </div>
+            )}
+
+            {/* Dine-in መስኮች */}
+            {customerInfo.orderType === 'Dine-in' && (
+              <>
+                <div>
+                  <label className="block text-xs font-bold mb-1.5 text-zinc-300">
+                    {t.tableNumber} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={t.tablePlaceholder}
+                    value={customerInfo.tableNo || ''}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, tableNo: e.target.value })}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold mb-1.5 text-zinc-300">
+                    {t.phone} <span className="text-zinc-500 font-normal text-[11px] ml-1">{t.optionalTag}</span>
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder={t.phonePlaceholder}
+                    value={customerInfo.phone || ''}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Takeaway መስኮች */}
+            {customerInfo.orderType === 'Takeaway' && (
+              <>
+                <div>
+                  <label className="block text-xs font-bold mb-1.5 text-zinc-300">
+                    {t.fullName} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={t.namePlaceholder}
+                    value={customerInfo.name || ''}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold mb-1.5 text-zinc-300">
+                    {t.phone} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder={t.phonePlaceholder}
+                    value={customerInfo.phone || ''}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold mb-1.5 text-zinc-300">
+                    {t.pickupTime} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={customerInfo.time || ''}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, time: e.target.value })}
+                    onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 cursor-pointer [color-scheme:dark]"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextVal = !isSelfPickUp;
+                    setIsSelfPickUp(nextVal);
+                    if (nextVal) {
+                      setCustomerInfo(prev => ({ ...prev, address: 'መጥቼ እወስዳለሁ' }));
+                    } else {
+                      setCustomerInfo(prev => ({ ...prev, address: '' }));
+                    }
+                  }}
+                  className="flex items-center gap-2.5 text-xs text-orange-400 hover:text-orange-300 cursor-pointer pt-1"
+                >
+                  {isSelfPickUp ? <CheckSquare size={18} /> : <Square size={18} />}
+                  <span>{t.selfPickup}</span>
+                </button>
+
+                {!isSelfPickUp && (
+                  <div>
+                    <label className="block text-xs font-bold mb-1.5 text-zinc-300">
+                      {t.address} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={t.addressPlaceholder}
+                      value={customerInfo.address || ''}
+                      onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Total Price & Submit Button */}
+        <div className="mt-6 pt-4 border-t border-zinc-800 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-zinc-400">{t.totalPrice}</p>
+            <p className="text-xl font-black text-orange-500">{totalPrice} ETB</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onSubmitClick}
+            className="bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-black px-6 py-3 rounded-2xl text-sm transition-all shadow-lg shadow-orange-600/30 cursor-pointer"
+          >
+            {paymentMethod === 'Chapa' ? t.payChapa : t.submitOrder}
+          </button>
+        </div>
 
       </div>
     </div>
