@@ -39,33 +39,21 @@ io.on('connection', (socket) => {
     console.log(`👨‍🍳 Admin joined room: adminRoom (${socket.id})`);
   });
 
-  // 2. ደንበኛው ሲገባ የራሱን Socket ID ወይም Customer ID ይይዛል
+  // 2. ደንበኛው ሲገባ የራሱን Socket ID 'joinCustomer' ያደርጋል
   socket.on('joinCustomer', (customerSocketId) => {
     socket.join(customerSocketId || socket.id);
   });
 
-  // 3. ደንበኛው አዲስ ትዕዛዝ በ Socket ሲልክ
-  socket.on('sendOrder', (orderData) => {
-    // ሀ) አዲሱን ትዕዛዝ ለአድሚኖች ብቻ ላክ (ለሌላው ደንበኛ እንዳይሄድ!)
-    io.to('adminRoom').emit('newOrder', orderData);
-
-    // ለ) ትዕዛዙ መላኩን ለላከው ደንበኛ ብቻ አረጋግጥለት (ለሌላው ሰው አይሄድም)
-    socket.emit('orderConfirmed', { 
-      message: "ትዕዛዝዎን ተቀብለናል! በፍጥነት እናደርሳለን",
-      receiptId: orderData.receiptId 
-    });
-  });
-
-  // 4. አድሚኑ 'ተቀብለናል' የሚል በተን ሲነካ -> ለትዕዛዙ ባለቤት (ለዚያ ስልክ) ብቻ ይልካል
+  // 3. አድሚኑ 'ተቀብለናል' የሚል በተን ሲነካ -> ለትዕዛዙ ባለቤት (ለዚያ ስልክ) ብቻ ይላካል
   socket.on('adminAcceptOrder', (data) => {
     console.log(`✅ Order accepted by admin: ${data.receiptId}`);
     
     const notificationPayload = {
       receiptId: data.receiptId,
-      message: 'ትዕዛዝዎ ደርሶናል! በፍጥነት እናደርሳለን፤ በካፌያችን ስለተስተናገዱ እናመሰግናለን!'
+      message: 'ትዕዛዝዎ ደርሶናል! በፍጥነት እናደርሳለን፤ በካፌያችን ስለተገለገሉ እናመሰግናለን!'
     };
 
-    // targetSocketId ካለ ለዚያ ደንበኛ ብቻ፤ ከሌለ ለሁሉም አድሚኖች ማሳወቅ
+    // targetSocketId ካለ ለዚያ ደንበኛ ብቻ፤ ከሌለ ለሁሉም ይልካል
     if (data.targetSocketId) {
       io.to(data.targetSocketId).emit('orderAcceptedNotification', notificationPayload);
     } else {
@@ -73,22 +61,15 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 5. Status ሲቀየር (Pending -> In Progress -> Completed)
+  // 4. Status ሲቀየር (Pending -> In Progress -> Completed)
   socket.on('updateOrderStatus', (data) => {
     console.log(`🔄 Order ${data.receiptId} status updated to: ${data.status}`);
     
-    // ሀ) በ RAM ውስጥ የትዕዛዙን Status ማስተካከል
-    if (global.globalOrders) {
-      const order = global.globalOrders.find(o => 
-        o.receiptId === data.receiptId || o.id === data.receiptId || o._id === data.receiptId
-      );
-      if (order) {
-        order.status = data.status;
-      }
+    if (data.targetSocketId) {
+      io.to(data.targetSocketId).emit('orderStatusUpdated', data);
+    } else {
+      io.emit('orderStatusUpdated', data);
     }
-
-    // ለ) ለአድሚኖች በሙሉ አዲሱን Status ማሳወቅ (አንዱ አድሚን ሲቀበል ሌላውም እንዲያየው)
-    io.to('adminRoom').emit('orderStatusChanged', data);
   });
 
   socket.on('disconnect', () => {
