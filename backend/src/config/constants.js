@@ -1,4 +1,8 @@
-export const PORT = 5000;
-export const TELEGRAM_TOKEN = "8601691945:AAHuf1tKpCAmU6j6cOqp0i8sR0qv4F0nCPc";
-export const ADMIN_CHAT_ID = "2068983666";
-export const CHAPA_SECRET_KEY= "CHASECK_TEST-2pVeymLycF5pVNAhGW7bubjYx1quI7bO";
+import dotenv from 'dotenv';
+dotenv.config();
+
+export const PORT = process.env.PORT || 5000;
+export const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+export const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
+export const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY;
+export const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/urjicafe';

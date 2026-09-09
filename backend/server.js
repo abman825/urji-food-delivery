@@ -2,55 +2,79 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import connectDB from './src/config/db.js';
+import Order from './src/models/Order.js';
 import { PORT as CONSTANT_PORT } from './src/config/constants.js';
 import apiRoutes from './src/routes/apiRoutes.js';
+
+// 1. Connect to MongoDB
+connectDB();
 
 const app = express();
 const httpServer = createServer(app);
 
-// Socket.io Config ከ CORS ጋር
+// Socket.io Config
 const io = new Server(httpServer, {
-  cors: {
-    origin: "*", // ወይም Frontend URL e.g. "http://localhost:5173"
-    methods: ["GET", "POST"]
-  }
+  cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// Middlewares
+app.set('socketio', io);
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 app.use(cors());
 app.use(express.json());
-
-// API Routes Integration
 app.use('/api', apiRoutes);
 
 // Socket.io Real-time Connection Logic
 io.on('connection', (socket) => {
   console.log('⚡ Client connected:', socket.id);
 
-  // 1. ደንበኛው አዲስ ትዕዛዝ ሲልክ (ለ Admin Dashboard ማሳወቅ)
-  socket.on('newOrder', (orderData) => {
-    console.log('📦 New Order received:', orderData);
-    io.emit('newOrder', orderData);
+  socket.on('joinAdmin', () => socket.join('adminRoom'));
+
+  socket.on('joinOrderRoom', (receiptId) => {
+    if (receiptId) socket.join(`order_${String(receiptId).trim()}`);
   });
 
-  socket.on('newOrderPlaced', (orderData) => {
-    console.log('📦 New Order Placed:', orderData);
-    io.emit('orderReceived', orderData);
+  // አዲስ ትዕዛዝ በ Socket ሲመጣ DB ላይ ማስቀመጥ
+  socket.on('placeOrder', async (orderData) => {
+    try {
+      const newOrder = new Order({ ...orderData, socketId: socket.id });
+      await newOrder.save();
+
+      // ለአድሚኖች በ Real-time ማሳወቅ
+      io.to('adminRoom').emit('newOrder', newOrder);
+    } catch (err) {
+      console.error("Error saving order to MongoDB:", err);
+    }
   });
 
-  // 2. የአድሚኑ በተን ሲነካ Status ን በ Real-time ለሁሉም/ለደንበኛው ማሰራጨት (Pending/In Progress/Completed)
-  socket.on('updateOrderStatus', (data) => {
-    console.log(`🔄 Order ${data.receiptId} status updated to: ${data.status}`);
-    io.emit('orderStatusUpdated', data);
-  });
+  // Status ሲቀየር (Pending -> In Progress -> Completed) DB ላይ Update ማድረግ
+  socket.on('updateOrderStatus', async (data) => {
+    const { receiptId, status } = data;
+    console.log(`🔄 Updating Order ${receiptId} to: ${status}`);
 
-  // 3. አድሚኑ ትዕዛዝ ሲቀበል የሚላክ Notification
-  socket.on('adminAcceptOrder', (data) => {
-    console.log(`✅ Order accepted by admin: ${data.receiptId}`);
-    io.emit('orderAcceptedNotification', {
-      receiptId: data.receiptId,
-      message: 'ትዕዛዝዎ ደርሶናል! በፍጥነት እናደርሳለን፤ በካፌያችን ስለተገለገሉ እናመሰግናለን!'
-    });
+    try {
+      // 1. MongoDB ላይ Statusን Update አድርግ
+      const updatedOrder = await Order.findOneAndUpdate(
+        { receiptId: receiptId },
+        { status: status },
+        { new: true }
+      );
+
+      const receiptRoom = `order_${String(receiptId).trim()}`;
+      const payload = { receiptId, status, updatedOrder };
+
+      // 2. ለተወሰነው ደንበኛ እና ለአድሚን በ Real-time ማሳወቅ
+      io.to(receiptRoom).emit('orderStatusUpdated', payload);
+      io.emit('orderStatusUpdated', payload);
+      io.to('adminRoom').emit('adminOrderStatusChanged', payload);
+
+    } catch (err) {
+      console.error("Failed to update status in Database:", err);
+    }
   });
 
   socket.on('disconnect', () => {
@@ -58,9 +82,5 @@ io.on('connection', (socket) => {
   });
 });
 
-// Port Setting & Server Listening
 const PORT = process.env.PORT || CONSTANT_PORT || 5000;
-
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+httpServer.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
