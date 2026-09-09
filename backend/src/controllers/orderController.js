@@ -3,9 +3,6 @@ import axios from 'axios';
 import fs from 'fs';
 import { CHAPA_SECRET_KEY } from '../config/constants.js';
 
-// ትዕዛዞችን በሰርቨሩ Memory (RAM) ውስጥ መዝግቦ መያዣ Array (ያለ Database ይሰራል)
-export let globalOrders = [];
-
 // የምግቦች ዝርዝር ቅርፅ ማስተካከያ
 const formatOrderItems = (items) => {
   if (!items) return '• ምንም የተመረጠ ምግብ የለም';
@@ -72,27 +69,6 @@ ${formattedItems}
       console.error('⚠️ Chapa Telegram Notification Failed:', telegramErr.message);
     }
 
-    const orderData = {
-      id: receiptId,
-      name: pendingOrder?.name || 'እንግዳ',
-      phone: pendingOrder?.phone || '-',
-      tableNo: displayTableNo,
-      orderType: currentOrderType,
-      totalPrice: pendingOrder?.totalPrice || '0',
-      items: typeof pendingOrder?.items === 'string' ? JSON.parse(pendingOrder.items) : pendingOrder?.items,
-      paymentMethod: 'Chapa Online Payment',
-      status: 'Pending',
-      createdAt: new Date()
-    };
-
-    // በ Memory Array ውስጥ መመዝገብ
-    globalOrders.unshift(orderData);
-
-    // ለ Admin Room ብቻ መላክ
-    if (req.io) {
-      req.io.to('adminRoom').emit('newOrder', orderData);
-    }
-
     return res.status(200).json({ 
       success: true, 
       receiptId,
@@ -119,8 +95,8 @@ export const initiateChapaPayment = async (req, res) => {
     }
 
     const tx_ref = `tx-${Date.now()}`;
-    
-    const clientHost = req.headers.origin || process.env.CLIENT_URL || 'http://localhost:5173';
+    // መስመር 98 አካባቢ የሚገኘውን ይሄንን፦
+const clientHost = req.headers.origin || 'https://urji-food-delivery.vercel.app';
     const finalReturnUrl = returnUrl || `${clientHost}/?trx_id=${tx_ref}&status=success`;
 
     const chapaPayload = {
@@ -170,8 +146,10 @@ export const submitOrderFormData = async (req, res) => {
     const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod } = req.body;
     const file = req.file;
 
+    // 1. Order Type ማረጋገጫ
     const currentOrderType = orderType || 'Dine-In';
 
+    // 2. Dine-In ከሆነ ብቻ ነው የወንበር ቁጥር መኖሩን ቼክ የሚያደርገው
     if (currentOrderType === 'Dine-In' && (!tableNo || !tableNo.trim())) {
       return res.status(400).json({ 
         success: false, 
@@ -179,7 +157,9 @@ export const submitOrderFormData = async (req, res) => {
       });
     }
 
+    // 3. Takeaway ከሆነ የወንበር ቁጥር 'Takeaway' ይሆናል
     const displayTableNo = currentOrderType === 'Takeaway' ? 'Takeaway' : (tableNo || '-');
+
     const formattedItems = formatOrderItems(items);
     const orderId = `REC-${Date.now().toString().slice(-6)}`;
     
@@ -215,6 +195,7 @@ ${formattedItems}
 
     let screenshotBase64 = null;
 
+    // Telegram መልእክት እና ምስል መላኪያ
     if (file) {
       const fileBuffer = file.buffer || (file.path ? fs.readFileSync(file.path) : null);
 
@@ -246,6 +227,7 @@ ${formattedItems}
       }
     }
 
+    // 4. ወደ Admin Dashboard በ Socket.io የሚላክ Realtime መረጃ
     const orderData = {
       id: orderId,
       name: name || 'እንግዳ',
@@ -256,16 +238,11 @@ ${formattedItems}
       items: typeof items === 'string' ? JSON.parse(items) : items,
       paymentMethod: payMethodText,
       screenshot: screenshotBase64,
-      status: 'Pending',
       createdAt: new Date()
     };
 
-    // አዲሱን ትዕዛዝ በ Global Array ውስጥ መመዝገብ
-    globalOrders.unshift(orderData);
-
-    // ለ Admin Room ብቻ አዲስ ትዕዛዝ መድረሱን ማሳወቅ
     if (req.io) {
-      req.io.to('adminRoom').emit('newOrder', orderData);
+      req.io.emit('newOrder', orderData);
     }
 
     return res.status(200).json({ 
@@ -284,12 +261,7 @@ ${formattedItems}
   }
 };
 
-// 4. አድሚን ከየትኛውም ስልክ ሲገባ የተቀመጡ ትዕዛዞችን ማምጫ API
-export const getAllOrders = (req, res) => {
-  return res.status(200).json({ success: true, orders: globalOrders });
-};
-
-// 5. Toggle Availability Handler
+// 4. Toggle Availability Handler
 export const toggleAvailability = async (req, res) => {
   try {
     const { id } = req.params;
@@ -310,4 +282,5 @@ export const toggleAvailability = async (req, res) => {
   }
 };
 
+// 5. Alias Export
 export const createScreenshotOrder = submitOrderFormData;

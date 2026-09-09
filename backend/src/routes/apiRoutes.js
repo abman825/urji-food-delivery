@@ -1,27 +1,21 @@
 import express from 'express';
 import multer from 'multer';
 import { 
-  submitOrderFormData, 
-  handleChapaSuccess, 
+  createScreenshotOrder, 
   initiateChapaPayment, 
-  toggleAvailability,
-  getAllOrders
+  handleChapaSuccess,
+  toggleAvailability 
 } from '../controllers/orderController.js';
 
 const router = express.Router();
-const upload = multer(); // File Upload Memory storage (ለ Screenshots)
+const upload = multer({ storage: multer.memoryStorage() });
 
-// 1. ነባር ትዕዛዞችን በሙሉ ለማምጣት (ለ Admin Dashboard)
-router.get('/orders', getAllOrders);
-
-// 2. አዲስ ትዕዛዝ በስክሪንሾት/በካሽ መላኪያ
-router.post('/orders', upload.single('screenshot'), submitOrderFormData);
-
-// 3. Chapa ክፍያ ማስመርመሪያ እና ማሳወቂያ Routes
+// 1. የትዕዛዝ እና የክፍያ Routes
+router.post('/orders', upload.single('image'), createScreenshotOrder);
 router.post('/chapa-pay', initiateChapaPayment);
 router.post('/chapa-success-notify', handleChapaSuccess);
 
-// 4. የምግብ Availability መቀየሪያ
-router.post('/menu-toggle/:id', toggleAvailability);
+// 2. የምግብ availability (አለ/አልቋል) መቆጣጠሪያ Route
+router.patch('/menu/:id/toggle', toggleAvailability);
 
 export default router;
