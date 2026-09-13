@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   UtensilsCrossed, ShoppingCart, Menu, X, 
-  CheckCircle, Clock, ShoppingBag, Utensils, Lock 
+  CheckCircle, ShoppingBag, Utensils, Lock 
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import AdminDashboard from './AdminDashboard';
@@ -10,7 +10,6 @@ import MenuManagementTab from './MenuManagementTab';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
 const socket = io(BACKEND_URL);
 
-// --- Main Navbar Component ---
 export default function Navbar({ 
   cartCount, 
   onOpenCart, 
@@ -21,20 +20,13 @@ export default function Navbar({
   setMenuItems 
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  // Modals visibility control
   const [isAdminDashOpen, setIsAdminDashOpen] = useState(false);
   const [isMenuEditorOpen, setIsMenuEditorOpen] = useState(false);
-
-  // Real-time Notification State
   const [orderNotification, setOrderNotification] = useState(null);
 
-  // --- Real-time Socket Listener ---
   useEffect(() => {
-    // 1. ቴሌግራም ቦት ላይ "Yes" ሲባል ወይም Backend 'orderAcceptedNotification' ወይም 'orderAccepted' ሲልክ የሚቀበል
     const handleOrderAccepted = (data) => {
       const userLang = data?.lang || lang;
-
       let msg = 'ትዕዛዝዎ ተቀብለናል! በጥቂት ደቂቃዎች ውስጥ ይደርስዎታል።';
 
       if (userLang === 'om') {
@@ -44,17 +36,12 @@ export default function Navbar({
       }
 
       setOrderNotification(msg);
-
-      setTimeout(() => {
-        setOrderNotification(null);
-      }, 7000);
+      setTimeout(() => setOrderNotification(null), 7000);
     };
 
-    // ሁለቱንም Event ስሞች እንዲያዳምጥ ተደርጓል (ቴሌግራም ቦት የፈለገውን ቢልክ ይቀበለዋል)
     socket.on('orderAcceptedNotification', handleOrderAccepted);
     socket.on('orderAccepted', handleOrderAccepted);
 
-    // 2. የትዕዛዝ ሁኔታ ሲቀየር የሚቀበል (In Progress, Completed)
     socket.on('orderStatusUpdated', (data) => {
       const userLang = data?.lang || lang;
       const status = data?.status;
@@ -77,9 +64,7 @@ export default function Navbar({
         }
       }
 
-      setTimeout(() => {
-        setOrderNotification(null);
-      }, 7000);
+      setTimeout(() => setOrderNotification(null), 7000);
     });
 
     return () => {
@@ -96,14 +81,6 @@ export default function Navbar({
   };
 
   const currentNav = navLabels[lang] || navLabels.am;
-
-  const handleOpenMenuEditor = () => {
-    setIsMenuEditorOpen(true);
-  };
-
-  const handleOpenOrders = () => {
-    setIsAdminDashOpen(true);
-  };
 
   const handleHomeClick = (e) => {
     e.preventDefault();
@@ -137,7 +114,7 @@ export default function Navbar({
 
   return (
     <>
-      {/* 🔔 REAL-TIME ORDER ACCEPTED NOTIFICATION TOAST */}
+      {/* 🔔 REAL-TIME NOTIFICATION TOAST */}
       {orderNotification && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100000] w-[90%] max-w-md bg-zinc-900 border border-green-500/50 text-white p-4 rounded-2xl shadow-2xl backdrop-blur-lg flex items-start gap-3 animate-bounce">
           <div className="p-2 bg-green-500/20 text-green-400 rounded-xl shrink-0">
@@ -161,55 +138,54 @@ export default function Navbar({
       <nav className="bg-white/90 backdrop-blur-md border-b border-gray-100 p-4 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           
-          {/* የሎጎ ክፍል */}
-          <div className="flex items-center gap-3 group cursor-pointer" onClick={handleHomeClick}>
+          {/* Logo */}
+          <div className="flex items-center gap-2 group cursor-pointer" onClick={handleHomeClick}>
             <div className="bg-orange-600 p-2 rounded-2xl group-hover:rotate-12 transition-transform duration-300 shadow-lg shadow-orange-200">
-              <UtensilsCrossed className="text-white" size={24} />
+              <UtensilsCrossed className="text-white" size={20} />
             </div>
-            <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tighter">
+            <h1 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter">
               {currentNav.title} <span className="text-orange-600">{currentNav.subTitle}</span>
             </h1>
           </div>
           
-          {/* የDesktop ሊንኮች */}
+          {/* Desktop Nav Links */}
           <div className="hidden md:flex gap-8 text-sm font-bold text-gray-600">
             <a href="#home" onClick={handleHomeClick} className="hover:text-orange-600 transition-colors">{currentNav.home}</a>
             <a href="#menu" onClick={handleMenuClick} className="hover:text-orange-600 transition-colors">{currentNav.menu}</a>
             <a href="#footer" onClick={handleAboutClick} className="hover:text-orange-600 transition-colors">{currentNav.about}</a>
           </div>
 
-          {/* የቀኝ አቅጣጫዎች */}
-          <div className="flex items-center gap-2 md:gap-3">
+          {/* Right Icons Container */}
+          <div className="flex items-center gap-2">
             
-            {/* 🛍️ 1. የእኔ ትዕዛዞች (My Orders) ቁልፍ */}
-            <button
-              onClick={handleOpenOrders}
-              className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-zinc-700/60 active:scale-95 shadow-sm"
-              title="My Orders"
-            >
-              <ShoppingBag size={16} className="text-orange-400" />
-              <span className="hidden sm:inline">{currentNav.ordersBtn}</span>
-            </button>
+            {/* 🖥️ በኮምፒውተር (Desktop) ላይ ብቻ የሚታዩ (hidden md:flex) ቁልፎች */}
+            <div className="hidden md:flex items-center gap-2">
+              <button
+                onClick={() => setIsAdminDashOpen(true)}
+                className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-zinc-700/60 active:scale-95 shadow-sm"
+              >
+                <ShoppingBag size={16} className="text-orange-400" />
+                <span>{currentNav.ordersBtn}</span>
+              </button>
 
-            {/* 🍽️ 2. የሜኑ ማስተካከያ ቁልፍ */}
-            <button
-              onClick={handleOpenMenuEditor}
-              className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-zinc-700/60 active:scale-95 shadow-sm"
-              title="Menu Management"
-            >
-              <Utensils size={16} className="text-orange-400" />
-              <span className="hidden sm:inline">{currentNav.menuBtn}</span>
-              <Lock size={12} className="text-zinc-400 ml-0.5" />
-            </button>
+              <button
+                onClick={() => setIsMenuEditorOpen(true)}
+                className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-zinc-700/60 active:scale-95 shadow-sm"
+              >
+                <Utensils size={16} className="text-orange-400" />
+                <span>{currentNav.menuBtn}</span>
+                <Lock size={12} className="text-zinc-400 ml-0.5" />
+              </button>
+            </div>
 
-            {/* Language Selector */}
+            {/* Language Selector (በሁለቱም ስክሪን ላይ የሚቆይ) */}
             <select 
               value={lang} 
               onChange={(e) => setLang(e.target.value)}
-              className="bg-gray-100 border border-gray-200 rounded-xl px-2 py-2 text-xs font-bold text-gray-700 cursor-pointer focus:outline-none focus:border-orange-500 transition-colors"
+              className="bg-gray-100 border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-bold text-gray-700 cursor-pointer focus:outline-none focus:border-orange-500"
             >
               <option value="am">🇪🇹 አማርኛ</option>
-              <option value="om">🇪🇹 Afaan Oromoo</option>
+              <option value="om">🇪🇹 Oromoo</option>
               <option value="en">🇬🇧 English</option>
             </select>
 
@@ -218,19 +194,19 @@ export default function Navbar({
               className="relative cursor-pointer hover:scale-105 active:scale-95 transition-all" 
               onClick={() => cartCount > 0 && onOpenCart()}
             >
-              <div className="p-2.5 bg-gray-100 rounded-2xl hover:bg-orange-50 transition-colors">
-                <ShoppingCart className="text-gray-700" size={20} />
+              <div className="p-2 bg-gray-100 rounded-2xl hover:bg-orange-50 transition-colors">
+                <ShoppingCart className="text-gray-700" size={18} />
               </div>
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
+                <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
                   {cartCount}
                 </span>
               )}
             </div>
 
-            {/* Hamburger Menu Button */}
+            {/* Hamburger Button (በስልክ ላይ ብቻ የሚታይ) */}
             <button 
-              className="md:hidden p-2.5 bg-gray-100 rounded-2xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-all active:scale-90 border border-gray-200/50"
+              className="md:hidden p-2 bg-gray-100 rounded-2xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-all border border-gray-200/50"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -239,35 +215,41 @@ export default function Navbar({
 
         </div>
 
-        {/* Mobile Menu Dropdown */}
+        {/* 📱 Mobile Menu Dropdown (በስልክ ሶስቱ መስመር ሲነካ ብቻ የሚከፈት) */}
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-4 right-4 bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl p-4 mt-2 shadow-xl flex flex-col gap-3 font-bold text-gray-700 text-sm">
             <a href="#home" onClick={handleHomeClick} className="p-2 hover:bg-orange-50 rounded-xl hover:text-orange-600 transition-colors">{currentNav.home}</a>
             <a href="#menu" onClick={handleMenuClick} className="p-2 hover:bg-orange-50 rounded-xl hover:text-orange-600 transition-colors">{currentNav.menu}</a>
             <a href="#footer" onClick={handleAboutClick} className="p-2 hover:bg-orange-50 rounded-xl hover:text-orange-600 transition-colors">{currentNav.about}</a>
             
-            <div className="border-t border-gray-100 pt-2 flex flex-col gap-2">
+            {/* በስልክ ሜኑ ውስጥ አዝራሮቹ የሚታዩበት ክፍል */}
+            <div className="border-t border-gray-100 pt-3 flex flex-col gap-2">
               <button
-                onClick={() => { setIsMobileMenuOpen(false); handleOpenOrders(); }}
-                className="flex items-center gap-2 p-2 bg-zinc-800 text-white rounded-xl text-xs font-bold"
+                onClick={() => { setIsMobileMenuOpen(false); setIsAdminDashOpen(true); }}
+                className="flex items-center justify-between p-3 bg-zinc-900 text-white rounded-xl text-xs font-bold active:scale-98 transition-all"
               >
-                <ShoppingBag size={16} className="text-orange-400" />
-                <span>{currentNav.ordersBtn}</span>
+                <div className="flex items-center gap-2">
+                  <ShoppingBag size={16} className="text-orange-400" />
+                  <span>{currentNav.ordersBtn}</span>
+                </div>
               </button>
+
               <button
-                onClick={() => { setIsMobileMenuOpen(false); handleOpenMenuEditor(); }}
-                className="flex items-center gap-2 p-2 bg-zinc-800 text-white rounded-xl text-xs font-bold"
+                onClick={() => { setIsMobileMenuOpen(false); setIsMenuEditorOpen(true); }}
+                className="flex items-center justify-between p-3 bg-zinc-900 text-white rounded-xl text-xs font-bold active:scale-98 transition-all"
               >
-                <Utensils size={16} className="text-orange-400" />
-                <span>{currentNav.menuBtn}</span>
-                <Lock size={12} className="text-zinc-400 ml-auto" />
+                <div className="flex items-center gap-2">
+                  <Utensils size={16} className="text-orange-400" />
+                  <span>{currentNav.menuBtn}</span>
+                </div>
+                <Lock size={12} className="text-zinc-400" />
               </button>
             </div>
           </div>
         )}
       </nav>
 
-      {/* 📦 Admin Dashboard Component */}
+      {/* Admin Dashboard Modal */}
       {isAdminDashOpen && (
         <AdminDashboard 
           isOpen={isAdminDashOpen} 
@@ -276,7 +258,7 @@ export default function Navbar({
         />
       )}
 
-      {/* 🍔 Standalone Menu Management Modal */}
+      {/* Menu Management Modal */}
       {isMenuEditorOpen && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
           <div className="relative w-full max-w-5xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
