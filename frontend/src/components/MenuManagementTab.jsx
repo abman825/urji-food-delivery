@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Edit3, Save, Upload, Eye, Lock, Utensils } from 'lucide-react';
+import axios from 'axios';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
 
 export default function MenuManagementTab({ 
   menuItems = [], 
@@ -7,14 +10,12 @@ export default function MenuManagementTab({
   socket, 
   lang = 'am' 
 }) {
-  // 🔒 የራሱ ገለልተኛ የይለፍ ቃል ስቴቶች
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
 
-  const MENU_ADMIN_PASSWORD = "123"; // 🔑 የሜኑ ማስተካከያ ፓስወርድ
+  const MENU_ADMIN_PASSWORD = "123";
 
-  // 🍕 የሜኑ ማስተካከያ ስቴቶች
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', price: '', img: '', category: '', variants: [] });
   const [newItem, setNewItem] = useState({ 
@@ -43,7 +44,7 @@ export default function MenuManagementTab({
     addItemBtn: { am: "ምግብ ጨምር", om: "Nyaata Dabali", en: "Add Item" },
     save: { am: "አስቀምጥ", om: "Olka'i", en: "Save" },
     cancel: { am: "ሰርዝ", om: "Dhiisi", en: "Cancel" },
-    confirmDeleteItem: { am: "ይሁኑን ምግብ ማጥፋት እርግጠኛ ነዎት?", om: "Nyaata kana haquuf mirkanaa'aadhaa?", en: "Are you sure you want to delete this item?" },
+    confirmDeleteItem: { am: "ይሁንን ምግብ ማጥፋት እርግጠኛ ነዎት?", om: "Nyaata kana haquuf mirkanaa'aadhaa?", en: "Are you sure you want to delete this item?" },
     fillRequired: { am: "እባክዎን ስም እና ዋጋ (ወይም አማራጮችን) ያስገቡ!", om: "Maaloo maqaa fi gatii (ykn filannoowwan) galchaa!", en: "Please enter name and price (or variants)!" },
     priceNotSet: { am: "ዋጋ አልተወሰነም", om: "Gatiin Hin Murtaa'ine", en: "Price not set" },
     from: { am: "ከ", om: "Kaa'immaa", en: "From" },
@@ -67,14 +68,6 @@ export default function MenuManagementTab({
     if (typeof nameObj === 'object') {
       return nameObj[lang] || nameObj.am || nameObj.en || '';
     }
-    if (typeof nameObj === 'string') {
-      if (lang === 'am' && nameObj.includes('(')) return nameObj.split('(')[0].trim();
-      if (lang === 'om' && nameObj.includes('(')) {
-        const match = nameObj.match(/\(([^)]+)\)/);
-        return match ? match[1].trim() : nameObj;
-      }
-      return nameObj;
-    }
     return String(nameObj);
   };
 
@@ -90,6 +83,19 @@ export default function MenuManagementTab({
         }
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // 🔄 ሁሉንም የተቀየሩ የሜኑ መረጃዎች Database እና Socket ጋር ማገናኛ Function
+  const syncWithDatabase = async (updatedMenuItems) => {
+    setMenuItems(updatedMenuItems);
+    try {
+      await axios.post(`${BACKEND_URL}/api/menu/update`, { items: updatedMenuItems });
+      if (socket) {
+        socket.emit('updateMenu', updatedMenuItems);
+      }
+    } catch (err) {
+      console.error("Failed to sync menu with database:", err);
     }
   };
 
@@ -117,7 +123,8 @@ export default function MenuManagementTab({
     });
   };
 
-  const handleAddItem = (e) => {
+  // 1️⃣ አዲስ ምግብ Database ውስጥ ለመጨመር
+  const handleAddItem = async (e) => {
     e.preventDefault();
     if (!newItem.name || (!newItem.price && newItem.variants.length === 0)) {
       alert(t.fillRequired[lang] || t.fillRequired.am);
@@ -141,12 +148,8 @@ export default function MenuManagementTab({
       isAvailable: true
     };
 
-    setMenuItems(prev => {
-      const updated = [createdItem, ...prev];
-      localStorage.setItem('customMenuItems', JSON.stringify(updated));
-      if (socket) socket.emit('updateMenu', updated);
-      return updated;
-    });
+    const updatedList = [createdItem, ...menuItems];
+    await syncWithDatabase(updatedList);
 
     setNewItem({ name: '', price: '', img: '', category: 'ምግብ', hasVariants: false, variants: [] });
   };
@@ -198,59 +201,52 @@ export default function MenuManagementTab({
     });
   };
 
-  const saveEdit = (id) => {
-    setMenuItems(prev => {
-      const updated = prev.map(item => {
-        if ((item.id || item._id) === id) {
-          const updatedVariants = editForm.variants.map(v => ({
-            ...v,
-            name: typeof v.name === 'object' ? { ...v.name, [lang]: v.nameStr || v.name[lang] } : (v.nameStr || v.name),
-            price: Number(v.price)
-          }));
+  // 2️⃣ የተስተካከለውን ምግብ Database ውስጥ ለማስቀመጥ
+  const saveEdit = async (id) => {
+    const updatedList = menuItems.map(item => {
+      if ((item.id || item._id) === id) {
+        const updatedVariants = editForm.variants.map(v => ({
+          ...v,
+          name: typeof v.name === 'object' ? { ...v.name, [lang]: v.nameStr || v.name[lang] } : (v.nameStr || v.name),
+          price: Number(v.price)
+        }));
 
-          return {
-            ...item,
-            name: typeof item.name === 'object' ? { ...item.name, [lang]: editForm.name } : editForm.name,
-            price: Number(editForm.price),
-            img: editForm.img,
-            category: editForm.category,
-            hasVariants: updatedVariants.length > 0,
-            variants: updatedVariants
-          };
-        }
-        return item;
-      });
-      localStorage.setItem('customMenuItems', JSON.stringify(updated));
-      if (socket) socket.emit('updateMenu', updated);
-      return updated;
+        return {
+          ...item,
+          name: typeof item.name === 'object' ? { ...item.name, [lang]: editForm.name } : editForm.name,
+          price: Number(editForm.price),
+          img: editForm.img,
+          category: editForm.category,
+          hasVariants: updatedVariants.length > 0,
+          variants: updatedVariants
+        };
+      }
+      return item;
     });
+
+    await syncWithDatabase(updatedList);
     setEditingId(null);
   };
 
-  const deleteItem = (id) => {
+  // 3️⃣ ምግብ ለመሰረዝ
+  const deleteItem = async (id) => {
     if (confirm(t.confirmDeleteItem[lang] || t.confirmDeleteItem.am)) {
-      setMenuItems(prev => {
-        const updated = prev.filter(item => (item.id || item._id) !== id);
-        localStorage.setItem('customMenuItems', JSON.stringify(updated));
-        if (socket) socket.emit('updateMenu', updated);
-        return updated;
-      });
+      const updatedList = menuItems.filter(item => (item.id || item._id) !== id);
+      await syncWithDatabase(updatedList);
     }
   };
 
-  const toggleAvailability = (itemId) => {
-    setMenuItems(prev => {
-      const updated = prev.map(item => {
-        if ((item.id || item._id) === itemId) {
-          const currentStatus = item.isAvailable !== false;
-          return { ...item, isAvailable: !currentStatus };
-        }
-        return item;
-      });
-      localStorage.setItem('customMenuItems', JSON.stringify(updated));
-      if (socket) socket.emit('updateMenu', updated);
-      return updated;
+  // 4️⃣ አለ/አልቋል Status ለመቀየር
+  const toggleAvailability = async (itemId) => {
+    const updatedList = menuItems.map(item => {
+      if ((item.id || item._id) === itemId) {
+        const currentStatus = item.isAvailable !== false;
+        return { ...item, isAvailable: !currentStatus };
+      }
+      return item;
     });
+
+    await syncWithDatabase(updatedList);
   };
 
   const renderPriceTag = (item) => {
@@ -265,7 +261,6 @@ export default function MenuManagementTab({
     return item.price ? `${item.price} ETB` : (t.priceNotSet[lang] || t.priceNotSet.am);
   };
 
-  // 🔒 የፓስወርድ መግቢያ ገጽ
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center py-12 bg-zinc-800/30 border border-zinc-800 rounded-3xl p-6 max-w-md mx-auto text-center animate-fadeIn">
@@ -273,7 +268,7 @@ export default function MenuManagementTab({
           <Lock size={32} />
         </div>
         <h3 className="text-lg font-bold text-white mb-2">{t.enterPasswordTitle[lang] || t.enterPasswordTitle.am}</h3>
-        <p className="text-xs text-zinc-400 mb-6">የምግብ እና የፓኬጅ ማስተካከያ ገጽ ለመክፈት የይለፍ ቃል ያስገቡ</p>
+        <p className="text-xs text-zinc-400 mb-6">የምግብ እና የፋክቸር ማስተካከያ ገጽ ለመክፈት የይለፍ ቃል ያስገቡ</p>
 
         <form onSubmit={handlePasswordSubmit} className="w-full space-y-4">
           <div>
@@ -303,11 +298,8 @@ export default function MenuManagementTab({
     );
   }
 
-  // 🍔 የሜኑ ማስተካከያ ዋና ገጽ
   return (
     <div className="space-y-6">
-      
-      {/* Add New Item Form */}
       <form onSubmit={handleAddItem} className="bg-zinc-800/40 border border-zinc-800 rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <Utensils size={16} className="text-orange-500" />
@@ -338,7 +330,6 @@ export default function MenuManagementTab({
           </select>
         </div>
 
-        {/* Variants */}
         <div className="space-y-2 pt-2">
           {newItem.variants.map((v, vIdx) => (
             <div key={v.id || vIdx} className="flex gap-2 items-center">
@@ -391,7 +382,6 @@ export default function MenuManagementTab({
         </div>
       </form>
 
-      {/* Item List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {menuItems.map(item => {
           const id = item.id || item._id;
