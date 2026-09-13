@@ -6,6 +6,7 @@ import connectDB from './src/config/db.js';
 import Order from './src/models/Order.js';
 import { PORT as CONSTANT_PORT } from './src/config/constants.js';
 import apiRoutes from './src/routes/apiRoutes.js';
+import { handleTelegramCallback } from './src/services/telegramService.js';
 
 // 1. Connect to MongoDB
 connectDB();
@@ -18,6 +19,7 @@ const io = new Server(httpServer, {
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
+// Socket.io Instance ማዘጋጀት
 app.set('socketio', io);
 app.use((req, res, next) => {
   req.io = io;
@@ -26,6 +28,23 @@ app.use((req, res, next) => {
 
 app.use(cors());
 app.use(express.json());
+
+// Telegram Webhook Route
+app.post('/api/telegram-webhook', async (req, res) => {
+  try {
+    const update = req.body;
+    const socketIo = req.app.get('socketio');
+
+    if (update && update.callback_query) {
+      await handleTelegramCallback(update.callback_query, socketIo);
+    }
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Telegram Webhook Error:", err);
+    res.sendStatus(500);
+  }
+});
+
 app.use('/api', apiRoutes);
 
 // Socket.io Real-time Connection Logic
@@ -38,26 +57,22 @@ io.on('connection', (socket) => {
     if (receiptId) socket.join(`order_${String(receiptId).trim()}`);
   });
 
-  // አዲስ ትዕዛዝ በ Socket ሲመጣ DB ላይ ማስቀመጥ
   socket.on('placeOrder', async (orderData) => {
     try {
       const newOrder = new Order({ ...orderData, socketId: socket.id });
       await newOrder.save();
 
-      // ለአድሚኖች በ Real-time ማሳወቅ
       io.to('adminRoom').emit('newOrder', newOrder);
     } catch (err) {
       console.error("Error saving order to MongoDB:", err);
     }
   });
 
-  // Status ሲቀየር (Pending -> In Progress -> Completed) DB ላይ Update ማድረግ
   socket.on('updateOrderStatus', async (data) => {
     const { receiptId, status } = data;
     console.log(`🔄 Updating Order ${receiptId} to: ${status}`);
 
     try {
-      // 1. MongoDB ላይ Statusን Update አድርግ
       const updatedOrder = await Order.findOneAndUpdate(
         { receiptId: receiptId },
         { status: status },
@@ -65,9 +80,13 @@ io.on('connection', (socket) => {
       );
 
       const receiptRoom = `order_${String(receiptId).trim()}`;
-      const payload = { receiptId, status, updatedOrder };
+      const payload = { 
+        receiptId, 
+        status, 
+        lang: updatedOrder?.lang || 'am',
+        updatedOrder 
+      };
 
-      // 2. ለተወሰነው ደንበኛ እና ለአድሚን በ Real-time ማሳወቅ
       io.to(receiptRoom).emit('orderStatusUpdated', payload);
       io.emit('orderStatusUpdated', payload);
       io.to('adminRoom').emit('adminOrderStatusChanged', payload);

@@ -7,8 +7,9 @@ import { menuItems as initialMenuItems } from './data/menuData.js';
 export default function App() {
   const [isTrackerOpen, setIsTrackerOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(null);
+  const [lang, setLang] = useState('am'); // lang state እዚህ ጋር ተጨምሯል
 
-  // 1. ገፁ Refresh ሲደረግ Scroll Position ወደ ላይኛው ጫፍ (Top) እንዲመለስ ማድረግ
+  // 1. ገጹ Refresh ሲደረግ Scroll Position ወደ ላይኛው ጫፍ (Top) እንዲመለስ ማድረግ
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
@@ -25,7 +26,7 @@ export default function App() {
   return (
     <CartProvider>
       <div className="relative min-h-screen bg-black text-white">
-        {/* የዋናው ገፅ Home Component (ትዕዛዝ መላኪያውን prop አድርገን እንልካለን) */}
+        {/* የዋናው ገጽ Home Component */}
         <Home onPlaceOrder={handlePlaceOrder} />
 
         {/* Real-time Order Tracker Modal */}
@@ -33,6 +34,8 @@ export default function App() {
           isOpen={isTrackerOpen}
           onClose={() => setIsTrackerOpen(false)}
           currentOrder={activeOrder}
+          setCurrentOrder={setActiveOrder}
+          lang={lang}
         />
       </div>
     </CartProvider>

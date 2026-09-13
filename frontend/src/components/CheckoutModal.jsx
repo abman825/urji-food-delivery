@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { X, Upload, CreditCard, Utensils, CheckSquare, Square, Smartphone, Building2 } from 'lucide-react';
+import { io } from 'socket.io-client';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
+const socket = io(BACKEND_URL);
 
 export default function CheckoutModal({
   isOpen,
@@ -12,7 +16,7 @@ export default function CheckoutModal({
   setSelectedFile,
   totalPrice,
   handleOrder,
-  cartItems,
+  cartItems = [],
   lang = 'am'
 }) {
   const [checkoutType, setCheckoutType] = useState('table'); 
@@ -24,7 +28,7 @@ export default function CheckoutModal({
     am: {
       title: "ትዕዛዝዎን ያጠናቅቁ",
       orderByTable: "በወንበር ቁጥር ለማዘዝ",
-      orderByPayment: "በክፍያ ለማዘዝ",
+      orderByPayment: "ክፍያ በመክፈል ለማዘዝ",
       dineIn: "እዚሁ (Dine-in)",
       takeaway: "ይዞ ለመሄድ (Takeaway)",
       tableNumber: "የወንበር/ጠረጴዛ ቁጥር",
@@ -121,14 +125,13 @@ export default function CheckoutModal({
 
   const handleOrderTypeChange = (type) => {
     setCustomerInfo(prev => ({ ...prev, orderType: type }));
-    // Takeaway ከሆነ ክፍያው ቀጥታ Chapa ይሆናል
     if (type === 'Takeaway') {
       setPaymentMethod('Chapa');
     }
   };
 
   const onSubmitClick = () => {
-    // 1. በወንበር ቁጥር ለማዘዝ ወይም Dine-in ሲሆን
+    // Validation
     if (checkoutType === 'table' || (checkoutType === 'online' && customerInfo.orderType === 'Dine-in')) {
       if (!customerInfo.tableNo || !customerInfo.tableNo.trim()) {
         alert(lang === 'am' ? 'እባክዎን የወንበር ቁጥር ያስገቡ!' : 'Please enter table number!');
@@ -136,7 +139,6 @@ export default function CheckoutModal({
       }
     }
 
-    // 2. በ Takeaway ሲሆን (Chapa ብቻ ነው የሚሆነው)
     if (checkoutType === 'online' && customerInfo.orderType === 'Takeaway') {
       if (!customerInfo.name || !customerInfo.name.trim()) {
         alert(lang === 'am' ? 'እባክዎን ሙሉ ስምዎን ያስገቡ!' : 'Please enter your name!');
@@ -147,7 +149,7 @@ export default function CheckoutModal({
         return;
       }
       if (!customerInfo.time) {
-        alert(lang === 'am' ? 'እባክዎን የመቀበያ ሰዓት ይምረጡ!' : 'Please select pickup time!');
+        alert(lang === 'am' ? 'እባክዎን የተቀበያ ሰዓት ይምረጡ!' : 'Please select pickup time!');
         return;
       }
       if (!isSelfPickUp && (!customerInfo.address || !customerInfo.address.trim())) {
@@ -156,7 +158,34 @@ export default function CheckoutModal({
       }
     }
 
-    handleOrder();
+    // ------------------ ወሳኙ ክፍል ------------------
+    const generatedReceiptId = `REC-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const newOrderObj = {
+      receiptId: generatedReceiptId,
+      items: cartItems,
+      totalPrice: totalPrice,
+      status: 'Pending',
+      tableNo: customerInfo.tableNo || null,
+      customerInfo: customerInfo,
+      lang: lang,
+      createdAt: new Date().toISOString()
+    };
+
+    // 🟢 1. ደንበኛውን በ Socket.io ከዚህ Receipt ID Room ጋር ማቀላቀል
+    if (socket) {
+      socket.emit('joinOrderRoom', generatedReceiptId);
+    }
+
+    // 2. ለ Order Tracker Modal / myorder.jsx
+    localStorage.setItem('myCurrentOrder', JSON.stringify(newOrderObj));
+
+    // 3. ለ My Orders ታሪክ
+    const existingOrders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+    localStorage.setItem('myOrders', JSON.stringify([newOrderObj, ...existingOrders]));
+
+    // 4. ዋናውን Order Handler መጥራት (ከነ receiptId ጋር)
+    handleOrder(generatedReceiptId);
   };
 
   return (
@@ -175,7 +204,7 @@ export default function CheckoutModal({
           {t.title}
         </h2>
 
-        {/* 1. Main Order Type Selection */}
+        {/* Main Order Type Selection */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           <button
             type="button"
@@ -204,7 +233,7 @@ export default function CheckoutModal({
           </button>
         </div>
 
-        {/* ----------------- ሀ) በወንበር ቁጥር ለማዘዝ (Dine-In) ----------------- */}
+        {/* ሀ) በወንበር ቁጥር ለማዘዝ (Dine-In) */}
         {checkoutType === 'table' && (
           <div className="space-y-4">
             <div className="bg-zinc-800/70 border border-zinc-700/60 rounded-2xl p-3.5 space-y-2">
@@ -254,7 +283,6 @@ export default function CheckoutModal({
               />
             </div>
 
-            {/* በወንበር ቁጥር ሲሆን የስክሪንሾት ማያያዣ (Optional) */}
             <div>
               <label className="block text-xs font-bold mb-1 text-zinc-300">
                 {t.uploadReceipt} <span className="text-zinc-500 font-normal text-[11px] ml-1">{t.optionalTag}</span>
@@ -276,7 +304,7 @@ export default function CheckoutModal({
           </div>
         )}
 
-        {/* ----------------- ለ) በክፍያ ለማዘዝ (Dine-in / Takeaway) ----------------- */}
+        {/* ለ) በክፍያ ለማዘዝ (Dine-in / Takeaway) */}
         {checkoutType === 'online' && (
           <div className="space-y-4">
             <div className="flex gap-2 p-1 bg-zinc-800 rounded-xl">
@@ -304,7 +332,6 @@ export default function CheckoutModal({
               </button>
             </div>
 
-            {/* Takeaway ሲሆን Chapa ብቻ እንደሆነ ለማሳወቅ የሚወጣ ባጅ */}
             {customerInfo.orderType === 'Takeaway' && (
               <div>
                 <label className="block text-xs font-bold mb-1.5 text-zinc-300">
@@ -317,7 +344,6 @@ export default function CheckoutModal({
               </div>
             )}
 
-            {/* Dine-in መስኮች */}
             {customerInfo.orderType === 'Dine-in' && (
               <>
                 <div>
@@ -348,7 +374,6 @@ export default function CheckoutModal({
               </>
             )}
 
-            {/* Takeaway መስኮች */}
             {customerInfo.orderType === 'Takeaway' && (
               <>
                 <div>

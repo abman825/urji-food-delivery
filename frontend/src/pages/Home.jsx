@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Search, X, Clock, Clock3, Receipt } from 'lucide-react';
+import { ShoppingBag, Search, X, Clock3 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CheckoutModal from '../components/CheckoutModal';
 import MenuItemCard from '../components/MenuItemCard';
 import HeroSection from '../components/HeroSection';
+import OrderTrackerModal from '../components/OrderTrackerModal';
 import { menuItems as localMenuItems } from '../data/menuData';
 import { fetchMenuItems, initiateChapaPay, submitOrderFormData, verifyChapaPayment } from '../services/api';
 import { translations } from '../data/translations';
 import { useVideoScroll } from '../hooks/useVideoScroll';
 import { useCart } from '../context/CartContext';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const socket = io(BACKEND_URL);
 
 export default function Home() {
@@ -53,10 +54,9 @@ export default function Home() {
     : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
   // -------------------------------------------------------------
-  // 🔄 REAL-TIME MENU SYNC (Socket.io + LocalStorage Event Listener)
+  // REAL-TIME MENU SYNC
   // -------------------------------------------------------------
   useEffect(() => {
-    // 1. Socket Listener for Real-time Menu Update
     socket.on('updateMenu', (updatedMenu) => {
       if (Array.isArray(updatedMenu)) {
         setMenuItems(updatedMenu);
@@ -74,7 +74,6 @@ export default function Home() {
       });
     });
 
-    // 2. Storage / Custom Event Listener
     const handleSync = () => {
       const saved = localStorage.getItem('customMenuItems');
       if (saved) {
@@ -234,9 +233,6 @@ export default function Home() {
     });
   };
 
-  // -------------------------------------------------------------
-  // 🚫 IN-STOCK CHECKER FOR ADD TO CART
-  // -------------------------------------------------------------
   const handleAddToCartChecked = (item, selectedVariant = null) => {
     if (item.isAvailable === false) {
       alert(
@@ -525,6 +521,16 @@ export default function Home() {
         />
       )}
 
+      {/* ✅ Clean Order Tracker Modal Component Call */}
+      <OrderTrackerModal
+        isOpen={isOrderTrackerOpen}
+        onClose={() => setIsOrderTrackerOpen(false)}
+        currentOrder={myActiveOrder}
+        setCurrentOrder={setMyActiveOrder}
+        lang={lang}
+      />
+
+      {/* Floating Status Button */}
       {myActiveOrder && (
         <div className="fixed bottom-6 left-6 z-[9998]">
           <button 
@@ -543,71 +549,6 @@ export default function Home() {
               </p>
             </div>
           </button>
-        </div>
-      )}
-
-      {isOrderTrackerOpen && myActiveOrder && (
-        <div className="fixed inset-0 z-[10001] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 text-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
-            <button 
-              onClick={() => setIsOrderTrackerOpen(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-white p-2 rounded-full hover:bg-zinc-800 transition-all cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-6">
-              <div className="bg-orange-600/20 p-3 rounded-2xl text-orange-500">
-                <Receipt className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black">{lang === 'om' ? "Hordoffii Ajajaa" : lang === 'en' ? "Order Tracker" : "የትዕዛዝዎ መቆጣጠሪያ"}</h3>
-                <p className="text-xs text-zinc-400">ID: {myActiveOrder.receiptId}</p>
-              </div>
-            </div>
-
-            <div className="bg-zinc-800/50 rounded-2xl p-4 border border-zinc-700/50 mb-6">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-xs text-zinc-400">{lang === 'om' ? "Haala:" : lang === 'en' ? "Status:" : "ሁኔታው፦"}</span>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border ${
-                  myActiveOrder.status === 'Completed' || myActiveOrder.status === 'ተጠናቋል' 
-                    ? 'bg-green-500/20 text-green-400 border-green-500/30' 
-                    : myActiveOrder.status === 'In Progress' || myActiveOrder.status === 'በመሥራት ላይ'
-                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                    : 'bg-orange-500/20 text-orange-400 border-orange-500/30'
-                }`}>
-                  <Clock className="w-3.5 h-3.5 animate-pulse" /> {myActiveOrder.status || 'Pending'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-xs text-zinc-300 mb-2">
-                <span>{lang === 'om' ? "Gosa Ajaja:" : lang === 'en' ? "Order Type:" : "የትዕዛዝ ዓይነት፦"}</span>
-                <span className="font-bold text-white">{myActiveOrder.orderType}</span>
-              </div>
-              {myActiveOrder.tableNo && (
-                <div className="flex justify-between items-center text-xs text-zinc-300">
-                  <span>{lang === 'om' ? "Lak. Barcumaa:" : lang === 'en' ? "Table No:" : "የወንበር ቁጥር፦"}</span>
-                  <span className="font-bold text-orange-400">{myActiveOrder.tableNo}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="max-h-40 overflow-y-auto mb-6 pr-1 space-y-2">
-              <p className="text-xs font-bold text-zinc-400 mb-2">{lang === 'om' ? "Tarree Nyaataa:" : lang === 'en' ? "Items:" : "የታዘዙ ምግቦች፦"}</p>
-              {myActiveOrder.items?.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center bg-zinc-800/30 p-2.5 rounded-xl text-xs">
-                  <span className="text-zinc-200 font-medium">
-                    {typeof item.name === 'object' ? item.name[lang] || item.name.am : item.name} x{item.quantity || item.qty || 1}
-                  </span>
-                  <span className="font-bold text-white">{(item.price * (item.quantity || item.qty || 1))} ETB</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t border-zinc-800 pt-4 flex justify-between items-center">
-              <span className="text-sm font-bold text-zinc-400">{lang === 'om' ? "Ida'ama:" : lang === 'en' ? "Total:" : "ጠቅላላ ዋጋ፦"}</span>
-              <span className="text-xl font-black text-orange-500">{myActiveOrder.totalPrice} ETB</span>
-            </div>
-          </div>
         </div>
       )}
 

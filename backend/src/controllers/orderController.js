@@ -3,7 +3,7 @@ import axios from 'axios';
 import fs from 'fs';
 import { CHAPA_SECRET_KEY } from '../config/constants.js';
 
-// የምግቦች ዝርዝር ቅርፅ ማስተካከያ
+// የትዕዛዝ ዝርዝር ማስተካከያ
 const formatOrderItems = (items) => {
   if (!items) return '• ምንም የተመረጠ ምግብ የለም';
   
@@ -50,7 +50,7 @@ export const handleChapaSuccess = async (req, res) => {
     if (pendingOrder?.time) details += `<b>⏰ ሰዓት:</b> ${pendingOrder.time}\n`;
 
     const message = `
-<b>✅ የ Chapa ክፍያ ተፈፅሟል!</b>
+<b>✅ የ Chapa ክፍያ ተፈጽሟል!</b>
 
 <b>🆔 ደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
 <b>💳 Tx Ref:</b> <code>${trx_id || 'ያልታወቀ'}</code>
@@ -60,7 +60,7 @@ ${details}<b>📦 አይነት:</b> ${currentOrderType}
 <b>🛒 የታዘዙ የምግብ አይነቶች:</b>
 ${formattedItems}
 
-<b>💰 የተከፈለው ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
+<b>💰 የተከፈለዉ ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
 `;
 
     try {
@@ -95,8 +95,7 @@ export const initiateChapaPayment = async (req, res) => {
     }
 
     const tx_ref = `tx-${Date.now()}`;
-    // መስመር 98 አካባቢ የሚገኘውን ይሄንን፦
-const clientHost = req.headers.origin || 'https://urji-food-delivery.vercel.app';
+    const clientHost = req.headers.origin || 'https://urji-food-delivery.vercel.app';
     const finalReturnUrl = returnUrl || `${clientHost}/?trx_id=${tx_ref}&status=success`;
 
     const chapaPayload = {
@@ -146,10 +145,8 @@ export const submitOrderFormData = async (req, res) => {
     const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod } = req.body;
     const file = req.file;
 
-    // 1. Order Type ማረጋገጫ
     const currentOrderType = orderType || 'Dine-In';
 
-    // 2. Dine-In ከሆነ ብቻ ነው የወንበር ቁጥር መኖሩን ቼክ የሚያደርገው
     if (currentOrderType === 'Dine-In' && (!tableNo || !tableNo.trim())) {
       return res.status(400).json({ 
         success: false, 
@@ -157,10 +154,7 @@ export const submitOrderFormData = async (req, res) => {
       });
     }
 
-    // 3. Takeaway ከሆነ የወንበር ቁጥር 'Takeaway' ይሆናል
     const displayTableNo = currentOrderType === 'Takeaway' ? 'Takeaway' : (tableNo || '-');
-
-    const formattedItems = formatOrderItems(items);
     const orderId = `REC-${Date.now().toString().slice(-6)}`;
     
     let payMethodText = 'በካሽ (Cash on Delivery)';
@@ -179,6 +173,8 @@ export const submitOrderFormData = async (req, res) => {
     if (address) details += `<b>📍 አድራሻ:</b> ${address}\n`;
     if (time) details += `<b>⏰ ሰዓት:</b> ${time}\n`;
 
+    const formattedItems = formatOrderItems(items);
+
     const caption = `
 <b>🛒 አዲስ ትዕዛዝ ደርሷል!</b>
 
@@ -195,7 +191,6 @@ ${formattedItems}
 
     let screenshotBase64 = null;
 
-    // Telegram መልእክት እና ምስል መላኪያ
     if (file) {
       const fileBuffer = file.buffer || (file.path ? fs.readFileSync(file.path) : null);
 
@@ -227,9 +222,10 @@ ${formattedItems}
       }
     }
 
-    // 4. ወደ Admin Dashboard በ Socket.io የሚላክ Realtime መረጃ
+    // 4. ወደ Frontend እና Admin Dashboard በ Socket.io መላክ (receiptId እዚህ ተጨምሯል)
     const orderData = {
       id: orderId,
+      receiptId: orderId, // 👉 ለ Frontend እንዲደርስ የተጨመረ
       name: name || 'እንግዳ',
       phone: phone || '-',
       tableNo: displayTableNo,
@@ -247,6 +243,7 @@ ${formattedItems}
 
     return res.status(200).json({ 
       success: true, 
+      receiptId: orderId,
       orderId, 
       order: orderData,
       message: 'ትዕዛዝዎ በተሳካ ሁኔታ ተልኳል!' 
@@ -282,5 +279,4 @@ export const toggleAvailability = async (req, res) => {
   }
 };
 
-// 5. Alias Export
 export const createScreenshotOrder = submitOrderFormData;

@@ -3,21 +3,18 @@ import React, { createContext, useContext, useState } from 'react';
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState([]); // የምግቦች ዝርዝር (Array of Objects)
+  const [cartItems, setCartItems] = useState([]);
 
   // 1. ምግብ ወደ ካርቶን መጨመሪያ
   const addToCart = (name, price) => {
     setCartItems(prevItems => {
-      // እቃው አስቀድሞ በካርቶኑ ውስጥ እንዳለ እንፈትሻለን
       const existingItem = prevItems.find(item => item.name === name);
 
       if (existingItem) {
-        // ካለ ብዛቱን (quantity) ብቻ +1 እንጨምራለን
         return prevItems.map(item =>
           item.name === name ? { ...item, quantity: item.quantity + 1 } : item
         );
       } else {
-        // ከሌለ አዲስ ምግብ አድርገን በ ብዛት 1 እንጨምረዋለን
         return [...prevItems, { name, price, quantity: 1 }];
       }
     });
@@ -31,10 +28,8 @@ export function CartProvider({ children }) {
       if (!existingItem) return prevItems;
 
       if (existingItem.quantity === 1) {
-        // ብዛቱ 1 ከሆነ ሙሉ በሙሉ ከዝርዝሩ እናስወግደዋለን
         return prevItems.filter(item => item.name !== name);
       } else {
-        // ብዛቱ ከ 1 በላይ ከሆነ -1 እንቀንሳለን
         return prevItems.map(item =>
           item.name === name ? { ...item, quantity: item.quantity - 1 } : item
         );
@@ -45,14 +40,27 @@ export function CartProvider({ children }) {
   // 3. ካርቶኑን ባዶ ማድረጊያ
   const clearCart = () => setCartItems([]);
 
-  // 4. አጠቃላይ የላከውን የምግብ ብዛት ማሰቢያ (Total Items)
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  // 4. አዲሱን Receipt ID መዝጋቢ እና በ LocalStorage ውስጥ ማስቀመጫ
+  const saveActiveReceiptId = (receiptId) => {
+    if (receiptId) {
+      localStorage.setItem('activeReceiptId', String(receiptId).trim());
+    }
+  };
 
-  // 5. አጠቃላይ ዋጋ ማሰቢያ (Total Price)
+  // 5. አጠቃላይ የላከውን የምግብ ብዛት እና ዋጋ ማሰቢያ
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   return (
-    <CartContext.Provider value={{ cartItems, cartCount, totalPrice, addToCart, removeFromCart, clearCart }}>
+    <CartContext.Provider value={{ 
+      cartItems, 
+      cartCount, 
+      totalPrice, 
+      addToCart, 
+      removeFromCart, 
+      clearCart,
+      saveActiveReceiptId 
+    }}>
       {children}
     </CartContext.Provider>
   );

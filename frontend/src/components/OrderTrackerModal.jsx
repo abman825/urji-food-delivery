@@ -11,21 +11,21 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
   const receiptId = currentOrder.receiptId || currentOrder.id || currentOrder._id;
   const status = currentOrder.status || 'Pending';
 
-  // 🌐 Dynamic Translation Dictionary (አማርኛ፣ Afaan Oromoo, English)
+  
+  // Dynamic Translation Dictionary
   const t = {
-    title: { am: "የትእዛዝዎ መቆጣጠሪያ", om: "To'annoo Ajaja Keessanii", en: "Order Tracker" },
+    title: { am: "የትዕዛዝዎ መቆጣጠሪያ", om: "To'annoo Ajaja Keessanii", en: "Order Tracker" },
     statusLabel: { am: "ሁኔታው", om: "Haala Ajajaa", en: "Status" },
-    pending: { am: "በጠባቅ ላይ", om: "Eegaa Jira", en: "Pending" },
-    inProgress: { am: "በዝግጅት ላይ", om: "Qophaa'aa Jira", en: "In Progress" },
-    completed: { am: "ተጠናቋል", om: "Xumurameera", en: "Completed" },
-    orderType: { am: "የትእዛዝ አይነት", om: "Gosa Ajajaa", en: "Order Type" },
+    pending: { am: "በትዕዛዝ ላይ...", om: "Eegaa Jira", en: "Pending" },
+    inProgress: { am: "በመሰራት ላይ", om: "Qophaa'aa Jira", en: "In Progress" },
+    completed: { am: "ተጠናቋል (ምግቡ ደርሷል)", om: "Xumurameera", en: "Completed" },
+    orderType: { am: "የትዕዛዝ አይነት", om: "Gosa Ajajaa", en: "Order Type" },
     tableNo: { am: "የወንበር ቁጥር", om: "Lakk. Teessoo", en: "Table No." },
     orderedItems: { am: "የታዘዙ ምግቦች", om: "Nyaatawwan Ajajaman", en: "Ordered Items" },
     totalPrice: { am: "ጠቅላላ ዋጋ", om: "Gatiiyyaa Walii Galaa", en: "Total Price" },
     dineIn: { am: "በቦታው ለመመገብ", om: "Bakka Kanatti", en: "Dine-in" }
   };
 
-  // 🔍 የምግብ ወይም የ variant ስም በቋንቋው መሰረት ለይቶ የማውጫ Helper Function
   const getTranslatedItemName = (nameObj) => {
     if (!nameObj) return '';
 
@@ -47,31 +47,40 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
     return String(nameObj);
   };
 
-  // 📡 Real-Time Socket Listener
+  // Real-Time Socket Listener
   useEffect(() => {
     const handleStatusUpdate = (data) => {
-      if (data && data.receiptId === receiptId) {
-        if (data.status === 'Completed') {
-          localStorage.removeItem('myCurrentOrder');
-          localStorage.removeItem('activeOrderReceipt');
-          setCurrentOrder(null);
-          if (onClose) onClose();
-        } else {
-          setCurrentOrder(prevOrder => ({
-            ...prevOrder,
-            status: data.status
-          }));
+      console.log("Received Socket Event:", data);
 
-          try {
-            const savedOrder = localStorage.getItem('myCurrentOrder');
-            if (savedOrder) {
-              const parsed = JSON.parse(savedOrder);
-              parsed.status = data.status;
-              localStorage.setItem('myCurrentOrder', JSON.stringify(parsed));
-            }
-          } catch (e) {
-            console.error("LocalStorage Update Error:", e);
+      if (data && (data.receiptId === receiptId || data.orderId === receiptId)) {
+        const updatedStatus = data.status || 'In Progress';
+
+        // 1. Update React State Realtime
+        setCurrentOrder(prevOrder => ({
+          ...prevOrder,
+          status: updatedStatus
+        }));
+
+        // 2. Update LocalStorage
+        try {
+          const savedOrder = localStorage.getItem('myCurrentOrder');
+          if (savedOrder) {
+            const parsed = JSON.parse(savedOrder);
+            parsed.status = updatedStatus;
+            localStorage.setItem('myCurrentOrder', JSON.stringify(parsed));
           }
+        } catch (e) {
+          console.error("LocalStorage Update Error:", e);
+        }
+
+        // 3. 'Completed' ወይም 'Finished' ከሆነ ከ 3 ሰከንድ በኋላ Modal መዘጋት
+        if (updatedStatus === 'Completed' || updatedStatus === 'Finished') {
+          setTimeout(() => {
+            localStorage.removeItem('myCurrentOrder');
+            localStorage.removeItem('activeOrderReceipt');
+            setCurrentOrder(null);
+            if (onClose) onClose();
+          }, 3000);
         }
       }
     };
@@ -108,22 +117,25 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
 
         {/* Status Display Badge */}
         <div className="bg-zinc-800/50 border border-zinc-800 rounded-2xl p-4 mb-5 space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-zinc-400">{t.statusLabel[lang] || t.statusLabel.am}</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-xs text-zinc-400 shrink-0">{t.statusLabel[lang] || t.statusLabel.am}</span>
             
+            {/* Pending */}
             {status === 'Pending' && (
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">
                 <Clock size={14} /> {t.pending[lang] || t.pending.am}
               </span>
             )}
 
-            {status === 'In Progress' && (
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+            {/* In Progress / Accepted */}
+            {(status === 'In Progress' || status === 'In-Progress' || status === 'Accepted') && (
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse">
                 <ChefHat size={14} className="animate-bounce" /> {t.inProgress[lang] || t.inProgress.am}
               </span>
             )}
 
-            {status === 'Completed' && (
+            {/* Completed */}
+            {(status === 'Completed' || status === 'Finished') && (
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30">
                 <CheckCircle size={14} /> {t.completed[lang] || t.completed.am}
               </span>
