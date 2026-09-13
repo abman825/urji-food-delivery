@@ -14,7 +14,9 @@ import { useVideoScroll } from '../hooks/useVideoScroll';
 import { useCart } from '../context/CartContext';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-const socket = io(BACKEND_URL);
+const socket = io(BACKEND_URL, {
+  transports: ['websocket', 'polling']
+});
 
 export default function Home() {
   const [lang, setLang] = useState('am');
@@ -54,9 +56,10 @@ export default function Home() {
     : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
   // -------------------------------------------------------------
-  // REAL-TIME MENU SYNC
+  // REAL-TIME MENU & SOCKET SYNC
   // -------------------------------------------------------------
   useEffect(() => {
+    // 1. ከ Admin በኩል አዲስ ሜኑ ሲላክ በቅጽበት መቀበያ
     socket.on('updateMenu', (updatedMenu) => {
       if (Array.isArray(updatedMenu)) {
         setMenuItems(updatedMenu);
@@ -64,6 +67,7 @@ export default function Home() {
       }
     });
 
+    // 2. አንድ እቃ ብቻ Status (ለዛሬ አለ/አልቋል) ሲቀየር መቀበያ
     socket.on('menuItemUpdated', (updatedItem) => {
       setMenuItems((prevItems) => {
         const updated = prevItems.map((item) => 
@@ -134,36 +138,31 @@ export default function Home() {
     };
   }, [myActiveOrder]);
 
+  // የሜኑ መረጃዎችን መጀመሪያ መጫኛ
   useEffect(() => {
-    const savedItems = localStorage.getItem('customMenuItems');
-
-    if (savedItems) {
-      try {
-        const parsed = JSON.parse(savedItems);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMenuItems(parsed);
-          setLoading(false);
-          return;
-        }
-      } catch (e) {
-        console.error("Failed to parse local menu items:", e);
-      }
-    }
-
-    setMenuItems(localMenuItems || []);
-    setLoading(false);
-
     fetchMenuItems()
       .then(data => {
-        if (data?.length) {
-          setMenuItems(prev => {
-            const merged = [...localMenuItems, ...data];
-            localStorage.setItem('customMenuItems', JSON.stringify(merged));
-            return merged;
-          });
+        if (data && Array.isArray(data) && data.length > 0) {
+          setMenuItems(data);
+          localStorage.setItem('customMenuItems', JSON.stringify(data));
+        } else {
+          const savedItems = localStorage.getItem('customMenuItems');
+          if (savedItems) {
+            setMenuItems(JSON.parse(savedItems));
+          } else {
+            setMenuItems(localMenuItems || []);
+          }
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        const savedItems = localStorage.getItem('customMenuItems');
+        if (savedItems) {
+          setMenuItems(JSON.parse(savedItems));
+        } else {
+          setMenuItems(localMenuItems || []);
+        }
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -203,9 +202,6 @@ export default function Home() {
 
             setMyActiveOrder(newOrderObj);
             localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
-
-            const existingOrders = JSON.parse(localStorage.getItem('adminOrders') || '[]');
-            localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
 
             const alertMsg = lang === 'om' 
               ? `🧾 Nagahee Kaffaltii\n------------------------------\n🆔 Lakkoofsa Nagahee: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Kaffaltiin Chapa'n Milkaa'era!`
@@ -355,9 +351,6 @@ export default function Home() {
         setMyActiveOrder(newOrderObj);
         localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-        const existingOrders = JSON.parse(localStorage.getItem('adminOrders') || '[]');
-        localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
-
         const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተልኳል! ደረሰኝ ቁጥር:";
         alert(`✅ ${successText} ${receiptId}`);
         setIsModalOpen(false); 
@@ -419,7 +412,8 @@ export default function Home() {
             const updated = typeof newItems === 'function' ? newItems(menuItems) : newItems;
             setMenuItems(updated);
             localStorage.setItem('customMenuItems', JSON.stringify(updated));
-            window.dispatchEvent(new Event('menuUpdated'));
+            // Admin ሜኑ ሲቀይር በ Socket ለሌሎች እንዲደርስ emit እናደርጋለን
+            socket.emit('updateMenu', updated);
           }}
         />
 
@@ -521,7 +515,6 @@ export default function Home() {
         />
       )}
 
-      {/* ✅ Clean Order Tracker Modal Component Call */}
       <OrderTrackerModal
         isOpen={isOrderTrackerOpen}
         onClose={() => setIsOrderTrackerOpen(false)}
@@ -530,7 +523,6 @@ export default function Home() {
         lang={lang}
       />
 
-      {/* Floating Status Button */}
       {myActiveOrder && (
         <div className="fixed bottom-6 left-6 z-[9998]">
           <button 

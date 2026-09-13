@@ -1,11 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Minus, CheckCircle2, RotateCw } from 'lucide-react';
 import { getImageUrl } from '../data/menuData';
 import { useCart } from '../context/CartContext';
+import { io } from 'socket.io-client';
 
-export default function MenuItemCard({ item, lang = 'am', t }) {
+// Socket Server address (እንደ Backend URL ህ አስተካክለው)
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'https://urji-food-delivery.vercel.app';
+const socket = io(SOCKET_URL, { autoConnect: true });
+
+export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
+  const [item, setItem] = useState(initialItem);
   const [isFlipped, setIsFlipped] = useState(false);
   const { cartItems = [], addToCart, removeFromCart } = useCart();
+
+  // 🔄 Real-time Update: ከ Admin በ Socket.io የሜኑ መረጃ ሲቀየር ስልክ ላይ በቅጽበት ይ ቀየራል
+  useEffect(() => {
+    setItem(initialItem);
+  }, [initialItem]);
+
+  useEffect(() => {
+    const handleMenuUpdate = (updatedItem) => {
+      if (updatedItem.id === item.id || updatedItem._id === item._id) {
+        setItem((prev) => ({ ...prev, isAvailable: updatedItem.isAvailable }));
+      }
+    };
+
+    socket.on('menuItemUpdated', handleMenuUpdate);
+
+    return () => {
+      socket.off('menuItemUpdated', handleMenuUpdate);
+    };
+  }, [item.id, item._id]);
 
   // እቃው መኖሩን ወይም ማለቁን ማረጋገጫ (isAvailable === false ከሆነ አልቋል)
   const isAvailable = item?.isAvailable !== false;

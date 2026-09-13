@@ -23,7 +23,7 @@ router.get('/menu', async (req, res) => {
   }
 });
 
-// 2. ሜኑ ሲቀየር/ሲጨመር Database እና Socket ማደሻ
+// 2. ሜኑ ሲቀየር/ሲጨመር Database እና Socket ማደሻ (Real-time Broadcast)
 router.post('/menu/update', async (req, res) => {
   try {
     const { items } = req.body;
@@ -33,7 +33,8 @@ router.post('/menu/update', async (req, res) => {
 
     const socketIo = req.app.get('socketio');
     if (socketIo) {
-      socketIo.emit('menuUpdated', updatedItems);
+      // Home.jsx ላይ 'updateMenu' ተብሎ የተከፈተውን socket ለማሳወቅ
+      socketIo.emit('updateMenu', updatedItems);
     }
 
     res.json(updatedItems);

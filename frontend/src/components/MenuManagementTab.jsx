@@ -35,7 +35,7 @@ export default function MenuManagementTab({
     passwordPlaceholder: { am: "የይለፍ ቃል...", om: "Jecha darbi...", en: "Password..." },
     submitPassword: { am: "ግባ", om: "Seeni", en: "Submit" },
     wrongPassword: { am: "የተሳሳተ የይለፍ ቃል ነው!", om: "Jechi darbi dogoggora!", en: "Incorrect Password!" },
-    addTitle: { am: "አዲስ የምግብ አይነት ጨምር", om: "Gosa Nyaataa Haarawa Dabali", en: "Add New Item" },
+    addTitle: { am: "አዲስ የምግብ ዓይነት ጨምር", om: "Gosa Nyaataa Haarawa Dabali", en: "Add New Item" },
     itemName: { am: "የምግብ ስም", om: "Maqaa Nyaataa", en: "Item Name" },
     itemPrice: { am: "ዋጋ (ETB)", om: "Gatii (ETB)", en: "Price (ETB)" },
     category: { am: "ምድብ", om: "Kutaa", en: "Category" },
@@ -44,7 +44,7 @@ export default function MenuManagementTab({
     addItemBtn: { am: "ምግብ ጨምር", om: "Nyaata Dabali", en: "Add Item" },
     save: { am: "አስቀምጥ", om: "Olka'i", en: "Save" },
     cancel: { am: "ሰርዝ", om: "Dhiisi", en: "Cancel" },
-    confirmDeleteItem: { am: "ይሁንን ምግብ ማጥፋት እርግጠኛ ነዎት?", om: "Nyaata kana haquuf mirkanaa'aadhaa?", en: "Are you sure you want to delete this item?" },
+    confirmDeleteItem: { am: "ይህንንም ምግብ ማጥፋት እርግጠኛ ነዎት?", om: "Nyaata kana haquuf mirkanaa'aadhaa?", en: "Are you sure you want to delete this item?" },
     fillRequired: { am: "እባክዎን ስም እና ዋጋ (ወይም አማራጮችን) ያስገቡ!", om: "Maaloo maqaa fi gatii (ykn filannoowwan) galchaa!", en: "Please enter name and price (or variants)!" },
     priceNotSet: { am: "ዋጋ አልተወሰነም", om: "Gatiin Hin Murtaa'ine", en: "Price not set" },
     from: { am: "ከ", om: "Kaa'immaa", en: "From" },
@@ -86,7 +86,7 @@ export default function MenuManagementTab({
     }
   };
 
-  // 🔄 ሁሉንም የተቀየሩ የሜኑ መረጃዎች Database እና Socket ጋር ማገናኛ Function
+  // ሁሉንም የተቀየሩ የሜኑ መረጃዎች Database እና Socket ጋር ማገናኛ Function
   const syncWithDatabase = async (updatedMenuItems) => {
     setMenuItems(updatedMenuItems);
     try {
@@ -123,7 +123,7 @@ export default function MenuManagementTab({
     });
   };
 
-  // 1️⃣ አዲስ ምግብ Database ውስጥ ለመጨመር
+  // 1. አዲስ ምግብ Database ውስጥ ለመጨመር
   const handleAddItem = async (e) => {
     e.preventDefault();
     if (!newItem.name || (!newItem.price && newItem.variants.length === 0)) {
@@ -201,7 +201,7 @@ export default function MenuManagementTab({
     });
   };
 
-  // 2️⃣ የተስተካከለውን ምግብ Database ውስጥ ለማስቀመጥ
+  // 2. የተስተካከለውን ምግብ Database ውስጥ ለማስቀመጥ
   const saveEdit = async (id) => {
     const updatedList = menuItems.map(item => {
       if ((item.id || item._id) === id) {
@@ -228,7 +228,7 @@ export default function MenuManagementTab({
     setEditingId(null);
   };
 
-  // 3️⃣ ምግብ ለመሰረዝ
+  // 3. ምግብ ለመሰረዝ
   const deleteItem = async (id) => {
     if (confirm(t.confirmDeleteItem[lang] || t.confirmDeleteItem.am)) {
       const updatedList = menuItems.filter(item => (item.id || item._id) !== id);
@@ -236,7 +236,7 @@ export default function MenuManagementTab({
     }
   };
 
-  // 4️⃣ አለ/አልቋል Status ለመቀየር
+  // 4. አለ/አልቋል Status ለመቀየር
   const toggleAvailability = async (itemId) => {
     const updatedList = menuItems.map(item => {
       if ((item.id || item._id) === itemId) {
@@ -268,7 +268,7 @@ export default function MenuManagementTab({
           <Lock size={32} />
         </div>
         <h3 className="text-lg font-bold text-white mb-2">{t.enterPasswordTitle[lang] || t.enterPasswordTitle.am}</h3>
-        <p className="text-xs text-zinc-400 mb-6">የምግብ እና የፋክቸር ማስተካከያ ገጽ ለመክፈት የይለፍ ቃል ያስገቡ</p>
+        <p className="text-xs text-zinc-400 mb-6">የምግብ እና የፋክቸር ማስተካከያ ገፅ ለመክፈት የይለፍ ቃል ያስገቡ</p>
 
         <form onSubmit={handlePasswordSubmit} className="w-full space-y-4">
           <div>

@@ -4,9 +4,12 @@ const orderSchema = new mongoose.Schema({
   receiptId: { type: String, required: true, unique: true },
   customerName: { type: String, default: '' },
   phone: { type: String, default: '-' },
-  tableNo: { type: String, default: '' },
-  orderType: { type: String, default: 'Dine In' },
+  tableNo: { type: String, default: '-' },
+  address: { type: String, default: '' },
+  time: { type: String, default: '' },
+  orderType: { type: String, default: 'Dine-In' },
   paymentMethod: { type: String, default: 'Cash' },
+  paymentStatus: { type: String, enum: ['Unpaid', 'Paid', 'Pending Verification'], default: 'Unpaid' },
   screenshotUrl: { type: String, default: '' },
   items: [
     {
