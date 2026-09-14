@@ -2,8 +2,9 @@ import { sendPhotoToTelegram, sendMessageToTelegram } from '../services/telegram
 import axios from 'axios';
 import fs from 'fs';
 import { CHAPA_SECRET_KEY } from '../config/constants.js';
+import Order from '../models/Order.js'; // የ Order Model ጥሪ (አስፈላጊ ከሆነ)
 
-// የትዕዛዝ ዝርዝር ማስተካከያ
+// የምግብ ዝርዝር ማስተካከያ እና ፎርማተር
 const formatOrderItems = (items) => {
   if (!items) return '• ምንም የተመረጠ ምግብ የለም';
   
@@ -52,19 +53,19 @@ export const handleChapaSuccess = async (req, res) => {
     const message = `
 <b>✅ የ Chapa ክፍያ ተፈጽሟል!</b>
 
-<b>🆔 ደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
-<b>💳 Tx Ref:</b> <code>${trx_id || 'ያልታወቀ'}</code>
-${details}<b>📦 ዓይነት:</b> ${currentOrderType}
+<b>🆔 የደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
+<b>💳 Tx Ref:</b> <code>${trx_id || 'ልዩነቱ ያልታወቀ'}</code>
+${details}<b>📦 አይነት:</b> ${currentOrderType}
 <b>💳 የመክፈያ መንገድ:</b> <b>Chapa Online Payment</b>
 
-<b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
+<b>🛒 የታዘዙ የምግብ አይነቶች:</b>
 ${formattedItems}
 
 <b>💰 የተከፈለው ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
 `;
 
     try {
-      await sendMessageToTelegram(message, receiptId);
+      await sendMessageToTelegram(message);
     } catch (telegramErr) {
       console.error('⚠️ Chapa Telegram Notification Failed:', telegramErr.message);
     }
@@ -134,7 +135,7 @@ export const initiateChapaPayment = async (req, res) => {
   } catch (error) {
     console.error('Chapa Init Error:', error?.response?.data || error.message);
     if (!res.headersSent) {
-      return res.status(500).json({ success: false, message: 'Chapa ክፍያ ማሰመርመር አልተቻለም' });
+      return res.status(500).json({ success: false, message: 'Chapa ክፍያ ማስመርመር አልተቻለም' });
     }
   }
 };
@@ -150,7 +151,7 @@ export const submitOrderFormData = async (req, res) => {
     if (currentOrderType === 'Dine-In' && (!tableNo || !tableNo.trim())) {
       return res.status(400).json({ 
         success: false, 
-        message: 'እባክዎ የወንበር ቁጥር ያስገቡ!' 
+        message: 'እባክዎን የወንበር ቁጥር ያስገቡ!' 
       });
     }
 
@@ -178,12 +179,12 @@ export const submitOrderFormData = async (req, res) => {
     const caption = `
 <b>🛒 አዲስ ትዕዛዝ ደርሷል!</b>
 
-<b>🆔 ደረሰኝ ቁጥር:</b> <code>${orderId}</code>
-${details}<b>📦 ዓይነት:</b> ${currentOrderType}
+<b>🆔 የደረሰኝ ቁጥር:</b> <code>${orderId}</code>
+${details}<b>📦 አይነት:</b> ${currentOrderType}
 <b>💳 የመክፈያ መንገድ:</b> <b>${payMethodText}</b>
 <b>🧾 የክፍያ ስክሪንሾት:</b> ${hasReceipt}
 
-<b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
+<b>🛒 የታዘዙ የምግብ አይነቶች:</b>
 ${formattedItems}
 
 <b>💰 ጠቅላላ ዋጋ:</b> <b>${totalPrice || '0'} ETB</b>
@@ -199,15 +200,16 @@ ${formattedItems}
         screenshotBase64 = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
 
         try {
-          // ፎቶውን ከ receiptId ጋር መላክ
-          await sendPhotoToTelegram(fileBuffer, caption, orderId);
+          await sendPhotoToTelegram(fileBuffer, caption);
         } catch (telegramErr) {
           console.error('⚠️ Telegram Photo Send Error:', telegramErr.message);
-          // ፎቶው ቢያመልጠውም በፅሁፍ እንዲልክ መሞከር
-          await sendMessageToTelegram(caption, orderId).catch(() => {});
         }
       } else {
-        await sendMessageToTelegram(caption, orderId).catch(() => {});
+        try {
+          await sendMessageToTelegram(caption);
+        } catch (telegramErr) {
+          console.error('⚠️ Telegram Text Send Error:', telegramErr.message);
+        }
       }
 
       if (file.path) {
@@ -215,12 +217,13 @@ ${formattedItems}
       }
     } else {
       try {
-        await sendMessageToTelegram(caption, orderId);
+        await sendMessageToTelegram(caption);
       } catch (telegramErr) {
         console.error('⚠️ Telegram Text Send Error:', telegramErr.message);
       }
     }
 
+    // 4. ወደ Frontend እና Admin Dashboard በ Socket.io መላክ
     const orderData = {
       id: orderId,
       receiptId: orderId,
@@ -256,13 +259,14 @@ ${formattedItems}
   }
 };
 
-// 4. Toggle Availability Handler
+// 4. Toggle Availability Handler (ለዛሬ አለ / አልቋል መቀየሪያ)
 export const toggleAvailability = async (req, res) => {
   try {
     const { id } = req.params;
     const { isAvailable } = req.body;
 
     if (req.io) {
+      // ለደንበኞች ስልክ የትኛው እቃ አለ/እንደሌለ በቅጽበት ማሳወቂያ
       req.io.emit('menuItemUpdated', { id, isAvailable });
     }
 
