@@ -96,26 +96,17 @@ export default function Home() {
     };
   }, []);
 
-  // LocalStorage ውስጥ ያለውን ትዕዛዝ ሲያገኝ Socket Room መቀላቀል
   useEffect(() => {
     const savedOrder = localStorage.getItem('myPersonalOrder');
     if (savedOrder) {
       try {
-        const parsed = JSON.parse(savedOrder);
-        setMyActiveOrder(parsed);
-        
-        // 👈 Socket Room መቀላቀል (ለተሌግራም መልእክት ማዳመጫ)
-        const receiptId = parsed?.receiptId || parsed?.id;
-        if (receiptId) {
-          socket.emit('joinOrderRoom', receiptId);
-        }
+        setMyActiveOrder(JSON.parse(savedOrder));
       } catch (e) {
         console.error("Failed to parse personal order:", e);
       }
     }
   }, []);
 
-  // የቴሌግራም ቦት Response ማዳመጫ
   useEffect(() => {
     const handleStatusUpdate = (data) => {
       if (!myActiveOrder) return;
@@ -212,15 +203,15 @@ export default function Home() {
 
             setMyActiveOrder(newOrderObj);
             localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
-            
-            // 👈 Socket Room መቀላቀል
-            socket.emit('joinOrderRoom', receiptId);
+
+            const existingOrders = JSON.parse(localStorage.getItem('adminOrders') || '[]');
+            localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
 
             const alertMsg = lang === 'om' 
-              ? `💐 Nagahee Kaffaltii\n------------------------------\n🆔 Lakkoofsa Nagahee: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Kaffaltiin Chapa'n Milkaa'era!`
+              ? `🧾 Nagahee Kaffaltii\n------------------------------\n🆔 Lakkoofsa Nagahee: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Kaffaltiin Chapa'n Milkaa'era!`
               : lang === 'en'
-              ? `💐 Payment Receipt\n------------------------------\n🆔 Receipt ID: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Chapa Payment Successful!`
-              : `💐 የክፍያ ደረሰኝ\n------------------------------\n🆔 የደረሰኝ ቁጥር: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ ክፍያው በ Chapa ተሳክቷል!`;
+              ? `🧾 Payment Receipt\n------------------------------\n🆔 Receipt ID: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Chapa Payment Successful!`
+              : `🧾 የክፍያ ደረሰኝ\n------------------------------\n🆔 የደረሰኝ ቁጥር: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ ክፍያው በ Chapa ተሳክቷል!`;
 
             alert(alertMsg);
             clearCart();
@@ -364,8 +355,8 @@ export default function Home() {
         setMyActiveOrder(newOrderObj);
         localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-        // 👈 Socket Room መቀላቀል
-        socket.emit('joinOrderRoom', receiptId);
+        const existingOrders = JSON.parse(localStorage.getItem('adminOrders') || '[]');
+        localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
 
         const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተልኳል! ደረሰኝ ቁጥር:";
         alert(`✅ ${successText} ${receiptId}`);
@@ -530,6 +521,7 @@ export default function Home() {
         />
       )}
 
+      {/* ✅ Clean Order Tracker Modal Component Call */}
       <OrderTrackerModal
         isOpen={isOrderTrackerOpen}
         onClose={() => setIsOrderTrackerOpen(false)}
@@ -538,6 +530,7 @@ export default function Home() {
         lang={lang}
       />
 
+      {/* Floating Status Button */}
       {myActiveOrder && (
         <div className="fixed bottom-6 left-6 z-[9998]">
           <button 

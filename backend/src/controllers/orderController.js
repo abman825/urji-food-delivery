@@ -52,19 +52,18 @@ export const handleChapaSuccess = async (req, res) => {
     const message = `
 <b>✅ የ Chapa ክፍያ ተፈጽሟል!</b>
 
-<b>🆔 የደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
+<b>🆔 ደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
 <b>💳 Tx Ref:</b> <code>${trx_id || 'ያልታወቀ'}</code>
-${details}<b>📦 አይነት:</b> ${currentOrderType}
+${details}<b>📦 ዓይነት:</b> ${currentOrderType}
 <b>💳 የመክፈያ መንገድ:</b> <b>Chapa Online Payment</b>
 
-<b>🛒 የታዘዙ የምግብ አይነቶች:</b>
+<b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
 ${formattedItems}
 
 <b>💰 የተከፈለው ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
 `;
 
     try {
-      // 👈 receiptId እዚህ ጋር ተጨምሯል
       await sendMessageToTelegram(message, receiptId);
     } catch (telegramErr) {
       console.error('⚠️ Chapa Telegram Notification Failed:', telegramErr.message);
@@ -151,7 +150,7 @@ export const submitOrderFormData = async (req, res) => {
     if (currentOrderType === 'Dine-In' && (!tableNo || !tableNo.trim())) {
       return res.status(400).json({ 
         success: false, 
-        message: 'እባክዎን የወንበር ቁጥር ያስገቡ!' 
+        message: 'እባክዎ የወንበር ቁጥር ያስገቡ!' 
       });
     }
 
@@ -179,12 +178,12 @@ export const submitOrderFormData = async (req, res) => {
     const caption = `
 <b>🛒 አዲስ ትዕዛዝ ደርሷል!</b>
 
-<b>🆔 የደረሰኝ ቁጥር:</b> <code>${orderId}</code>
-${details}<b>📦 አይነት:</b> ${currentOrderType}
+<b>🆔 ደረሰኝ ቁጥር:</b> <code>${orderId}</code>
+${details}<b>📦 ዓይነት:</b> ${currentOrderType}
 <b>💳 የመክፈያ መንገድ:</b> <b>${payMethodText}</b>
 <b>🧾 የክፍያ ስክሪንሾት:</b> ${hasReceipt}
 
-<b>🛒 የታዘዙ የምግብ አይነቶች:</b>
+<b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
 ${formattedItems}
 
 <b>💰 ጠቅላላ ዋጋ:</b> <b>${totalPrice || '0'} ETB</b>
@@ -200,18 +199,15 @@ ${formattedItems}
         screenshotBase64 = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
 
         try {
-          // 👈 orderId (receiptId) እዚህ ጋር ተጨምሯል
+          // ፎቶውን ከ receiptId ጋር መላክ
           await sendPhotoToTelegram(fileBuffer, caption, orderId);
         } catch (telegramErr) {
           console.error('⚠️ Telegram Photo Send Error:', telegramErr.message);
+          // ፎቶው ቢያመልጠውም በፅሁፍ እንዲልክ መሞከር
+          await sendMessageToTelegram(caption, orderId).catch(() => {});
         }
       } else {
-        try {
-          // 👈 orderId (receiptId) እዚህ ጋር ተጨምሯል
-          await sendMessageToTelegram(caption, orderId);
-        } catch (telegramErr) {
-          console.error('⚠️ Telegram Text Send Error:', telegramErr.message);
-        }
+        await sendMessageToTelegram(caption, orderId).catch(() => {});
       }
 
       if (file.path) {
@@ -219,7 +215,6 @@ ${formattedItems}
       }
     } else {
       try {
-        // 👈 orderId (receiptId) እዚህ ጋር ተጨምሯል
         await sendMessageToTelegram(caption, orderId);
       } catch (telegramErr) {
         console.error('⚠️ Telegram Text Send Error:', telegramErr.message);

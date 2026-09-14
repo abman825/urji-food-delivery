@@ -2,10 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import axios from 'axios';
 import connectDB from './src/config/db.js';
 import Order from './src/models/Order.js';
-import { PORT as CONSTANT_PORT, TELEGRAM_TOKEN } from './src/config/constants.js';
+import { PORT as CONSTANT_PORT } from './src/config/constants.js';
 import apiRoutes from './src/routes/apiRoutes.js';
 import { handleTelegramCallback } from './src/services/telegramService.js';
 
@@ -48,7 +47,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
 
 app.use('/api', apiRoutes);
 
-// Socket.io Real-time Connection
+// Socket.io Real-time Connection Logic
 io.on('connection', (socket) => {
   console.log('⚡ Client connected:', socket.id);
 
@@ -62,6 +61,7 @@ io.on('connection', (socket) => {
     try {
       const newOrder = new Order({ ...orderData, socketId: socket.id });
       await newOrder.save();
+
       io.to('adminRoom').emit('newOrder', newOrder);
     } catch (err) {
       console.error("Error saving order to MongoDB:", err);
@@ -70,6 +70,8 @@ io.on('connection', (socket) => {
 
   socket.on('updateOrderStatus', async (data) => {
     const { receiptId, status } = data;
+    console.log(`🔄 Updating Order ${receiptId} to: ${status}`);
+
     try {
       const updatedOrder = await Order.findOneAndUpdate(
         { receiptId: receiptId },
@@ -100,18 +102,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || CONSTANT_PORT || 5000;
-
-httpServer.listen(PORT, async () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-
-  const backendUrl = process.env.BACKEND_URL;
-  if (backendUrl && TELEGRAM_TOKEN) {
-    try {
-      const webhookUrl = `${backendUrl}/api/telegram-webhook`;
-      await axios.get(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook?url=${webhookUrl}`);
-      console.log(`✅ Telegram Webhook set to: ${webhookUrl}`);
-    } catch (err) {
-      console.error("⚠️ Webhook setup failed:", err.message);
-    }
-  }
-});
+httpServer.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

@@ -26,11 +26,11 @@ export const sendPhotoToTelegram = async (fileBuffer, caption, receiptId = '') =
   return await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`, form, {
     headers: form.getHeaders(),
     httpsAgent: agent,
-    timeout: 10000
+    timeout: 30000 // 30 ሰከንድ
   });
 };
 
-// 2. በጽሁፍ ብቻ ሲላክ (ከ Dynamic Receipt ID inline Button ጋር)
+// 2. በፅሁፍ ብቻ ሲላክ (ከ Dynamic Receipt ID inline Button ጋር)
 export const sendMessageToTelegram = async (message, receiptId = '') => {
   const callbackData = receiptId ? `confirm_${receiptId}` : 'confirm_order';
 
@@ -47,7 +47,7 @@ export const sendMessageToTelegram = async (message, receiptId = '') => {
     }
   }, {
     httpsAgent: agent,
-    timeout: 40000
+    timeout: 30000
   });
 };
 
@@ -58,7 +58,6 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
   const messageId = message.message_id;
   const data = callbackQuery.data;
 
-  // confirm_ በሚለው ከጀመረ (ለምሳሌ: confirm_REC-051289 ወይም confirm_order)
   if (data.startsWith('confirm')) {
     const text = message.caption || message.text || '';
     
@@ -73,9 +72,9 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
     await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/answerCallbackQuery`, {
       callback_query_id: callbackQuery.id,
       text: 'ትዕዛዙ ተረጋግጧል!'
-    }, { httpsAgent: agent });
+    }, { httpsAgent: agent }).catch(() => {});
 
-    // 🎯 ደንበኛው ድረ-ገጽ ላይ ላለው Modal በ Socket.io 'In Progress' ብሎ መላክ
+    // 🎯 በደንበኛው ድረ-ገጽ ላይ ላለው Modal በ Socket.io 'In Progress' ብሎ መላክ
     if (receiptId && io) {
       const payload = { 
         receiptId, 
