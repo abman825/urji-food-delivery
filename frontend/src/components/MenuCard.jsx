@@ -47,8 +47,9 @@ export default function FoodCard({ item, onAddToCart, lang = 'am' }) {
       {/* የምግብ ምስል እና ዋጋ */}
       <div className="relative mb-3">
         <img 
-          src={item.image || item.img} 
-          alt={foodName} 
+  src={getImageUrl(item.image || item.img)}
+  alt={item.name?.am || item.name} 
+
           className={`w-full h-44 sm:h-48 object-cover rounded-2xl transition-all ${!isAvailable ? 'grayscale opacity-60' : ''}`} 
         />
         

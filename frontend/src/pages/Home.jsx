@@ -224,15 +224,6 @@ export default function Home() {
     }
   }, [clearCart, lang]);
 
-  const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
   const handleAddToCartChecked = (item, selectedVariant = null) => {
     if (item.isAvailable === false) {
       alert(
@@ -248,37 +239,12 @@ export default function Home() {
     }
   };
 
-  const handleOrder = async () => {
+  // 🟢 የተስተካከለው እና የጠራው handleOrder
+  const handleOrder = async (receiptId) => {
     if (paymentMethod === 'Chapa') {
-      if (customerInfo.orderType === 'Dine-in') {
-        if (!customerInfo.tableNo) {
-          return alert(
-            lang === 'om' ? "Maaloo lakkoofsa barcumaa galchaa!" : 
-            lang === 'en' ? "Please enter table number!" : 
-            "እባክዎን የወንበር/ጠረጴዛ ቁጥር ያስገቡ!"
-          );
-        }
-      } else {
-        if (!customerInfo.name || !customerInfo.phone || !customerInfo.time) {
-          return alert(
-            lang === 'om' ? "Maaloo maqaa, bilbilaa fi sa'aatii galchaa!" : 
-            lang === 'en' ? "Please fill name, phone, and time!" : 
-            "እባክዎን ስም፣ ስልክ እና ሰዓት ያስገቡ!"
-          );
-        }
-        if (customerInfo.address !== 'መጥቼ እወስዳለሁ' && !customerInfo.address) {
-          return alert(
-            lang === 'om' ? "Maaloo teessoo galchaa ykn 'Ofii Koof Dhufeen Fadha' filadhaa!" : 
-            lang === 'en' ? "Please enter address or check self pick-up!" : 
-            "እባክዎን አድራሻ ያስገቡ ወይም 'መጥቼ እወስዳለሁ' የሚለውን ይምረጡ!"
-          );
-        }
-      }
-
       try {
-        const generatedReceiptId = `REC-${Date.now().toString().slice(-6)}`;
         const orderPayload = {
-          receiptId: generatedReceiptId,
+          receiptId: receiptId || `REC-${Date.now().toString().slice(-6)}`,
           name: customerInfo.name,
           phone: customerInfo.phone,
           address: customerInfo.address,
@@ -307,47 +273,33 @@ export default function Home() {
         alert(lang === 'om' ? "Chapa waliin wal-qunnamuun al-danda'ame!" : lang === 'en' ? "Failed to connect to Chapa!" : "ከ Chapa ጋር መገናኘት አልተቻለም!");
       }
     } else {
-      if (!customerInfo.tableNo) {
-        return alert(
-          lang === 'om' ? "Maaloo lakkoofsa barcumaa galchaa!" : 
-          lang === 'en' ? "Please enter table number!" : 
-          "እባክዎን የወንበር/ጠረጴዛ ቁጥር ያስገቡ!"
-        );
-      }
-
-      const formData = new FormData();
-      formData.append('tableNo', customerInfo.tableNo);
-      if (customerInfo.phone) formData.append('phone', customerInfo.phone);
-      formData.append('orderType', 'Dine-in');
-      formData.append('paymentMethod', paymentMethod);
-      formData.append('totalPrice', totalPrice);
-      formData.append('items', JSON.stringify(cartItems));
-
-      let imagePreviewUrl = null;
-      if (selectedFile) {
-        formData.append('image', selectedFile);
-        try {
-          imagePreviewUrl = await fileToBase64(selectedFile);
-        } catch (e) {
-          console.error("Error converting file:", e);
-        }
-      }
-
       try {
+        const formData = new FormData();
+        formData.append('receiptId', receiptId);
+        formData.append('lang', lang);
+        formData.append('tableNo', customerInfo.tableNo || '');
+        formData.append('phone', customerInfo.phone || '');
+        formData.append('orderType', customerInfo.orderType || 'Dine-in');
+        formData.append('paymentMethod', paymentMethod);
+        formData.append('totalPrice', totalPrice);
+        formData.append('items', JSON.stringify(cartItems));
+        formData.append('customerInfo', JSON.stringify(customerInfo));
+
+        if (selectedFile) {
+          formData.append('photo', selectedFile);
+        }
+
         const result = await submitOrderFormData(formData);
-        const receiptId = result?.receiptId || result?.orderId || `REC-${Date.now().toString().slice(-6)}`;
-        const backendImageUrl = result?.imageUrl || result?.paymentProof || imagePreviewUrl;
+        const finalReceiptId = result?.receiptId || receiptId || `REC-${Date.now().toString().slice(-6)}`;
 
         const newOrderObj = {
-          receiptId,
+          receiptId: finalReceiptId,
           status: 'Pending',
           paymentMethod: paymentMethod,
-          paymentProof: backendImageUrl,
-          imageUrl: backendImageUrl,
           totalPrice,
           items: cartItems,
-          orderType: 'Dine-in',
-          tableNo: customerInfo.tableNo,
+          orderType: customerInfo.orderType,
+          tableNo: customerInfo.tableNo || '-',
           phone: customerInfo.phone || '-',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
@@ -355,15 +307,14 @@ export default function Home() {
         setMyActiveOrder(newOrderObj);
         localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-        const existingOrders = JSON.parse(localStorage.getItem('adminOrders') || '[]');
-        localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
-
         const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተልኳል! ደረሰኝ ቁጥር:";
-        alert(`✅ ${successText} ${receiptId}`);
+        alert(`✅ ${successText} ${finalReceiptId}`);
+        
         setIsModalOpen(false); 
         clearCart();
         setSelectedFile(null);
       } catch (err) { 
+        console.error("Order submit error:", err);
         alert(lang === 'om' ? "Ajaja ergachuun al-danda'ame!" : lang === 'en' ? "Failed to send order!" : "ትዕዛዙን መላክ አልተቻለም!"); 
       }
     }
@@ -521,7 +472,7 @@ export default function Home() {
         />
       )}
 
-      {/* ✅ Clean Order Tracker Modal Component Call */}
+      {/* Order Tracker Modal */}
       <OrderTrackerModal
         isOpen={isOrderTrackerOpen}
         onClose={() => setIsOrderTrackerOpen(false)}
