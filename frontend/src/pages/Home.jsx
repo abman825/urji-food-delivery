@@ -14,9 +14,7 @@ import { useVideoScroll } from '../hooks/useVideoScroll';
 import { useCart } from '../context/CartContext';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-const socket = io(BACKEND_URL, {
-  transports: ['websocket', 'polling']
-});
+const socket = io(BACKEND_URL);
 
 export default function Home() {
   const [lang, setLang] = useState('am');
@@ -56,10 +54,9 @@ export default function Home() {
     : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
   // -------------------------------------------------------------
-  // REAL-TIME MENU & SOCKET SYNC
+  // REAL-TIME MENU SYNC
   // -------------------------------------------------------------
   useEffect(() => {
-    // 1. ከ Admin በኩል አዲስ ሜኑ ሲላክ በቅጽበት መቀበያ
     socket.on('updateMenu', (updatedMenu) => {
       if (Array.isArray(updatedMenu)) {
         setMenuItems(updatedMenu);
@@ -67,7 +64,6 @@ export default function Home() {
       }
     });
 
-    // 2. አንድ እቃ ብቻ Status (ለዛሬ አለ/አልቋል) ሲቀየር መቀበያ
     socket.on('menuItemUpdated', (updatedItem) => {
       setMenuItems((prevItems) => {
         const updated = prevItems.map((item) => 
@@ -100,17 +96,26 @@ export default function Home() {
     };
   }, []);
 
+  // LocalStorage ውስጥ ያለውን ትዕዛዝ ሲያገኝ Socket Room መቀላቀል
   useEffect(() => {
     const savedOrder = localStorage.getItem('myPersonalOrder');
     if (savedOrder) {
       try {
-        setMyActiveOrder(JSON.parse(savedOrder));
+        const parsed = JSON.parse(savedOrder);
+        setMyActiveOrder(parsed);
+        
+        // 👈 Socket Room መቀላቀል (ለተሌግራም መልእክት ማዳመጫ)
+        const receiptId = parsed?.receiptId || parsed?.id;
+        if (receiptId) {
+          socket.emit('joinOrderRoom', receiptId);
+        }
       } catch (e) {
         console.error("Failed to parse personal order:", e);
       }
     }
   }, []);
 
+  // የቴሌግራም ቦት Response ማዳመጫ
   useEffect(() => {
     const handleStatusUpdate = (data) => {
       if (!myActiveOrder) return;
@@ -138,31 +143,36 @@ export default function Home() {
     };
   }, [myActiveOrder]);
 
-  // የሜኑ መረጃዎችን መጀመሪያ መጫኛ
   useEffect(() => {
+    const savedItems = localStorage.getItem('customMenuItems');
+
+    if (savedItems) {
+      try {
+        const parsed = JSON.parse(savedItems);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMenuItems(parsed);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to parse local menu items:", e);
+      }
+    }
+
+    setMenuItems(localMenuItems || []);
+    setLoading(false);
+
     fetchMenuItems()
       .then(data => {
-        if (data && Array.isArray(data) && data.length > 0) {
-          setMenuItems(data);
-          localStorage.setItem('customMenuItems', JSON.stringify(data));
-        } else {
-          const savedItems = localStorage.getItem('customMenuItems');
-          if (savedItems) {
-            setMenuItems(JSON.parse(savedItems));
-          } else {
-            setMenuItems(localMenuItems || []);
-          }
+        if (data?.length) {
+          setMenuItems(prev => {
+            const merged = [...localMenuItems, ...data];
+            localStorage.setItem('customMenuItems', JSON.stringify(merged));
+            return merged;
+          });
         }
       })
-      .catch(() => {
-        const savedItems = localStorage.getItem('customMenuItems');
-        if (savedItems) {
-          setMenuItems(JSON.parse(savedItems));
-        } else {
-          setMenuItems(localMenuItems || []);
-        }
-      })
-      .finally(() => setLoading(false));
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -202,12 +212,15 @@ export default function Home() {
 
             setMyActiveOrder(newOrderObj);
             localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
+            
+            // 👈 Socket Room መቀላቀል
+            socket.emit('joinOrderRoom', receiptId);
 
             const alertMsg = lang === 'om' 
-              ? `🧾 Nagahee Kaffaltii\n------------------------------\n🆔 Lakkoofsa Nagahee: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Kaffaltiin Chapa'n Milkaa'era!`
+              ? `💐 Nagahee Kaffaltii\n------------------------------\n🆔 Lakkoofsa Nagahee: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Kaffaltiin Chapa'n Milkaa'era!`
               : lang === 'en'
-              ? `🧾 Payment Receipt\n------------------------------\n🆔 Receipt ID: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Chapa Payment Successful!`
-              : `🧾 የክፍያ ደረሰኝ\n------------------------------\n🆔 የደረሰኝ ቁጥር: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ ክፍያው በ Chapa ተሳክቷል!`;
+              ? `💐 Payment Receipt\n------------------------------\n🆔 Receipt ID: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Chapa Payment Successful!`
+              : `💐 የክፍያ ደረሰኝ\n------------------------------\n🆔 የደረሰኝ ቁጥር: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ ክፍያው በ Chapa ተሳክቷል!`;
 
             alert(alertMsg);
             clearCart();
@@ -351,6 +364,9 @@ export default function Home() {
         setMyActiveOrder(newOrderObj);
         localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
+        // 👈 Socket Room መቀላቀል
+        socket.emit('joinOrderRoom', receiptId);
+
         const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተልኳል! ደረሰኝ ቁጥር:";
         alert(`✅ ${successText} ${receiptId}`);
         setIsModalOpen(false); 
@@ -412,8 +428,7 @@ export default function Home() {
             const updated = typeof newItems === 'function' ? newItems(menuItems) : newItems;
             setMenuItems(updated);
             localStorage.setItem('customMenuItems', JSON.stringify(updated));
-            // Admin ሜኑ ሲቀይር በ Socket ለሌሎች እንዲደርስ emit እናደርጋለን
-            socket.emit('updateMenu', updated);
+            window.dispatchEvent(new Event('menuUpdated'));
           }}
         />
 

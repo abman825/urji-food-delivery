@@ -37,17 +37,59 @@ export default function App() {
 
     fetchMenu();
 
+    // Menu updates
     socket.on('menuUpdated', (updatedMenu) => {
       setMenuItems(updatedMenu);
     });
 
-    return () => socket.off('menuUpdated');
+    socket.on('updateMenu', (updatedMenu) => {
+      setMenuItems(updatedMenu);
+    });
+
+    return () => {
+      socket.off('menuUpdated');
+      socket.off('updateMenu');
+    };
   }, []);
 
-  // 3. ትዕዛዝ ሲላክ Tracker መክፈት
+  // 3. 👈 ከተሌግራም ቦት የሚመጣውን Real-time Order Status Update ማዳመጫ (የተጨመረ)
+  useEffect(() => {
+    socket.on('orderStatusUpdated', (data) => {
+      const { receiptId, status } = data;
+
+      setActiveOrder((prevOrder) => {
+        if (!prevOrder) return prevOrder;
+
+        // የደረሰኝ ቁጥሩ ከያዝነው ትዕዛዝ ጋር ከተመሳሰለ ሁኔታውን ይቀይራል
+        if (
+          prevOrder.receiptId === receiptId || 
+          prevOrder.id === receiptId || 
+          prevOrder.orderId === receiptId
+        ) {
+          return {
+            ...prevOrder,
+            status: status
+          };
+        }
+        return prevOrder;
+      });
+    });
+
+    return () => {
+      socket.off('orderStatusUpdated');
+    };
+  }, []);
+
+  // 4. ትዕዛዝ ሲላክ Tracker መክፈት እና Socket Room መቀላቀል
   const handlePlaceOrder = (newOrderData) => {
     setActiveOrder(newOrderData);
     setIsTrackerOpen(true);
+
+    // 👈 ደንበኛውን የትዕዛዙ ቁጥር ባለው Socket Room ውስጥ እንዲገባ ማድረግ
+    const receiptId = newOrderData?.receiptId || newOrderData?.id || newOrderData?.orderId;
+    if (receiptId) {
+      socket.emit('joinOrderRoom', receiptId);
+    }
   };
 
   return (

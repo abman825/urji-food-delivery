@@ -3,10 +3,10 @@ import axios from 'axios';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const API_BASE = `${BACKEND_URL}/api`;
 
-// 1. የሜኑ እቃዎችን መፈለጊያ
+// 1. የሜኑ ዕቃዎችን መፈለጊያ (ማስተካከያ፡ /menu-items የነበረው ወደ /menu ተቀይሯል)
 export const fetchMenuItems = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/menu-items`);
+    const res = await axios.get(`${API_BASE}/menu`);
     return res.data;
   } catch (err) {
     console.error("Error fetching menu:", err);
@@ -14,7 +14,7 @@ export const fetchMenuItems = async () => {
   }
 };
 
-// 2. በ Chapa ለመክፈል ማስጀመሪያ (receiptId እና lang መጨመራቸውን ማረጋገጥ)
+// 2. በ Chapa ለመክፈል ማዘጋጃ
 export const initiateChapaPay = async (paymentData) => {
   try {
     const res = await axios.post(`${API_BASE}/chapa-pay`, paymentData);
