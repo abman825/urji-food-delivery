@@ -7,6 +7,7 @@ import CheckoutModal from '../components/CheckoutModal';
 import MenuItemCard from '../components/MenuItemCard';
 import HeroSection from '../components/HeroSection';
 import OrderTrackerModal from '../components/OrderTrackerModal';
+import { menuItems as localMenuItems } from '../data/menuData';
 import { fetchMenuItems, initiateChapaPay, submitOrderFormData, verifyChapaPayment } from '../services/api';
 import { translations } from '../data/translations';
 import { useVideoScroll } from '../hooks/useVideoScroll';
@@ -50,33 +51,11 @@ export default function Home() {
     ? ['Hunda', 'Nyaata', 'Fast Food', 'Juice', 'Dhugaatii Qabbanaawaa', "Dhugaatii Ho'aa"]
     : lang === 'en'
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
-    : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጣጥ', 'ትኩስ መጣጥ'];
+    : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
-  // 1. Fetch Menu from Backend Database on Load
-  useEffect(() => {
-    const loadMenu = async () => {
-      try {
-        setLoading(true);
-        const data = await fetchMenuItems();
-        if (data && Array.isArray(data)) {
-          setMenuItems(data);
-          localStorage.setItem('customMenuItems', JSON.stringify(data));
-        }
-      } catch (err) {
-        console.error("Failed to load menu from DB:", err);
-        const saved = localStorage.getItem('customMenuItems');
-        if (saved) {
-          try { setMenuItems(JSON.parse(saved)); } catch (e) {}
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadMenu();
-  }, []);
-
-  // 2. REAL-TIME MENU SYNC WITH SOCKET.IO
+  // -------------------------------------------------------------
+  // REAL-TIME MENU SYNC
+  // -------------------------------------------------------------
   useEffect(() => {
     socket.on('updateMenu', (updatedMenu) => {
       if (Array.isArray(updatedMenu)) {
@@ -95,17 +74,36 @@ export default function Home() {
       });
     });
 
+    const handleSync = () => {
+      const saved = localStorage.getItem('customMenuItems');
+      if (saved) {
+        try {
+          setMenuItems(JSON.parse(saved));
+        } catch (e) {
+          console.error("Failed to parse synced menu:", e);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('menuUpdated', handleSync);
+
     return () => {
       socket.off('updateMenu');
       socket.off('menuItemUpdated');
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('menuUpdated', handleSync);
     };
   }, []);
 
-  // 3. Active Order Tracker Logic
   useEffect(() => {
     const savedOrder = localStorage.getItem('myPersonalOrder');
     if (savedOrder) {
-      try { setMyActiveOrder(JSON.parse(savedOrder)); } catch (e) {}
+      try {
+        setMyActiveOrder(JSON.parse(savedOrder));
+      } catch (e) {
+        console.error("Failed to parse personal order:", e);
+      }
     }
   }, []);
 
@@ -136,7 +134,38 @@ export default function Home() {
     };
   }, [myActiveOrder]);
 
-  // 4. Verify Chapa Payment Callback
+  useEffect(() => {
+    const savedItems = localStorage.getItem('customMenuItems');
+
+    if (savedItems) {
+      try {
+        const parsed = JSON.parse(savedItems);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMenuItems(parsed);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to parse local menu items:", e);
+      }
+    }
+
+    setMenuItems(localMenuItems || []);
+    setLoading(false);
+
+    fetchMenuItems()
+      .then(data => {
+        if (data?.length) {
+          setMenuItems(prev => {
+            const merged = [...localMenuItems, ...data];
+            localStorage.setItem('customMenuItems', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
     const trx_id = queryParams.get('trx_id') || queryParams.get('tx_ref') || queryParams.get('reference');
@@ -148,7 +177,11 @@ export default function Home() {
       let pendingOrder = null;
 
       if (savedData) {
-        try { pendingOrder = JSON.parse(savedData); } catch (e) {}
+        try {
+          pendingOrder = JSON.parse(savedData);
+        } catch (e) {
+          console.error("JSON Parse Error:", e);
+        }
       }
 
       verifyChapaPayment(pendingOrder, trx_id)
@@ -171,10 +204,16 @@ export default function Home() {
             setMyActiveOrder(newOrderObj);
             localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-            alert(
-              lang === 'om' ? "Kaffaltiin Chapa'n Milkaa'era!" :
-              lang === 'en' ? "Chapa Payment Successful!" : "ክፍያው በ Chapa ተሳክቷል!"
-            );
+            const existingOrders = JSON.parse(localStorage.getItem('adminOrders') || '[]');
+            localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
+
+            const alertMsg = lang === 'om' 
+              ? `🧾 Nagahee Kaffaltii\n------------------------------\n🆔 Lakkoofsa Nagahee: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Kaffaltiin Chapa'n Milkaa'era!`
+              : lang === 'en'
+              ? `🧾 Payment Receipt\n------------------------------\n🆔 Receipt ID: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Chapa Payment Successful!`
+              : `🧾 የክፍያ ደረሰኝ\n------------------------------\n🆔 የደረሰኝ ቁጥር: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ ክፍያው በ Chapa ተሳክቷል!`;
+
+            alert(alertMsg);
             clearCart();
             localStorage.removeItem('pendingChapaOrder');
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -200,6 +239,7 @@ export default function Home() {
     }
   };
 
+  // 🟢 የተስተካከለው እና የጠራው handleOrder
   const handleOrder = async (receiptId) => {
     if (paymentMethod === 'Chapa') {
       try {
@@ -234,22 +274,20 @@ export default function Home() {
       }
     } else {
       try {
-        // frontend/src/pages/Home.jsx
-const formData = new FormData();
-formData.append('receiptId', receiptId);
-formData.append('socketId', socket ? socket.id : '');
-formData.append('lang', lang);
-formData.append('tableNo', customerInfo.tableNo || '');
-formData.append('phone', customerInfo.phone || '');
-formData.append('orderType', customerInfo.orderType || 'Dine-in');
-formData.append('paymentMethod', paymentMethod);
-formData.append('totalPrice', totalPrice);
-formData.append('items', JSON.stringify(cartItems));
-formData.append('customerInfo', JSON.stringify(customerInfo));
+        const formData = new FormData();
+        formData.append('receiptId', receiptId);
+        formData.append('lang', lang);
+        formData.append('tableNo', customerInfo.tableNo || '');
+        formData.append('phone', customerInfo.phone || '');
+        formData.append('orderType', customerInfo.orderType || 'Dine-in');
+        formData.append('paymentMethod', paymentMethod);
+        formData.append('totalPrice', totalPrice);
+        formData.append('items', JSON.stringify(cartItems));
+        formData.append('customerInfo', JSON.stringify(customerInfo));
 
-if (selectedFile) {
-  formData.append('screenshot', selectedFile);
-}
+        if (selectedFile) {
+          formData.append('screenshot', selectedFile);
+        }
 
         const result = await submitOrderFormData(formData);
         const finalReceiptId = result?.receiptId || receiptId || `REC-${Date.now().toString().slice(-6)}`;
@@ -301,9 +339,19 @@ if (selectedFile) {
     } else if (activeTabIndex === 3) {
       matchesCategory = cat === 'juice' || cat === 'ጁስ';
     } else if (activeTabIndex === 4) {
-      matchesCategory = cat.includes('ቀዝቃዛ') || cat.includes('cold') || cat.includes('qabbanaawaa');
+      matchesCategory = 
+        cat.includes('ቀዝቃዛ') || 
+        cat.includes('cold') || 
+        cat.includes('qabbanaawaa') ||
+        cat === 'ቀዝቃዛ መጠጥ' || 
+        cat === 'cold drinks';
     } else if (activeTabIndex === 5) {
-      matchesCategory = cat.includes('ትኩስ') || cat.includes('hot') || cat.includes("ho'aa");
+      matchesCategory = 
+        cat.includes('ትኩስ') || 
+        cat.includes('hot') || 
+        cat.includes("ho'aa") ||
+        cat === 'ትኩስ መጠጥ' || 
+        cat === 'hot drinks';
     }
 
     return matchesSearch && matchesCategory;
@@ -318,7 +366,12 @@ if (selectedFile) {
           lang={lang} 
           setLang={setLang} 
           menuItems={menuItems}
-          setMenuItems={setMenuItems}
+          setMenuItems={(newItems) => {
+            const updated = typeof newItems === 'function' ? newItems(menuItems) : newItems;
+            setMenuItems(updated);
+            localStorage.setItem('customMenuItems', JSON.stringify(updated));
+            window.dispatchEvent(new Event('menuUpdated'));
+          }}
         />
 
         <HeroSection containerRef={containerRef} videoRef={videoRef} scrollProgress={scrollProgress} activeCardIndex={activeCardIndex} t={t} />
@@ -419,6 +472,7 @@ if (selectedFile) {
         />
       )}
 
+      {/* Order Tracker Modal */}
       <OrderTrackerModal
         isOpen={isOrderTrackerOpen}
         onClose={() => setIsOrderTrackerOpen(false)}
@@ -427,6 +481,7 @@ if (selectedFile) {
         lang={lang}
       />
 
+      {/* Floating Status Button */}
       {myActiveOrder && (
         <div className="fixed bottom-6 left-6 z-[9998]">
           <button 

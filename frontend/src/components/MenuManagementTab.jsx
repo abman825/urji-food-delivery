@@ -35,12 +35,12 @@ export default function MenuManagementTab({
     passwordPlaceholder: { am: "የይለፍ ቃል...", om: "Jecha darbi...", en: "Password..." },
     submitPassword: { am: "ግባ", om: "Seeni", en: "Submit" },
     wrongPassword: { am: "የተሳሳተ የይለፍ ቃል ነው!", om: "Jechi darbi dogoggora!", en: "Incorrect Password!" },
-    addTitle: { am: "አዲስ የምግብ ዓይነት ጨምር", om: "Gosa Nyaataa Haarawa Dabali", en: "Add New Item" },
+    addTitle: { am: "አዲስ የምግብ አይነት ጨምር", om: "Gosa Nyaataa Haarawa Dabali", en: "Add New Item" },
     itemName: { am: "የምግብ ስም", om: "Maqaa Nyaataa", en: "Item Name" },
     itemPrice: { am: "ዋጋ (ETB)", om: "Gatii (ETB)", en: "Price (ETB)" },
     category: { am: "ምድብ", om: "Kutaa", en: "Category" },
-    imageNamePlaceholder: { am: "የፎቶ ስም ወይም URL (ምሳሌ: tebs.jpg)", om: "Maqaa Fakkii (fkn: tebs.jpg)", en: "Image Name or URL (e.g. tebs.jpg)" },
-    addVariant: { am: "+ አማራጭ/ዓይነት ጨምር (ትልቅ/ትንሽ...)", om: "+ Filannoo Dabali", en: "+ Add Variant" },
+    imageNamePlaceholder: { am: "የፎቶ ስም (ምሳሌ: tebs.jpg)", om: "Maqaa Fakkii (fkn: tebs.jpg)", en: "Image Name (e.g. tebs.jpg)" },
+    addVariant: { am: "+ አማራጭ/አይነት ጨምር (ትልቅ/ትንሽ...)", om: "+ Filannoo Dabali", en: "+ Add Variant" },
     addItemBtn: { am: "ምግብ ጨምር", om: "Nyaata Dabali", en: "Add Item" },
     save: { am: "አስቀምጥ", om: "Olka'i", en: "Save" },
     cancel: { am: "ሰርዝ", om: "Dhiisi", en: "Cancel" },
@@ -71,17 +71,10 @@ export default function MenuManagementTab({
     return String(nameObj);
   };
 
-  // 🎯 የተስተካከለ Dynamic Image URL Helper
-  const getImageUrl = (item) => {
-    const imgSrc = typeof item === 'string' ? item : (item?.image || item?.imageUrl || item?.img || item?.photo);
+  const getImageUrl = (imgSrc) => {
     if (!imgSrc) return '/placeholder.png';
-
-    if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://') || imgSrc.startsWith('data:image')) {
-      return imgSrc;
-    }
-
-    const path = imgSrc.startsWith('/') ? imgSrc : `/${imgSrc}`;
-    return `${BACKEND_URL}${path}`;
+    if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://')) return imgSrc;
+    return imgSrc.startsWith('/') ? imgSrc : `/${imgSrc}`;
   };
 
   const syncWithDatabase = async (updatedMenuItems) => {
@@ -120,6 +113,7 @@ export default function MenuManagementTab({
     });
   };
 
+  // 1. አዲስ ምግብ Database ውስጥ ለመጨመር (ተስተካክሏል!)
   const handleAddItem = async (e) => {
     e.preventDefault();
     if (!newItem.name || (!newItem.price && newItem.variants.length === 0)) {
@@ -138,6 +132,7 @@ export default function MenuManagementTab({
     const createdItem = {
       id: `item_${Date.now()}`,
       category: newItem.category || 'ምግብ',
+      // 🎯 ሁለቱንም image እና img መላካችን Database ሁልጊዜ እንዲያገኘው ያደርገዋል
       image: imageValue,
       img: imageValue,
       hasVariants: createdVariants.length > 0,
@@ -200,6 +195,7 @@ export default function MenuManagementTab({
     });
   };
 
+  // 2. የተስተካከለውን ምግብ Database ውስጥ ለማስቀመጥ (ተስተካክሏል!)
   const saveEdit = async (id) => {
     const updatedList = menuItems.map(item => {
       if ((item.id || item._id) === id) {
@@ -485,15 +481,10 @@ export default function MenuManagementTab({
               ) : (
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    {/* 🎯 የተስተካከለ Image እና Alt Tag */}
-                    <img
-                      src={getImageUrl(item)}
-                      alt={getTranslatedItemName(item.name)}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '/placeholder.png';
-                      }}
-                      className="w-14 h-14 object-cover rounded-xl border border-zinc-700"
+                    <img 
+                      src={getImageUrl(item.img || item.image)} 
+                      alt={getTranslatedItemName(item.name)} 
+                      className="w-14 h-14 object-cover rounded-xl border border-zinc-700" 
                     />
                     <div>
                       <h4 className="text-xs font-bold text-white">{getTranslatedItemName(item.name)}</h4>

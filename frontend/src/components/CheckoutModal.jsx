@@ -29,7 +29,7 @@ export default function CheckoutModal({
       title: "ትዕዛዝዎን ያጠናቅቁ",
       orderByTable: "በወንበር ቁጥር ለማዘዝ",
       orderByPayment: "ክፍያ በመክፈል ለማዘዝ",
-      dineIn: "እዚህ (Dine-in)",
+      dineIn: "እዚሁ (Dine-in)",
       takeaway: "ይዞ ለመሄድ (Takeaway)",
       tableNumber: "የወንበር/ጠረጴዛ ቁጥር",
       tablePlaceholder: "ምሳሌ: 5",
@@ -158,6 +158,7 @@ export default function CheckoutModal({
       }
     }
 
+    // ------------------ ወሳኙ ክፍል ------------------
     const generatedReceiptId = `REC-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const newOrderObj = {
@@ -171,17 +172,20 @@ export default function CheckoutModal({
       createdAt: new Date().toISOString()
     };
 
+    // 🟢 1. ደንበኛውን በ Socket.io ከዚህ Receipt ID Room ጋር ማቀላቀል
     if (socket) {
       socket.emit('joinOrderRoom', generatedReceiptId);
     }
 
+    // 2. ለ Order Tracker Modal / myorder.jsx
     localStorage.setItem('myCurrentOrder', JSON.stringify(newOrderObj));
 
+    // 3. ለ My Orders ታሪክ
     const existingOrders = JSON.parse(localStorage.getItem('myOrders') || '[]');
     localStorage.setItem('myOrders', JSON.stringify([newOrderObj, ...existingOrders]));
 
-    // 🎯 ዋናውን የትዕዛዝ መላኪያ እዚህ ጋር እንጠራዋለን (ከ socket.id ጋር)
-    handleOrder(generatedReceiptId, socket.id);
+    // 4. ዋናውን Order Handler መጥራት (ከነ receiptId ጋር)
+    handleOrder(generatedReceiptId);
   };
 
   return (

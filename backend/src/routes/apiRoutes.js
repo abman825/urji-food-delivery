@@ -29,23 +29,13 @@ router.get('/menu', async (req, res) => {
   }
 });
 
-// 2. ሜኑ ሲቀየር/ሲጨመር Database እና Socket ማደሻ (Real-time Broadcast)
+// 2. ሜኑ ሲቀየር/ሲጨምር Database እና Socket ማደሻ (Real-time Broadcast)
 router.post('/menu/update', async (req, res) => {
   try {
     const { items } = req.body;
-
-    // ከ Frontend የሚመጣውን ፎቶ ለሁለቱም (image እና img) ማዘጋጀት
-    const formattedItems = items.map(item => {
-      const photoName = item.img || item.image || 'placeholder.png';
-      return {
-        ...item,
-        image: photoName,
-        img: photoName
-      };
-    });
-
+    
     await MenuItem.deleteMany({});
-    const updatedItems = await MenuItem.insertMany(formattedItems);
+    const updatedItems = await MenuItem.insertMany(items);
 
     const socketIo = req.app.get('socketio');
     if (socketIo) {
@@ -59,6 +49,7 @@ router.post('/menu/update', async (req, res) => {
 });
 
 // --- 📦 ORDER ROUTES ---
+// 'screenshot' እና 'image' ሁለቱንም እንዲቀበል ተደርጓል
 router.post('/orders', upload.single('screenshot'), createScreenshotOrder);
 router.post('/chapa-pay', initiateChapaPayment);
 router.post('/chapa-success-notify', handleChapaSuccess);

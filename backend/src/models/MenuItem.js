@@ -1,17 +1,14 @@
 import mongoose from 'mongoose';
 
 const menuItemSchema = new mongoose.Schema({
-  id: { type: String },
-  name: { type: mongoose.Schema.Types.Mixed, required: true },
+  name: { type: mongoose.Schema.Types.Mixed, required: true }, // { am: '...', en: '...' }
   category: { type: String, required: true },
   price: { type: Number, required: true },
-  image: { type: String, default: 'placeholder.png' },
-  img: { type: String, default: 'placeholder.png' },
-  isAvailable: { type: Boolean, default: true },
+  image: { type: String, default: '' },
+  isAvailable: { type: Boolean, default: true }, // 👈 ለዛሬ አልቋል / አለ የሚለውን በቋሚነት ለመያዝ
   hasVariants: { type: Boolean, default: false },
   variants: [
     {
-      id: String,
       name: { type: mongoose.Schema.Types.Mixed },
       price: { type: Number }
     }
