@@ -2,7 +2,7 @@ import { sendPhotoToTelegram, sendMessageToTelegram } from '../services/telegram
 import axios from 'axios';
 import fs from 'fs';
 import { CHAPA_SECRET_KEY } from '../config/constants.js';
-import Order from '../models/Order.js'; // የ Order Model ጥሪ
+import Order from '../models/Order.js';
 
 // የምግብ ዝርዝር ማስተካከያ እና ፎርማተር
 const formatOrderItems = (items) => {
@@ -51,7 +51,7 @@ export const handleChapaSuccess = async (req, res) => {
     if (pendingOrder?.time) details += `<b>⏰ ሰዓት:</b> ${pendingOrder.time}\n`;
 
     const message = `
-<b>✅ የ Chapa ክፍያ ተፈጽሟል!</b>
+<b>✅ የ Chapa ክፍያ ተፈፅሟል!</b>
 
 <b>🆔 የደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
 <b>💳 Tx Ref:</b> <code>${trx_id || 'ልዩነቱ ያልታወቀ'}</code>
@@ -61,7 +61,7 @@ ${details}<b>📦 ዓይነት:</b> ${currentOrderType}
 <b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
 ${formattedItems}
 
-<b>💰 የተከፈለዉ ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
+<b>💰 የተከፈለው ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
 `;
 
     try {
@@ -87,7 +87,7 @@ ${formattedItems}
       });
       await newOrder.save();
 
-      // Socket ማሳወቂያ
+      // Socket ማስታወቂያ
       const io = req.app.get('socketio') || req.io;
       if (io) {
         io.to('adminRoom').emit('newOrder', newOrder);
@@ -170,7 +170,7 @@ export const initiateChapaPayment = async (req, res) => {
 // 3. Main Order / Screenshot Submission Handler
 export const submitOrderFormData = async (req, res) => {
   try {
-    const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod } = req.body;
+    const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod, socketId } = req.body;
     const file = req.file;
 
     const currentOrderType = orderType || 'Dine-In';
@@ -192,7 +192,7 @@ export const submitOrderFormData = async (req, res) => {
       payMethodText = 'በስክሪንሾት / ባንክ';
     }
 
-    const hasReceipt = file ? '✅ አዎ (ከሰር ተያይዟል)' : '❌ አልተያያዘም (በካሽ የሚከፈል)';
+    const hasReceipt = file ? '✅ አዎ (ከስር ተያይዟል)' : '❌ አልተያያዘም (በካሽ የሚከፈል)';
 
     let details = '';
     if (name) details += `<b>👤 ስም:</b> ${name}\n`;
@@ -265,15 +265,18 @@ ${formattedItems}
         items: parsedItems,
         paymentMethod: payMethodText,
         screenshot: screenshotBase64,
+        screenshotUrl: screenshotBase64,
+        socketId: socketId || '',
         status: 'Pending',
         createdAt: new Date()
       });
+
       savedOrder = await newOrder.save();
     } catch (dbError) {
       console.error("MongoDB Order Save Error:", dbError);
     }
 
-    // 4. ወደ Frontend እና Admin Dashboard በ Socket.io መላክ
+    // ወደ Frontend እና Admin Dashboard በ Socket.io መላክ
     const orderData = savedOrder ? savedOrder.toObject() : {
       id: orderId,
       receiptId: orderId,
@@ -285,13 +288,13 @@ ${formattedItems}
       items: parsedItems,
       paymentMethod: payMethodText,
       screenshot: screenshotBase64,
+      socketId: socketId || '',
       status: 'Pending',
       createdAt: new Date()
     };
 
     const io = req.app.get('socketio') || req.io;
     if (io) {
-      // ለ Admin Dashboard 'adminRoom' እና ለጠቅላላ ብራውዘር በ Real-time ይልካል
       io.to('adminRoom').emit('newOrder', orderData);
       io.emit('newOrder', orderData);
     }
@@ -313,7 +316,7 @@ ${formattedItems}
   }
 };
 
-// 4. Toggle Availability Handler (ለዛሬ አለ / አልቋል መቀየሪያ)
+// 4. Toggle Availability Handler
 export const toggleAvailability = async (req, res) => {
   try {
     const { id } = req.params;

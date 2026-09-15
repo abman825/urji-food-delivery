@@ -35,12 +35,12 @@ export default function MenuManagementTab({
     passwordPlaceholder: { am: "የይለፍ ቃል...", om: "Jecha darbi...", en: "Password..." },
     submitPassword: { am: "ግባ", om: "Seeni", en: "Submit" },
     wrongPassword: { am: "የተሳሳተ የይለፍ ቃል ነው!", om: "Jechi darbi dogoggora!", en: "Incorrect Password!" },
-    addTitle: { am: "አዲስ የምግብ አይነት ጨምር", om: "Gosa Nyaataa Haarawa Dabali", en: "Add New Item" },
+    addTitle: { am: "አዲስ የምግብ ዓይነት ጨምር", om: "Gosa Nyaataa Haarawa Dabali", en: "Add New Item" },
     itemName: { am: "የምግብ ስም", om: "Maqaa Nyaataa", en: "Item Name" },
     itemPrice: { am: "ዋጋ (ETB)", om: "Gatii (ETB)", en: "Price (ETB)" },
     category: { am: "ምድብ", om: "Kutaa", en: "Category" },
-    imageNamePlaceholder: { am: "የፎቶ ስም (ምሳሌ: tebs.jpg)", om: "Maqaa Fakkii (fkn: tebs.jpg)", en: "Image Name (e.g. tebs.jpg)" },
-    addVariant: { am: "+ አማራጭ/አይነት ጨምር (ትልቅ/ትንሽ...)", om: "+ Filannoo Dabali", en: "+ Add Variant" },
+    imageNamePlaceholder: { am: "የፎቶ ስም ወይም URL (ምሳሌ: tebs.jpg)", om: "Maqaa Fakkii (fkn: tebs.jpg)", en: "Image Name or URL (e.g. tebs.jpg)" },
+    addVariant: { am: "+ አማራጭ/ዓይነት ጨምር (ትልቅ/ትንሽ...)", om: "+ Filannoo Dabali", en: "+ Add Variant" },
     addItemBtn: { am: "ምግብ ጨምር", om: "Nyaata Dabali", en: "Add Item" },
     save: { am: "አስቀምጥ", om: "Olka'i", en: "Save" },
     cancel: { am: "ሰርዝ", om: "Dhiisi", en: "Cancel" },
@@ -71,14 +71,19 @@ export default function MenuManagementTab({
     return String(nameObj);
   };
 
-  // የፎቶ URL/Path አሰራርን የማስተካከያ Helper Function
-  const getImageUrl = (imgSrc) => {
+  // 🎯 የተስተካከለ Dynamic Image URL Helper
+  const getImageUrl = (item) => {
+    const imgSrc = typeof item === 'string' ? item : (item?.image || item?.imageUrl || item?.img || item?.photo);
     if (!imgSrc) return '/placeholder.png';
-    if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://')) return imgSrc;
-    return imgSrc.startsWith('/') ? imgSrc : `/${imgSrc}`;
+
+    if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://') || imgSrc.startsWith('data:image')) {
+      return imgSrc;
+    }
+
+    const path = imgSrc.startsWith('/') ? imgSrc : `/${imgSrc}`;
+    return `${BACKEND_URL}${path}`;
   };
 
-  // ሁሉንም የተቀየሩ የሜኑ መረጃዎች Database እና Socket ጋር ማገናኛ Function
   const syncWithDatabase = async (updatedMenuItems) => {
     setMenuItems(updatedMenuItems);
     try {
@@ -115,7 +120,6 @@ export default function MenuManagementTab({
     });
   };
 
-  // 1. አዲስ ምግብ Database ውስጥ ለመጨመር
   const handleAddItem = async (e) => {
     e.preventDefault();
     if (!newItem.name || (!newItem.price && newItem.variants.length === 0)) {
@@ -129,10 +133,13 @@ export default function MenuManagementTab({
       price: Number(v.price)
     }));
 
+    const imageValue = newItem.img.trim() || 'placeholder.png';
+
     const createdItem = {
       id: `item_${Date.now()}`,
       category: newItem.category || 'ምግብ',
-      img: newItem.img.trim() || 'placeholder.png', // የፎቶውን ስም ብቻ ያስገባል
+      image: imageValue,
+      img: imageValue,
       hasVariants: createdVariants.length > 0,
       name: { am: newItem.name, om: newItem.name, en: newItem.name },
       price: Number(newItem.price || 0),
@@ -193,7 +200,6 @@ export default function MenuManagementTab({
     });
   };
 
-  // 2. የተስተካከለውን ምግብ Database ውስጥ ለማስቀመጥ
   const saveEdit = async (id) => {
     const updatedList = menuItems.map(item => {
       if ((item.id || item._id) === id) {
@@ -203,11 +209,14 @@ export default function MenuManagementTab({
           price: Number(v.price)
         }));
 
+        const imageValue = editForm.img.trim();
+
         return {
           ...item,
           name: typeof item.name === 'object' ? { ...item.name, [lang]: editForm.name } : editForm.name,
           price: Number(editForm.price),
-          img: editForm.img.trim(), // የፎቶውን ስም ብቻ ያስቀምጣል
+          image: imageValue,
+          img: imageValue,
           category: editForm.category,
           hasVariants: updatedVariants.length > 0,
           variants: updatedVariants
@@ -220,7 +229,6 @@ export default function MenuManagementTab({
     setEditingId(null);
   };
 
-  // 3. ምግብ ለመሰረዝ
   const deleteItem = async (id) => {
     if (confirm(t.confirmDeleteItem[lang] || t.confirmDeleteItem.am)) {
       const updatedList = menuItems.filter(item => (item.id || item._id) !== id);
@@ -228,7 +236,6 @@ export default function MenuManagementTab({
     }
   };
 
-  // 4. አለ/አልቋል Status ለመቀየር
   const toggleAvailability = async (itemId) => {
     const updatedList = menuItems.map(item => {
       if ((item.id || item._id) === itemId) {
@@ -260,7 +267,7 @@ export default function MenuManagementTab({
           <Lock size={32} />
         </div>
         <h3 className="text-lg font-bold text-white mb-2">{t.enterPasswordTitle[lang] || t.enterPasswordTitle.am}</h3>
-        <p className="text-xs text-zinc-400 mb-6">የምግብ እና የፋክቸር ማስተካከያ ገጽ ለመክፈት የይለፍ ቃል ያስገቡ</p>
+        <p className="text-xs text-zinc-400 mb-6">የምግብ እና የፋክቶር ማስተካከያ ገጽ ለመክፈት የይለፍ ቃል ያስገቡ</p>
 
         <form onSubmit={handlePasswordSubmit} className="w-full space-y-4">
           <div>
@@ -292,7 +299,7 @@ export default function MenuManagementTab({
 
   return (
     <div className="space-y-6">
-      {/* አዲስ ምግብ መጨምሪያ Form */}
+      {/* አዲስ ምግብ መጨመሪያ Form */}
       <form onSubmit={handleAddItem} className="bg-zinc-800/40 border border-zinc-800 rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <Utensils size={16} className="text-orange-500" />
@@ -323,7 +330,7 @@ export default function MenuManagementTab({
           </select>
         </div>
 
-        {/* የፎቶ ስም በጽሁፍ ማስገቢያ ብቻ (Text Input) */}
+        {/* የፎቶ ስም በጽሁፍ ማስገቢያ */}
         <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2 focus-within:border-orange-500">
           <ImageIcon size={16} className="text-zinc-400" />
           <input
@@ -340,7 +347,7 @@ export default function MenuManagementTab({
             <div key={v.id || vIdx} className="flex gap-2 items-center">
               <input
                 type="text"
-                placeholder="የአማራጭ ስም (ምሳሌ፡ ሙሉ/ግማሽ)"
+                placeholder="የአማራጭ ስም (ምሳሌ፤ ሙሉ/ግማሽ)"
                 value={v.nameStr}
                 onChange={e => handleNewVariantChange(vIdx, 'nameStr', e.target.value)}
                 className="bg-zinc-900 border border-zinc-700 rounded-xl p-2 text-xs text-white flex-1 outline-none"
@@ -381,7 +388,7 @@ export default function MenuManagementTab({
         </div>
       </form>
 
-      {/* የምግብ ዝርዝር Cardዎች */}
+      {/* የምግብ ዝርዝር Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {menuItems.map(item => {
           const id = item.id || item._id;
@@ -414,7 +421,6 @@ export default function MenuManagementTab({
                     </select>
                   </div>
 
-                  {/* በ Edit ጊዜ የፎቶ ስም በጽሁፍ ማስተካከያ Input */}
                   <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2">
                     <ImageIcon size={14} className="text-zinc-400" />
                     <input
@@ -479,10 +485,15 @@ export default function MenuManagementTab({
               ) : (
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <img 
-                      src={getImageUrl(item.img || item.image)} 
-                      alt={getTranslatedItemName(item.name)} 
-                      className="w-14 h-14 object-cover rounded-xl border border-zinc-700" 
+                    {/* 🎯 የተስተካከለ Image እና Alt Tag */}
+                    <img
+                      src={getImageUrl(item)}
+                      alt={getTranslatedItemName(item.name)}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/placeholder.png';
+                      }}
+                      className="w-14 h-14 object-cover rounded-xl border border-zinc-700"
                     />
                     <div>
                       <h4 className="text-xs font-bold text-white">{getTranslatedItemName(item.name)}</h4>

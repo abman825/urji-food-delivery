@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Minus, CheckCircle2, RotateCw } from 'lucide-react';
-import { getImageUrl } from '../data/menuData';
+import { getImageUrl } from '../utils/helpers';
 import { useCart } from '../context/CartContext';
 import { io } from 'socket.io-client';
 
-// Socket Server address (እንደ Backend URL ህ አስተካክለው)
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'https://urji-food-delivery.vercel.app';
 const socket = io(SOCKET_URL, { autoConnect: true });
 
@@ -13,7 +12,6 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const { cartItems = [], addToCart, removeFromCart } = useCart();
 
-  // 🔄 Real-time Update: ከ Admin በ Socket.io የሜኑ መረጃ ሲቀየር ስልክ ላይ በቅጽበት ይ ቀየራል
   useEffect(() => {
     setItem(initialItem);
   }, [initialItem]);
@@ -32,7 +30,6 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
     };
   }, [item.id, item._id]);
 
-  // እቃው መኖሩን ወይም ማለቁን ማረጋገጫ (isAvailable === false ከሆነ አልቋል)
   const isAvailable = item?.isAvailable !== false;
 
   const fallbackImg =
@@ -54,9 +51,6 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
     }).length;
   };
 
-  // ==========================================
-  // 1. ካርዱ አማራጮች (Variants) ከሌሉት
-  // ==========================================
   if (!item.hasVariants || !item.variants || item.variants.length === 0) {
     const countInCart = getCount(mainName);
 
@@ -66,7 +60,6 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
           !isAvailable ? 'opacity-65 grayscale' : ''
         }`}
       >
-        {/* "ለዛሬ አልቋል" የሚል ባጅ */}
         {!isAvailable && (
           <span className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-red-600/90 text-white text-[9px] sm:text-xs font-black px-2.5 py-1 rounded-full shadow-lg z-20 border border-red-500">
             ለዛሬ አልቋል
@@ -143,9 +136,6 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
     );
   }
 
-  // ==========================================
-  // 2. ካርዱ አማራጮች (Variants) ካሉት (Flipping Card)
-  // ==========================================
   return (
     <div
       onClick={() => isAvailable && setIsFlipped(!isFlipped)}
@@ -158,13 +148,11 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
           isFlipped ? '[transform:rotateY(180deg)]' : ''
         }`}
       >
-        {/* የፊተኛው ገጽ */}
         <div
           className={`absolute inset-0 w-full h-full bg-zinc-900 border border-zinc-800 rounded-2xl md:rounded-[2.5rem] shadow-xl overflow-hidden [backface-visibility:hidden] flex flex-col justify-between p-2 sm:p-3 md:p-6 ${
             !isAvailable ? 'opacity-65 grayscale' : ''
           }`}
         >
-          {/* "ለዛሬ አልቋል" የሚል ባጅ */}
           {!isAvailable && (
             <span className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-red-600/90 text-white text-[9px] sm:text-xs font-black px-2.5 py-1 rounded-full shadow-lg z-20 border border-red-500">
               ለዛሬ አልቋል
@@ -200,7 +188,6 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
           </div>
         </div>
 
-        {/* የጀርባው ገጽ (Variants የሚታዩበት) */}
         <div className="absolute inset-0 w-full h-full bg-zinc-950 text-white rounded-2xl md:rounded-[2.5rem] p-2 sm:p-3 md:p-6 [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col justify-between border border-orange-500/40 shadow-2xl">
           <div>
             <div className="text-center mb-1 md:mb-4 pb-1 md:pb-3 border-b border-zinc-800">
