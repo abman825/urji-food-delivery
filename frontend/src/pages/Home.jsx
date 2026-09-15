@@ -286,7 +286,7 @@ export default function Home() {
         formData.append('customerInfo', JSON.stringify(customerInfo));
 
         if (selectedFile) {
-          formData.append('photo', selectedFile);
+          formData.append('screenshot', selectedFile);
         }
 
         const result = await submitOrderFormData(formData);

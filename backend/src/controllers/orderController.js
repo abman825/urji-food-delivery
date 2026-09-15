@@ -2,7 +2,7 @@ import { sendPhotoToTelegram, sendMessageToTelegram } from '../services/telegram
 import axios from 'axios';
 import fs from 'fs';
 import { CHAPA_SECRET_KEY } from '../config/constants.js';
-import Order from '../models/Order.js'; // የ Order Model ጥሪ (አስፈላጊ ከሆነ)
+import Order from '../models/Order.js'; // የ Order Model ጥሪ
 
 // የምግብ ዝርዝር ማስተካከያ እና ፎርማተር
 const formatOrderItems = (items) => {
@@ -55,19 +55,46 @@ export const handleChapaSuccess = async (req, res) => {
 
 <b>🆔 የደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
 <b>💳 Tx Ref:</b> <code>${trx_id || 'ልዩነቱ ያልታወቀ'}</code>
-${details}<b>📦 አይነት:</b> ${currentOrderType}
+${details}<b>📦 ዓይነት:</b> ${currentOrderType}
 <b>💳 የመክፈያ መንገድ:</b> <b>Chapa Online Payment</b>
 
-<b>🛒 የታዘዙ የምግብ አይነቶች:</b>
+<b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
 ${formattedItems}
 
-<b>💰 የተከፈለው ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
+<b>💰 የተከፈለዉ ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
 `;
 
     try {
       await sendMessageToTelegram(message);
     } catch (telegramErr) {
       console.error('⚠️ Chapa Telegram Notification Failed:', telegramErr.message);
+    }
+
+    // Database ውስጥ ማስቀመጥ
+    try {
+      const parsedItems = typeof pendingOrder?.items === 'string' ? JSON.parse(pendingOrder.items) : pendingOrder?.items;
+      const newOrder = new Order({
+        receiptId,
+        name: pendingOrder?.name || 'እንግዳ',
+        phone: pendingOrder?.phone || '-',
+        tableNo: displayTableNo,
+        orderType: currentOrderType,
+        totalPrice: pendingOrder?.totalPrice || '0',
+        items: parsedItems,
+        paymentMethod: 'Chapa Online Payment',
+        status: 'Pending',
+        createdAt: new Date()
+      });
+      await newOrder.save();
+
+      // Socket ማሳወቂያ
+      const io = req.app.get('socketio') || req.io;
+      if (io) {
+        io.to('adminRoom').emit('newOrder', newOrder);
+        io.emit('newOrder', newOrder);
+      }
+    } catch (dbErr) {
+      console.error("MongoDB Chapa Save Error:", dbErr);
     }
 
     return res.status(200).json({ 
@@ -165,7 +192,7 @@ export const submitOrderFormData = async (req, res) => {
       payMethodText = 'በስክሪንሾት / ባንክ';
     }
 
-    const hasReceipt = file ? '✅ አዎ (ከስር ተያይዟል)' : '❌ አልተያያዘም (በካሽ የሚከፈል)';
+    const hasReceipt = file ? '✅ አዎ (ከሰር ተያይዟል)' : '❌ አልተያያዘም (በካሽ የሚከፈል)';
 
     let details = '';
     if (name) details += `<b>👤 ስም:</b> ${name}\n`;
@@ -180,11 +207,11 @@ export const submitOrderFormData = async (req, res) => {
 <b>🛒 አዲስ ትዕዛዝ ደርሷል!</b>
 
 <b>🆔 የደረሰኝ ቁጥር:</b> <code>${orderId}</code>
-${details}<b>📦 አይነት:</b> ${currentOrderType}
+${details}<b>📦 ዓይነት:</b> ${currentOrderType}
 <b>💳 የመክፈያ መንገድ:</b> <b>${payMethodText}</b>
 <b>🧾 የክፍያ ስክሪንሾት:</b> ${hasReceipt}
 
-<b>🛒 የታዘዙ የምግብ አይነቶች:</b>
+<b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
 ${formattedItems}
 
 <b>💰 ጠቅላላ ዋጋ:</b> <b>${totalPrice || '0'} ETB</b>
@@ -223,8 +250,31 @@ ${formattedItems}
       }
     }
 
+    const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
+
+    // Database ላይ ሴቭ ማድረግ
+    let savedOrder = null;
+    try {
+      const newOrder = new Order({
+        receiptId: orderId,
+        name: name || 'እንግዳ',
+        phone: phone || '-',
+        tableNo: displayTableNo,
+        orderType: currentOrderType,
+        totalPrice: totalPrice || '0',
+        items: parsedItems,
+        paymentMethod: payMethodText,
+        screenshot: screenshotBase64,
+        status: 'Pending',
+        createdAt: new Date()
+      });
+      savedOrder = await newOrder.save();
+    } catch (dbError) {
+      console.error("MongoDB Order Save Error:", dbError);
+    }
+
     // 4. ወደ Frontend እና Admin Dashboard በ Socket.io መላክ
-    const orderData = {
+    const orderData = savedOrder ? savedOrder.toObject() : {
       id: orderId,
       receiptId: orderId,
       name: name || 'እንግዳ',
@@ -232,14 +282,18 @@ ${formattedItems}
       tableNo: displayTableNo,
       orderType: currentOrderType,
       totalPrice: totalPrice || '0',
-      items: typeof items === 'string' ? JSON.parse(items) : items,
+      items: parsedItems,
       paymentMethod: payMethodText,
       screenshot: screenshotBase64,
+      status: 'Pending',
       createdAt: new Date()
     };
 
-    if (req.io) {
-      req.io.emit('newOrder', orderData);
+    const io = req.app.get('socketio') || req.io;
+    if (io) {
+      // ለ Admin Dashboard 'adminRoom' እና ለጠቅላላ ብራውዘር በ Real-time ይልካል
+      io.to('adminRoom').emit('newOrder', orderData);
+      io.emit('newOrder', orderData);
     }
 
     return res.status(200).json({ 
@@ -265,9 +319,9 @@ export const toggleAvailability = async (req, res) => {
     const { id } = req.params;
     const { isAvailable } = req.body;
 
-    if (req.io) {
-      // ለደንበኞች ስልክ የትኛው እቃ አለ/እንደሌለ በቅጽበት ማሳወቂያ
-      req.io.emit('menuItemUpdated', { id, isAvailable });
+    const io = req.app.get('socketio') || req.io;
+    if (io) {
+      io.emit('menuItemUpdated', { id, isAvailable });
     }
 
     return res.status(200).json({ 

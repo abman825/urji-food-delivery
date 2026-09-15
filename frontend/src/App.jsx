@@ -21,7 +21,14 @@ export default function App() {
     }
     window.scrollTo(0, 0);
   }, []);
-
+useEffect(() => {
+  if (socket) {
+    socket.on('menuUpdated', (newMenuItems) => {
+      setMenuItems(newMenuItems);
+    });
+  }
+  return () => socket?.off('menuUpdated');
+}, [socket]);
   // 2. ከ Database ሜኑውን መጫን እና በ Socket real-time ማዳመጥ
   useEffect(() => {
     const fetchMenu = async () => {

@@ -3,10 +3,10 @@ import axios from 'axios';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const API_BASE = `${BACKEND_URL}/api`;
 
-// 1. የሜኑ እቃዎችን መፈለጊያ
+// 1. የሜኑ እቃዎችን መፈለጊያ (ከ /menu-items ወደ /menu ተቀይሯል)
 export const fetchMenuItems = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/menu-items`);
+    const res = await axios.get(`${API_BASE}/menu`);
     return res.data;
   } catch (err) {
     console.error("Error fetching menu:", err);
@@ -14,7 +14,7 @@ export const fetchMenuItems = async () => {
   }
 };
 
-// 2. በ Chapa ለመክፈል ማስጀመሪያ (receiptId እና lang መጨመራቸውን ማረጋገጥ)
+// 2. በ Chapa ለመክፈል ማስጀመሪያ
 export const initiateChapaPay = async (paymentData) => {
   try {
     const res = await axios.post(`${API_BASE}/chapa-pay`, paymentData);
@@ -25,7 +25,7 @@ export const initiateChapaPay = async (paymentData) => {
   }
 };
 
-// 3. የ Chapa ክፍያ ከተፈጸመ በኋላ ማረጋገጫና ለቴሌግራም/Socket መላኪያ
+// 3. የ Chapa ክፍያ ከተፈጸመ በኋላ ማረጋገጫ
 export const verifyChapaPayment = async (pendingOrder, trx_id) => {
   try {
     const res = await axios.post(`${API_BASE}/chapa-success-notify`, {
@@ -42,9 +42,7 @@ export const verifyChapaPayment = async (pendingOrder, trx_id) => {
 // 4. መደበኛ ትዕዛዝ በፎቶ/ስክሪንሾት ወይም ያለ ፎቶ መላኪያ (FormData)
 export const submitOrderFormData = async (formData) => {
   try {
-    const res = await axios.post(`${API_BASE}/orders`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    const res = await axios.post(`${API_BASE}/orders`, formData);
     return res.data;
   } catch (err) {
     console.error("Submit order error:", err);

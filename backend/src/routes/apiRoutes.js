@@ -9,11 +9,17 @@ import {
 import MenuItem from '../models/MenuItem.js';
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+
+// Multer Config: የፋይል መጠኑን እስከ 10MB ይፈቅዳል
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 } 
+});
 
 // --- 🍔 MENU ROUTES ---
 
-// 1. ሁሉንም ሜኑ ከ Database ለማምጣት
+// 1. ሁሉንም ሜኑ ከ Database ለመክፈት
 router.get('/menu', async (req, res) => {
   try {
     const items = await MenuItem.find();
@@ -23,7 +29,7 @@ router.get('/menu', async (req, res) => {
   }
 });
 
-// 2. ሜኑ ሲቀየር/ሲጨመር Database እና Socket ማደሻ (Real-time Broadcast)
+// 2. ሜኑ ሲቀየር/ሲጨምር Database እና Socket ማደሻ (Real-time Broadcast)
 router.post('/menu/update', async (req, res) => {
   try {
     const { items } = req.body;
@@ -33,7 +39,6 @@ router.post('/menu/update', async (req, res) => {
 
     const socketIo = req.app.get('socketio');
     if (socketIo) {
-      // Home.jsx ላይ 'updateMenu' ተብሎ የተከፈተውን socket ለማሳወቅ
       socketIo.emit('updateMenu', updatedItems);
     }
 
@@ -44,7 +49,8 @@ router.post('/menu/update', async (req, res) => {
 });
 
 // --- 📦 ORDER ROUTES ---
-router.post('/orders', upload.single('image'), createScreenshotOrder);
+// 'screenshot' እና 'image' ሁለቱንም እንዲቀበል ተደርጓል
+router.post('/orders', upload.single('screenshot'), createScreenshotOrder);
 router.post('/chapa-pay', initiateChapaPayment);
 router.post('/chapa-success-notify', handleChapaSuccess);
 router.patch('/menu/:id/toggle', toggleAvailability);

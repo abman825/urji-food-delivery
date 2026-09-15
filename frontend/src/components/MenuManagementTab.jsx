@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit3, Save, Upload, Eye, Lock, Utensils } from 'lucide-react';
+import { Plus, Trash2, Edit3, Save, Eye, Lock, Utensils, Image as ImageIcon } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
@@ -35,16 +35,16 @@ export default function MenuManagementTab({
     passwordPlaceholder: { am: "የይለፍ ቃል...", om: "Jecha darbi...", en: "Password..." },
     submitPassword: { am: "ግባ", om: "Seeni", en: "Submit" },
     wrongPassword: { am: "የተሳሳተ የይለፍ ቃል ነው!", om: "Jechi darbi dogoggora!", en: "Incorrect Password!" },
-    addTitle: { am: "አዲስ የምግብ ዓይነት ጨምር", om: "Gosa Nyaataa Haarawa Dabali", en: "Add New Item" },
+    addTitle: { am: "አዲስ የምግብ አይነት ጨምር", om: "Gosa Nyaataa Haarawa Dabali", en: "Add New Item" },
     itemName: { am: "የምግብ ስም", om: "Maqaa Nyaataa", en: "Item Name" },
     itemPrice: { am: "ዋጋ (ETB)", om: "Gatii (ETB)", en: "Price (ETB)" },
     category: { am: "ምድብ", om: "Kutaa", en: "Category" },
-    uploadImage: { am: "ፎቶ ስቀል", om: "Fakkii Fe'i", en: "Upload Image" },
-    addVariant: { am: "+ አማራጭ/ዓይነት ጨምር (ትልቅ/ትንሽ...)", om: "+ Filannoo Dabali", en: "+ Add Variant" },
+    imageNamePlaceholder: { am: "የፎቶ ስም (ምሳሌ: tebs.jpg)", om: "Maqaa Fakkii (fkn: tebs.jpg)", en: "Image Name (e.g. tebs.jpg)" },
+    addVariant: { am: "+ አማራጭ/አይነት ጨምር (ትልቅ/ትንሽ...)", om: "+ Filannoo Dabali", en: "+ Add Variant" },
     addItemBtn: { am: "ምግብ ጨምር", om: "Nyaata Dabali", en: "Add Item" },
     save: { am: "አስቀምጥ", om: "Olka'i", en: "Save" },
     cancel: { am: "ሰርዝ", om: "Dhiisi", en: "Cancel" },
-    confirmDeleteItem: { am: "ይህንንም ምግብ ማጥፋት እርግጠኛ ነዎት?", om: "Nyaata kana haquuf mirkanaa'aadhaa?", en: "Are you sure you want to delete this item?" },
+    confirmDeleteItem: { am: "ይሁንም ምግብ ማጥፋት እርግጠኛ ነዎት?", om: "Nyaata kana haquuf mirkanaa'aadhaa?", en: "Are you sure you want to delete this item?" },
     fillRequired: { am: "እባክዎን ስም እና ዋጋ (ወይም አማራጮችን) ያስገቡ!", om: "Maaloo maqaa fi gatii (ykn filannoowwan) galchaa!", en: "Please enter name and price (or variants)!" },
     priceNotSet: { am: "ዋጋ አልተወሰነም", om: "Gatiin Hin Murtaa'ine", en: "Price not set" },
     from: { am: "ከ", om: "Kaa'immaa", en: "From" },
@@ -71,19 +71,11 @@ export default function MenuManagementTab({
     return String(nameObj);
   };
 
-  const handleImageUpload = (e, isEdit = false) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (isEdit) {
-          setEditForm(prev => ({ ...prev, img: reader.result }));
-        } else {
-          setNewItem(prev => ({ ...prev, img: reader.result }));
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+  // የፎቶ URL/Path አሰራርን የማስተካከያ Helper Function
+  const getImageUrl = (imgSrc) => {
+    if (!imgSrc) return '/placeholder.png';
+    if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://')) return imgSrc;
+    return imgSrc.startsWith('/') ? imgSrc : `/${imgSrc}`;
   };
 
   // ሁሉንም የተቀየሩ የሜኑ መረጃዎች Database እና Socket ጋር ማገናኛ Function
@@ -140,7 +132,7 @@ export default function MenuManagementTab({
     const createdItem = {
       id: `item_${Date.now()}`,
       category: newItem.category || 'ምግብ',
-      img: newItem.img || 'https://via.placeholder.com/150?text=Food',
+      img: newItem.img.trim() || 'placeholder.png', // የፎቶውን ስም ብቻ ያስገባል
       hasVariants: createdVariants.length > 0,
       name: { am: newItem.name, om: newItem.name, en: newItem.name },
       price: Number(newItem.price || 0),
@@ -215,7 +207,7 @@ export default function MenuManagementTab({
           ...item,
           name: typeof item.name === 'object' ? { ...item.name, [lang]: editForm.name } : editForm.name,
           price: Number(editForm.price),
-          img: editForm.img,
+          img: editForm.img.trim(), // የፎቶውን ስም ብቻ ያስቀምጣል
           category: editForm.category,
           hasVariants: updatedVariants.length > 0,
           variants: updatedVariants
@@ -268,7 +260,7 @@ export default function MenuManagementTab({
           <Lock size={32} />
         </div>
         <h3 className="text-lg font-bold text-white mb-2">{t.enterPasswordTitle[lang] || t.enterPasswordTitle.am}</h3>
-        <p className="text-xs text-zinc-400 mb-6">የምግብ እና የፋክቸር ማስተካከያ ገፅ ለመክፈት የይለፍ ቃል ያስገቡ</p>
+        <p className="text-xs text-zinc-400 mb-6">የምግብ እና የፋክቸር ማስተካከያ ገጽ ለመክፈት የይለፍ ቃል ያስገቡ</p>
 
         <form onSubmit={handlePasswordSubmit} className="w-full space-y-4">
           <div>
@@ -300,6 +292,7 @@ export default function MenuManagementTab({
 
   return (
     <div className="space-y-6">
+      {/* አዲስ ምግብ መጨምሪያ Form */}
       <form onSubmit={handleAddItem} className="bg-zinc-800/40 border border-zinc-800 rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <Utensils size={16} className="text-orange-500" />
@@ -328,6 +321,18 @@ export default function MenuManagementTab({
           >
             {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
+        </div>
+
+        {/* የፎቶ ስም በጽሁፍ ማስገቢያ ብቻ (Text Input) */}
+        <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2 focus-within:border-orange-500">
+          <ImageIcon size={16} className="text-zinc-400" />
+          <input
+            type="text"
+            placeholder={t.imageNamePlaceholder[lang] || t.imageNamePlaceholder.am}
+            value={newItem.img}
+            onChange={e => setNewItem({ ...newItem, img: e.target.value })}
+            className="bg-transparent text-xs text-white w-full outline-none"
+          />
         </div>
 
         <div className="space-y-2 pt-2">
@@ -366,13 +371,7 @@ export default function MenuManagementTab({
           </button>
         </div>
 
-        <div className="flex justify-between items-center pt-2">
-          <label className="flex items-center gap-2 cursor-pointer bg-zinc-900 border border-zinc-700 px-3 py-1.5 rounded-xl text-xs text-zinc-300 hover:text-white">
-            <Upload size={14} />
-            <span>{t.uploadImage[lang] || t.uploadImage.am}</span>
-            <input type="file" accept="image/*" onChange={e => handleImageUpload(e)} className="hidden" />
-          </label>
-
+        <div className="flex justify-end items-center pt-2">
           <button
             type="submit"
             className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer transition shadow-lg"
@@ -382,6 +381,7 @@ export default function MenuManagementTab({
         </div>
       </form>
 
+      {/* የምግብ ዝርዝር Cardዎች */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {menuItems.map(item => {
           const id = item.id || item._id;
@@ -412,6 +412,18 @@ export default function MenuManagementTab({
                     >
                       {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
+                  </div>
+
+                  {/* በ Edit ጊዜ የፎቶ ስም በጽሁፍ ማስተካከያ Input */}
+                  <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2">
+                    <ImageIcon size={14} className="text-zinc-400" />
+                    <input
+                      type="text"
+                      placeholder="የፎቶ ስም (ምሳሌ: tebs.jpg)"
+                      value={editForm.img}
+                      onChange={e => setEditForm({ ...editForm, img: e.target.value })}
+                      className="bg-transparent text-xs text-white w-full outline-none"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -447,35 +459,28 @@ export default function MenuManagementTab({
                     </button>
                   </div>
 
-                  <div className="flex justify-between items-center pt-2">
-                    <label className="cursor-pointer bg-zinc-900 border border-zinc-700 px-3 py-1.5 rounded-xl text-xs text-zinc-300">
-                      ፎቶ ቀይር
-                      <input type="file" accept="image/*" onChange={e => handleImageUpload(e, true)} className="hidden" />
-                    </label>
-
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => saveEdit(id)}
-                        className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
-                      >
-                        <Save size={13} /> {t.save[lang] || t.save.am}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(null)}
-                        className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white rounded-xl text-xs font-bold cursor-pointer"
-                      >
-                        {t.cancel[lang] || t.cancel.am}
-                      </button>
-                    </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => saveEdit(id)}
+                      className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Save size={13} /> {t.save[lang] || t.save.am}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(null)}
+                      className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white rounded-xl text-xs font-bold cursor-pointer"
+                    >
+                      {t.cancel[lang] || t.cancel.am}
+                    </button>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <img 
-                      src={item.img || item.image || 'https://via.placeholder.com/150'} 
+                      src={getImageUrl(item.img || item.image)} 
                       alt={getTranslatedItemName(item.name)} 
                       className="w-14 h-14 object-cover rounded-xl border border-zinc-700" 
                     />
