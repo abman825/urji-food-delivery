@@ -118,7 +118,7 @@ export default function Home() {
       const incomingReceiptId = String(data.receiptId || data.orderId || data.id || '').trim();
 
       if (currentReceiptId && incomingReceiptId && currentReceiptId === incomingReceiptId) {
-        if (data.status === 'Completed' || data.status === 'Finished' || data.status === 'ተጠናቋል') {
+        if (data.status === 'Completed' || data.status === 'Finished' || data.status === 'Delivered' ||data.status === 'ተጠናቋል') {
           setMyActiveOrder(null);
           setIsOrderTrackerOpen(false);
           localStorage.removeItem('myPersonalOrder');

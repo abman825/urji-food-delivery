@@ -49,7 +49,10 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
   // Real-Time Socket Listener
   useEffect(() => {
     const handleStatusUpdate = (data) => {
-      if (data && (data.receiptId === receiptId || data.orderId === receiptId)) {
+      const incomingId = String(data.receiptId || data.orderId || data.id || '').trim();
+      const currentId = String(receiptId || '').trim();
+
+      if (data && currentId && incomingId && currentId === incomingId) {
         const updatedStatus = data.status || 'In Progress';
 
         // 1. Update React State Realtime
@@ -58,23 +61,27 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
           status: updatedStatus
         }));
 
-        // 2. Update LocalStorage
+        // 2. Update LocalStorage (myPersonalOrder)
         try {
-          const savedOrder = localStorage.getItem('myCurrentOrder');
+          const savedOrder = localStorage.getItem('myPersonalOrder');
           if (savedOrder) {
             const parsed = JSON.parse(savedOrder);
             parsed.status = updatedStatus;
-            localStorage.setItem('myCurrentOrder', JSON.stringify(parsed));
+            localStorage.setItem('myPersonalOrder', JSON.stringify(parsed));
           }
         } catch (e) {
           console.error("LocalStorage Update Error:", e);
         }
 
-        // 3. 'Completed' ወይም 'Finished' ከሆነ ከ 3 ሰከንድ በኋላ Modal መዘጋት
-        if (updatedStatus === 'Completed' || updatedStatus === 'Finished') {
+        // 3. Delivered, Completed ወይም Finished ሲሆን ከ 3 ሰከንድ በኋላ ሞዳሉ ይዘጋል
+        if (
+          updatedStatus === 'Delivered' || 
+          updatedStatus === 'Completed' || 
+          updatedStatus === 'Finished' || 
+          updatedStatus === 'ተጠናቋል'
+        ) {
           setTimeout(() => {
-            localStorage.removeItem('myCurrentOrder');
-            localStorage.removeItem('activeOrderReceipt');
+            localStorage.removeItem('myPersonalOrder');
             setCurrentOrder(null);
             if (onClose) onClose();
           }, 3000);
@@ -131,8 +138,8 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
               </span>
             )}
 
-            {/* Completed */}
-            {(status === 'Completed' || status === 'Finished') && (
+            {/* Completed / Delivered */}
+            {(status === 'Completed' || status === 'Delivered' || status === 'Finished' || status === 'ተጠናቋል') && (
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30">
                 <CheckCircle size={14} /> {t.completed[lang] || t.completed.am}
               </span>
