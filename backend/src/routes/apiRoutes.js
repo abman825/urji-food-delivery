@@ -49,7 +49,6 @@ router.post('/menu/update', async (req, res) => {
 });
 
 // --- 📦 ORDER ROUTES ---
-// 'screenshot' እና 'image' ሁለቱንም እንዲቀበል ተደርጓል
 router.post('/orders', upload.single('screenshot'), createScreenshotOrder);
 router.post('/chapa-pay', initiateChapaPayment);
 router.post('/chapa-success-notify', handleChapaSuccess);

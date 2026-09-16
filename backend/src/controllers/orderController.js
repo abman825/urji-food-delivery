@@ -2,7 +2,7 @@ import { sendPhotoToTelegram, sendMessageToTelegram } from '../services/telegram
 import axios from 'axios';
 import fs from 'fs';
 import { CHAPA_SECRET_KEY } from '../config/constants.js';
-import Order from '../models/Order.js'; // የ Order Model ጥሪ
+import Order from '../models/Order.js';
 
 // የምግብ ዝርዝር ማስተካከያ እና ፎርማተር
 const formatOrderItems = (items) => {
@@ -43,6 +43,9 @@ export const handleChapaSuccess = async (req, res) => {
     const currentOrderType = pendingOrder?.orderType || 'Takeaway';
     const displayTableNo = currentOrderType === 'Takeaway' ? 'Takeaway' : (pendingOrder?.tableNo || '-');
 
+    // 🎯 Note ማውጣት
+    const userNote = pendingOrder?.note || 'የለም';
+
     let details = '';
     if (pendingOrder?.name) details += `<b>👤 ስም:</b> ${pendingOrder.name}\n`;
     if (pendingOrder?.phone) details += `<b>📞 ስልክ:</b> <code>${pendingOrder.phone}</code>\n`;
@@ -55,17 +58,20 @@ export const handleChapaSuccess = async (req, res) => {
 
 <b>🆔 የደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
 <b>💳 Tx Ref:</b> <code>${trx_id || 'ልዩነቱ ያልታወቀ'}</code>
-${details}<b>📦 ዓይነት:</b> ${currentOrderType}
+${details}<b>📝 አስተያየት (Note):</b>
+<code>${userNote}</code>
+
+<b>📦 አይነት:</b> ${currentOrderType}
 <b>💳 የመክፈያ መንገድ:</b> <b>Chapa Online Payment</b>
 
-<b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
+<b>🛒 የታዘዙ የምግብ አይነቶች:</b>
 ${formattedItems}
 
 <b>💰 የተከፈለዉ ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
 `;
 
     try {
-      await sendMessageToTelegram(message);
+      await sendMessageToTelegram(message, receiptId);
     } catch (telegramErr) {
       console.error('⚠️ Chapa Telegram Notification Failed:', telegramErr.message);
     }
@@ -81,13 +87,15 @@ ${formattedItems}
         orderType: currentOrderType,
         totalPrice: pendingOrder?.totalPrice || '0',
         items: parsedItems,
+        note: userNote,
+        customerInfo: { ...pendingOrder, note: userNote },
         paymentMethod: 'Chapa Online Payment',
         status: 'Pending',
         createdAt: new Date()
       });
       await newOrder.save();
 
-      // Socket ማሳወቂያ
+      // Socket ማስታወቂያ
       const io = req.app.get('socketio') || req.io;
       if (io) {
         io.to('adminRoom').emit('newOrder', newOrder);
@@ -156,7 +164,7 @@ export const initiateChapaPayment = async (req, res) => {
     if (response.data && response.data.status === 'success') {
       return res.status(200).json({ checkout_url: response.data.data.checkout_url });
     } else {
-      return res.status(400).json({ success: false, message: 'የ Chapa ሊንክ ማፍለቅ አልተቻለም' });
+      return res.status(400).json({ success: false, message: 'የ Chapa ሊንክ መፍቀድ አልተቻለም' });
     }
 
   } catch (error) {
@@ -170,19 +178,31 @@ export const initiateChapaPayment = async (req, res) => {
 // 3. Main Order / Screenshot Submission Handler
 export const submitOrderFormData = async (req, res) => {
   try {
-    const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod } = req.body;
+    const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod, note, customerInfo } = req.body;
     const file = req.file;
 
-    const currentOrderType = orderType || 'Dine-In';
+    // 🎯 Note ማውጣት (በቀጥታ req.body.note ወይም በ JSON customerInfo ውስጥ የመጣውን መፈለግ)
+    let parsedCustomerInfo = {};
+    if (customerInfo) {
+      try {
+        parsedCustomerInfo = typeof customerInfo === 'string' ? JSON.parse(customerInfo) : customerInfo;
+      } catch (e) {
+        console.error("CustomerInfo JSON parse error:", e);
+      }
+    }
 
-    if (currentOrderType === 'Dine-In' && (!tableNo || !tableNo.trim())) {
+    const userNote = note || parsedCustomerInfo?.note || 'የለም';
+    const currentOrderType = orderType || parsedCustomerInfo?.orderType || 'Dine-In';
+
+    if (currentOrderType === 'Dine-In' && (!tableNo && !parsedCustomerInfo?.tableNo)) {
       return res.status(400).json({ 
         success: false, 
         message: 'እባክዎን የወንበር ቁጥር ያስገቡ!' 
       });
     }
 
-    const displayTableNo = currentOrderType === 'Takeaway' ? 'Takeaway' : (tableNo || '-');
+    const inputTableNo = tableNo || parsedCustomerInfo?.tableNo;
+    const displayTableNo = currentOrderType === 'Takeaway' ? 'Takeaway' : (inputTableNo || '-');
     const orderId = `REC-${Date.now().toString().slice(-6)}`;
     
     let payMethodText = 'በካሽ (Cash on Delivery)';
@@ -194,12 +214,17 @@ export const submitOrderFormData = async (req, res) => {
 
     const hasReceipt = file ? '✅ አዎ (ከሰር ተያይዟል)' : '❌ አልተያያዘም (በካሽ የሚከፈል)';
 
+    const customerName = name || parsedCustomerInfo?.name;
+    const customerPhone = phone || parsedCustomerInfo?.phone;
+    const customerAddress = address || parsedCustomerInfo?.address;
+    const customerTime = time || parsedCustomerInfo?.time;
+
     let details = '';
-    if (name) details += `<b>👤 ስም:</b> ${name}\n`;
-    if (phone) details += `<b>📞 ስልክ:</b> <code>${phone}</code>\n`;
+    if (customerName) details += `<b>👤 ስም:</b> ${customerName}\n`;
+    if (customerPhone) details += `<b>📞 ስልክ:</b> <code>${customerPhone}</code>\n`;
     if (displayTableNo) details += `<b>📍 ጠረጴዛ ቁጥር:</b> <code>${displayTableNo}</code>\n`;
-    if (address) details += `<b>📍 አድራሻ:</b> ${address}\n`;
-    if (time) details += `<b>⏰ ሰዓት:</b> ${time}\n`;
+    if (customerAddress) details += `<b>📍 አድራሻ:</b> ${customerAddress}\n`;
+    if (customerTime) details += `<b>⏰ ሰዓት:</b> ${customerTime}\n`;
 
     const formattedItems = formatOrderItems(items);
 
@@ -207,11 +232,14 @@ export const submitOrderFormData = async (req, res) => {
 <b>🛒 አዲስ ትዕዛዝ ደርሷል!</b>
 
 <b>🆔 የደረሰኝ ቁጥር:</b> <code>${orderId}</code>
-${details}<b>📦 ዓይነት:</b> ${currentOrderType}
+${details}<b>📝 አስተያየት (Note):</b>
+<code>${userNote}</code>
+
+<b>📦 አይነት:</b> ${currentOrderType}
 <b>💳 የመክፈያ መንገድ:</b> <b>${payMethodText}</b>
 <b>🧾 የክፍያ ስክሪንሾት:</b> ${hasReceipt}
 
-<b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
+<b>🛒 የታዘዙ የምግብ አይነቶች:</b>
 ${formattedItems}
 
 <b>💰 ጠቅላላ ዋጋ:</b> <b>${totalPrice || '0'} ETB</b>
@@ -227,13 +255,13 @@ ${formattedItems}
         screenshotBase64 = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
 
         try {
-          await sendPhotoToTelegram(fileBuffer, caption);
+          await sendPhotoToTelegram(fileBuffer, caption, orderId);
         } catch (telegramErr) {
           console.error('⚠️ Telegram Photo Send Error:', telegramErr.message);
         }
       } else {
         try {
-          await sendMessageToTelegram(caption);
+          await sendMessageToTelegram(caption, orderId);
         } catch (telegramErr) {
           console.error('⚠️ Telegram Text Send Error:', telegramErr.message);
         }
@@ -244,7 +272,7 @@ ${formattedItems}
       }
     } else {
       try {
-        await sendMessageToTelegram(caption);
+        await sendMessageToTelegram(caption, orderId);
       } catch (telegramErr) {
         console.error('⚠️ Telegram Text Send Error:', telegramErr.message);
       }
@@ -257,12 +285,14 @@ ${formattedItems}
     try {
       const newOrder = new Order({
         receiptId: orderId,
-        name: name || 'እንግዳ',
-        phone: phone || '-',
+        name: customerName || 'እንግዳ',
+        phone: customerPhone || '-',
         tableNo: displayTableNo,
         orderType: currentOrderType,
         totalPrice: totalPrice || '0',
         items: parsedItems,
+        note: userNote,
+        customerInfo: { ...parsedCustomerInfo, name: customerName, phone: customerPhone, tableNo: displayTableNo, note: userNote },
         paymentMethod: payMethodText,
         screenshot: screenshotBase64,
         status: 'Pending',
@@ -277,12 +307,13 @@ ${formattedItems}
     const orderData = savedOrder ? savedOrder.toObject() : {
       id: orderId,
       receiptId: orderId,
-      name: name || 'እንግዳ',
-      phone: phone || '-',
+      name: customerName || 'እንግዳ',
+      phone: customerPhone || '-',
       tableNo: displayTableNo,
       orderType: currentOrderType,
       totalPrice: totalPrice || '0',
       items: parsedItems,
+      note: userNote,
       paymentMethod: payMethodText,
       screenshot: screenshotBase64,
       status: 'Pending',
@@ -291,7 +322,6 @@ ${formattedItems}
 
     const io = req.app.get('socketio') || req.io;
     if (io) {
-      // ለ Admin Dashboard 'adminRoom' እና ለጠቅላላ ብራውዘር በ Real-time ይልካል
       io.to('adminRoom').emit('newOrder', orderData);
       io.emit('newOrder', orderData);
     }

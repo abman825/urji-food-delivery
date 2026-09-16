@@ -58,11 +58,11 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
   const messageId = message.message_id;
   const data = callbackQuery.data;
 
-  // confirm_ በሚለው ከጀመረ (ለምሳሌ: confirm_REC-051289 ወይም confirm_order)
+  // confirm_ በሚለው ከተጀመረ (ለአብነት: confirm_REC-051289 ወይም confirm_order)
   if (data.startsWith('confirm')) {
     const text = message.caption || message.text || '';
     
-    // Receipt ID ከ callback_data ወይም ከፅሁፉ ውስጥ መፈለግ
+    // Receipt ID ከ callback_data ወይም ከጽሁፉ ውስጥ መፈለግ
     let receiptId = data.includes('_') ? data.split('_')[1] : null;
     if (!receiptId || receiptId === 'order') {
       const receiptMatch = text.match(/REC-\d+/);
@@ -75,12 +75,12 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
       text: 'ትዕዛዙ ተረጋግጧል!'
     }, { httpsAgent: agent });
 
-    // 🎯 ደንበኛው ድረ-ገጽ ላይ ላለው Modal በ Socket.io 'In Progress' ብሎ መላክ
+    // 🎯 ደንበኛው ድረ-ገፅ ላይ ላለው Modal በ Socket.io 'In Progress' ብሎ መላክ
     if (receiptId && io) {
       const payload = { 
         receiptId, 
         status: 'In Progress', 
-        message: 'ትዕዛዝዎ ደርሶናል! በዝግጅት ላይ ነው፤ ቶሎ እናመጣለን።' 
+        message: 'ትዕዛዝዎ ደርሶናል! በዝግጅት ላይ ነን፤ ቶሎ እናመጣለን።' 
       };
 
       io.to(`order_${receiptId}`).emit('orderStatusUpdated', payload);
