@@ -26,7 +26,6 @@ export default function Home() {
   const [myActiveOrder, setMyActiveOrder] = useState(null);
   const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
 
-  // 🎯 customerInfo ውስጥ note: '' ተጨምሯል
   const [customerInfo, setCustomerInfo] = useState({ 
     name: '', 
     phone: '', 
@@ -116,10 +115,10 @@ export default function Home() {
       if (!myActiveOrder) return;
 
       const currentReceiptId = String(myActiveOrder.receiptId || myActiveOrder.id || '').trim();
-      const incomingReceiptId = String(data.receiptId || data.id || '').trim();
+      const incomingReceiptId = String(data.receiptId || data.orderId || data.id || '').trim();
 
       if (currentReceiptId && incomingReceiptId && currentReceiptId === incomingReceiptId) {
-        if (data.status === 'Completed' || data.status === 'ተጠናቋል') {
+        if (data.status === 'Completed' || data.status === 'Finished' || data.status === 'ተጠናቋል') {
           setMyActiveOrder(null);
           setIsOrderTrackerOpen(false);
           localStorage.removeItem('myPersonalOrder');
@@ -245,7 +244,7 @@ export default function Home() {
         formData.append('tableNo', customerInfo.tableNo || '');
         formData.append('phone', customerInfo.phone || '');
         formData.append('orderType', customerInfo.orderType || 'Dine-in');
-        formData.append('note', customerInfo.note || ''); // 🎯 አስተያየቱ ወደ Backend ይላካል
+        formData.append('note', customerInfo.note || '');
         formData.append('paymentMethod', paymentMethod);
         formData.append('totalPrice', totalPrice);
         formData.append('items', JSON.stringify(cartItems));

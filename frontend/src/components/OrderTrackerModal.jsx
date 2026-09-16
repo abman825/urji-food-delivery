@@ -11,15 +11,14 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
   const receiptId = currentOrder.receiptId || currentOrder.id || currentOrder._id;
   const status = currentOrder.status || 'Pending';
 
-  
   // Dynamic Translation Dictionary
   const t = {
     title: { am: "የትዕዛዝዎ መቆጣጠሪያ", om: "To'annoo Ajaja Keessanii", en: "Order Tracker" },
     statusLabel: { am: "ሁኔታው", om: "Haala Ajajaa", en: "Status" },
     pending: { am: "በትዕዛዝ ላይ...", om: "Eegaa Jira", en: "Pending" },
-    inProgress: { am: "በመሰራት ላይ", om: "Qophaa'aa Jira", en: "In Progress" },
+    inProgress: { am: "በመሥራት ላይ", om: "Qophaa'aa Jira", en: "In Progress" },
     completed: { am: "ተጠናቋል (ምግቡ ደርሷል)", om: "Xumurameera", en: "Completed" },
-    orderType: { am: "የትዕዛዝ አይነት", om: "Gosa Ajajaa", en: "Order Type" },
+    orderType: { am: "የትዕዛዝ ዓይነት", om: "Gosa Ajajaa", en: "Order Type" },
     tableNo: { am: "የወንበር ቁጥር", om: "Lakk. Teessoo", en: "Table No." },
     orderedItems: { am: "የታዘዙ ምግቦች", om: "Nyaatawwan Ajajaman", en: "Ordered Items" },
     totalPrice: { am: "ጠቅላላ ዋጋ", om: "Gatiiyyaa Walii Galaa", en: "Total Price" },
@@ -50,8 +49,6 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
   // Real-Time Socket Listener
   useEffect(() => {
     const handleStatusUpdate = (data) => {
-      console.log("Received Socket Event:", data);
-
       if (data && (data.receiptId === receiptId || data.orderId === receiptId)) {
         const updatedStatus = data.status || 'In Progress';
 

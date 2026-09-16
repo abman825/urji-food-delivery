@@ -46,21 +46,21 @@ export default function Navbar({
       const userLang = data?.lang || lang;
       const status = data?.status;
 
-      if (status === 'In Progress' || status === 'በመሥራት ላይ') {
+      if (status === 'In Progress' || status === 'በመስራት ላይ') {
         if (userLang === 'om') {
           setOrderNotification(`Nyaatni keessan #${data.receiptId || ''} hojjetamaa jira! 🧑‍🍳`);
         } else if (userLang === 'en') {
           setOrderNotification(`Your food #${data.receiptId || ''} is being prepared! 🧑‍🍳`);
         } else {
-          setOrderNotification(`ምግብዎ #${data.receiptId || ''} በመሥራት ላይ ይገኛል፤ በጥቂት ደቂቃዎች ውስጥ እናደርሳለን! 🧑‍🍳`);
+          setOrderNotification(`ምግብዎ #${data.receiptId || ''} በመስራት ላይ ይገኛል፤ በጥቂት ደቂቃዎች ውስጥ እናደርሳለን! 🧑‍🍳`);
         }
-      } else if (status === 'Completed' || status === 'ተጠናቋል') {
+      } else if (status === 'Delivered' || status === 'Completed' || status === 'ተጠናቋል') {
         if (userLang === 'om') {
           setOrderNotification(`Nyaatni keessan #${data.receiptId || ''} xumurameera! 🎉`);
         } else if (userLang === 'en') {
-          setOrderNotification(`Your food #${data.receiptId || ''} is completed! 🎉`);
+          setOrderNotification(`Your food #${data.receiptId || ''} has been delivered! 🎉`);
         } else {
-          setOrderNotification(`ምግብዎ #${data.receiptId || ''} ተጠናቋል! ይድረስዎ! 🎉`);
+          setOrderNotification(`ምግብዎ #${data.receiptId || ''} ደርሷል! መልካም ምግብ! 🎉`);
         }
       }
 
@@ -114,7 +114,7 @@ export default function Navbar({
 
   return (
     <>
-      {/* 🔔 REAL-TIME NOTIFICATION TOAST */}
+      {/* REAL-TIME NOTIFICATION TOAST */}
       {orderNotification && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100000] w-[90%] max-w-md bg-zinc-900 border border-green-500/50 text-white p-4 rounded-2xl shadow-2xl backdrop-blur-lg flex items-start gap-3 animate-bounce">
           <div className="p-2 bg-green-500/20 text-green-400 rounded-xl shrink-0">
@@ -138,7 +138,6 @@ export default function Navbar({
       <nav className="bg-white/90 backdrop-blur-md border-b border-gray-100 p-4 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           
-          {/* Logo */}
           <div className="flex items-center gap-2 group cursor-pointer" onClick={handleHomeClick}>
             <div className="bg-orange-600 p-2 rounded-2xl group-hover:rotate-12 transition-transform duration-300 shadow-lg shadow-orange-200">
               <UtensilsCrossed className="text-white" size={20} />
@@ -148,17 +147,13 @@ export default function Navbar({
             </h1>
           </div>
           
-          {/* Desktop Nav Links */}
           <div className="hidden md:flex gap-8 text-sm font-bold text-gray-600">
             <a href="#home" onClick={handleHomeClick} className="hover:text-orange-600 transition-colors">{currentNav.home}</a>
             <a href="#menu" onClick={handleMenuClick} className="hover:text-orange-600 transition-colors">{currentNav.menu}</a>
             <a href="#footer" onClick={handleAboutClick} className="hover:text-orange-600 transition-colors">{currentNav.about}</a>
           </div>
 
-          {/* Right Icons Container */}
           <div className="flex items-center gap-2">
-            
-            {/* 🖥️ በኮምፒውተር (Desktop) ላይ ብቻ የሚታዩ (hidden md:flex) ቁልፎች */}
             <div className="hidden md:flex items-center gap-2">
               <button
                 onClick={() => setIsAdminDashOpen(true)}
@@ -178,7 +173,6 @@ export default function Navbar({
               </button>
             </div>
 
-            {/* Language Selector (በሁለቱም ስክሪን ላይ የሚቆይ) */}
             <select 
               value={lang} 
               onChange={(e) => setLang(e.target.value)}
@@ -189,7 +183,6 @@ export default function Navbar({
               <option value="en">🇬🇧 English</option>
             </select>
 
-            {/* Cart Icon */}
             <div 
               className="relative cursor-pointer hover:scale-105 active:scale-95 transition-all" 
               onClick={() => cartCount > 0 && onOpenCart()}
@@ -204,7 +197,6 @@ export default function Navbar({
               )}
             </div>
 
-            {/* Hamburger Button (በስልክ ላይ ብቻ የሚታይ) */}
             <button 
               className="md:hidden p-2 bg-gray-100 rounded-2xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-all border border-gray-200/50"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -215,14 +207,12 @@ export default function Navbar({
 
         </div>
 
-        {/* 📱 Mobile Menu Dropdown (በስልክ ሶስቱ መስመር ሲነካ ብቻ የሚከፈት) */}
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-4 right-4 bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl p-4 mt-2 shadow-xl flex flex-col gap-3 font-bold text-gray-700 text-sm">
             <a href="#home" onClick={handleHomeClick} className="p-2 hover:bg-orange-50 rounded-xl hover:text-orange-600 transition-colors">{currentNav.home}</a>
             <a href="#menu" onClick={handleMenuClick} className="p-2 hover:bg-orange-50 rounded-xl hover:text-orange-600 transition-colors">{currentNav.menu}</a>
-            <a href="#footer" onClick={handleAboutClick} className="p-2 hover:bg-orange-50 rounded-xl hover:text-orange-600 transition-colors">{currentNav.about}</a>
+            <a href="#footer" onClick={handleAboutClick} className="hover:text-orange-600 transition-colors p-2">{currentNav.about}</a>
             
-            {/* በስልክ ሜኑ ውስጥ አዝራሮቹ የሚታዩበት ክፍል */}
             <div className="border-t border-gray-100 pt-3 flex flex-col gap-2">
               <button
                 onClick={() => { setIsMobileMenuOpen(false); setIsAdminDashOpen(true); }}
@@ -249,7 +239,6 @@ export default function Navbar({
         )}
       </nav>
 
-      {/* Admin Dashboard Modal */}
       {isAdminDashOpen && (
         <AdminDashboard 
           isOpen={isAdminDashOpen} 
@@ -258,7 +247,6 @@ export default function Navbar({
         />
       )}
 
-      {/* Menu Management Modal */}
       {isMenuEditorOpen && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
           <div className="relative w-full max-w-5xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -271,9 +259,6 @@ export default function Navbar({
                   <h2 className="text-xl font-black text-white">
                     {lang === 'om' ? 'Sirreessaa Meenuu' : lang === 'en' ? 'Menu Management' : 'የሜኑ ማስተካከያ'}
                   </h2>
-                  <p className="text-xs text-zinc-400">
-                    {lang === 'om' ? 'Nyaata fi gatii jijjiiruuf' : lang === 'en' ? 'Manage menu items, prices, and availability' : 'ምግቦችን፣ ዋጋዎችን እና የዛሬ ዝግጁነትን ማስተካከያ'}
-                  </p>
                 </div>
               </div>
 

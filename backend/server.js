@@ -14,7 +14,6 @@ connectDB();
 const app = express();
 const httpServer = createServer(app);
 
-// CORS መጀመሪያ ላይ መሆን አለበት
 app.use(cors());
 
 // Socket.io Config
@@ -22,7 +21,7 @@ const io = new Server(httpServer, {
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// Payload Limit (ትላልቅ ስክሪንሾቶችን ለመቀበል - 10MB)
+// Payload Limit
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -55,20 +54,16 @@ app.use('/api', apiRoutes);
 io.on('connection', (socket) => {
   console.log('⚡ አዲስ ደንበኛ ተገናኝቷል:', socket.id);
 
-  // 1. Admin የሜኑ ለውጥ ሲያደርግ ለሁሉም ደንበኞች በቅጽበት መላኪያ
   socket.on('updateMenu', (updatedMenu) => {
     io.emit('updateMenu', updatedMenu);
   });
 
-  // 2. Admin Room መቀላቀያ
   socket.on('joinAdmin', () => socket.join('adminRoom'));
 
-  // 3. የትዕዛዝ Room መቀላቀያ (በ receiptId)
   socket.on('joinOrderRoom', (receiptId) => {
     if (receiptId) socket.join(`order_${String(receiptId).trim()}`);
   });
 
-  // 4. አዲስ ትዕዛዝ መስጫ
   socket.on('placeOrder', async (orderData) => {
     try {
       const newOrder = new Order({ ...orderData, socketId: socket.id });
@@ -80,7 +75,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 5. የትዕዛዝ Status መቀየሪያ
   socket.on('updateOrderStatus', async (data) => {
     const { receiptId, status } = data;
     console.log(`🔄 Updating Order ${receiptId} to: ${status}`);
@@ -109,7 +103,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 6. Client ሲቋረጥ
   socket.on('disconnect', () => {
     console.log('❌ ደንበኛ ተቋርጧል:', socket.id);
   });
