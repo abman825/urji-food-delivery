@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  X, Trash2, Clock, CheckCircle, Receipt, RefreshCw, ShoppingBag, ChefHat 
+  X, Trash2, CheckCircle, Receipt, RefreshCw, ShoppingBag, ChefHat, Truck 
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 
@@ -17,19 +17,19 @@ export default function AdminDashboard({ isOpen, onClose, lang = 'am' }) {
     incomingOrders: { am: "የገቡ ትዕዛዞች", om: "Ajajawwan Seenan", en: "Incoming Orders" },
     refresh: { am: "አዲስ", om: "Haaromsi", en: "Refresh" },
     clearAll: { am: "ሁሉንም አጥፋ", om: "Hunda Qulqulleessi", en: "Clear All" },
-    noOrders: { am: "ምንም ያልተሰራ አዲስ ትዕዛዝ የለም", om: "Ajajni haarawni tokkollee hin jiru", en: "No new orders available" },
-    accept: { am: "ተቀበል (Accept)", om: "Fudhadhu", en: "Accept" },
-    inProgress: { am: "በመስራት ላይ (ተጠናቋል በል)", om: "Hojjetamaa Jira (Xumurame)", en: "In Progress (Complete)" },
+    noOrders: { am: "ምንም ያልተሠራ አዲስ ትዕዛዝ የለም", om: "Ajajni haarawni tokkollee hin jiru", en: "No new orders available" },
+    inProgress: { am: "በመሥራት ላይ", om: "Hojjetamaa Jira", en: "In Progress" },
+    delivered: { am: "ደርሷል (Delivered)", om: "Gahaera", en: "Delivered" },
     completed: { am: "ተጠናቋል (Locked)", om: "Xumurameera", en: "Completed" },
     tableNo: { am: "ወንበር/ጠረጴዛ፡", om: "Teessoo/Mesa:", en: "Table/Seat:" },
     phone: { am: "ስልክ፡", om: "Lak.Bilbilaa:", en: "Phone:" },
-    type: { am: "አይነት፡", om: "Gosa:", en: "Type:" },
+    type: { am: "ዓይነት፡", om: "Gosa:", en: "Type:" },
     paymentMethod: { am: "የክፍያ መንገድ፡", om: "Mala Kaffaltii:", en: "Payment Method:" },
     screenshotTitle: { am: "🧾 የክፍያ ስክሪንሾት (ለመክፈት ይጫኑ)፡", om: "🧾 Nagahee Kaffaltii (Banachuuf cuqasaa):", en: "🧾 Payment Proof (Click to view):" },
     noScreenshot: { am: "💵 በካሽ የሚከፈል (ስክሪንሾት የለውም)", om: "💵 Kaffaltii Harkaa (Nagahee hin qabu)", en: "💵 Cash Payment (No screenshot)" },
     total: { am: "ጠቅላላ፡", om: "Walii Galaa:", en: "Total:" },
     confirmDeleteOrder: { am: "ይሁኑን ትዕዛዝ ማጥፋት ይፈልጋሉ?", om: "Ajaja kana haquu ni barbaadduu?", en: "Are you sure you want to delete this order?" },
-    confirmClearAll: { am: "ሁሉንም ትዕዛዞች ማጽዳት ይፈልጋሉ?", om: "Ajajawwan hunda qulqulleessuu ni barbaadduu?", en: "Are you sure you want to clear all orders?" },
+    confirmClearAll: { am: "ሁሉንም ትዕዛዞች ማፅዳት ይፈልጋሉ?", om: "Ajajawwan hunda qulqulleessuu ni barbaadduu?", en: "Are you sure you want to clear all orders?" },
     cash: { am: "በካሽ (Cash)", om: "Kaffaltii Harkaa (Cash)", en: "Cash" },
     screenshotBank: { am: "በስክሪንሾት / ባንክ", om: "Nagahee / Baankii", en: "Screenshot / Bank" }
   };
@@ -81,7 +81,8 @@ export default function AdminDashboard({ isOpen, onClose, lang = 'am' }) {
                 : o
             );
           } else {
-            updated = [{ ...incomingOrder, status: incomingOrder.status || 'Pending' }, ...prevOrders];
+            // አዲስ ሲመጣ 'In Progress' ብሎ ይጀምራል
+            updated = [{ ...incomingOrder, status: incomingOrder.status || 'In Progress' }, ...prevOrders];
           }
           
           localStorage.setItem('adminOrders', JSON.stringify(updated));
@@ -101,15 +102,16 @@ export default function AdminDashboard({ isOpen, onClose, lang = 'am' }) {
 
   if (!isOpen) return null;
 
+  // Status መቀያየሪያ Logic (In Progress -> Delivered -> Completed)
   const handleNextStatus = (index, order) => {
-    if (order.status === 'Completed') return;
+    if (order.status === 'Completed' || order.status === 'Delivered') return;
 
     const updatedOrders = [...orders];
-    let nextStatus = 'Pending';
+    let nextStatus = 'In Progress';
 
-    if (!order.status || order.status === 'Pending') {
-      nextStatus = 'In Progress';
-    } else if (order.status === 'In Progress') {
+    if (!order.status || order.status === 'Pending' || order.status === 'In Progress') {
+      nextStatus = 'Delivered';
+    } else if (order.status === 'Delivered') {
       nextStatus = 'Completed';
     }
 
@@ -119,6 +121,7 @@ export default function AdminDashboard({ isOpen, onClose, lang = 'am' }) {
 
     const receiptId = order.receiptId || order.id || order._id;
 
+    // ለደንበኛው real-time ማሳወቂያ
     socket.emit('updateOrderStatus', {
       receiptId: receiptId,
       status: nextStatus
@@ -209,7 +212,7 @@ export default function AdminDashboard({ isOpen, onClose, lang = 'am' }) {
               {orders.map((order, idx) => {
                 const screenshotImg = getScreenshotImg(order);
                 const paymentMethodStr = getPaymentMethod(order);
-                const currentStatus = order.status || 'Pending';
+                const currentStatus = order.status || 'In Progress';
 
                 return (
                   <div key={idx} className="bg-zinc-800/40 border border-zinc-800 rounded-2xl p-4 space-y-3">
@@ -220,16 +223,8 @@ export default function AdminDashboard({ isOpen, onClose, lang = 'am' }) {
                         <p className="text-xs text-zinc-400">{order.time || (order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : '')}</p>
                       </div>
 
-                      {currentStatus === 'Pending' && (
-                        <button
-                          onClick={() => handleNextStatus(idx, order)}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-all flex items-center gap-1 cursor-pointer animate-pulse"
-                        >
-                          <Clock size={13} /> {t.accept[lang] || t.accept.am}
-                        </button>
-                      )}
-
-                      {currentStatus === 'In Progress' && (
+                      {/* በመሥራት ላይ (In Progress) */}
+                      {(currentStatus === 'Pending' || currentStatus === 'In Progress') && (
                         <button
                           onClick={() => handleNextStatus(idx, order)}
                           className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition-all flex items-center gap-1 cursor-pointer"
@@ -238,10 +233,21 @@ export default function AdminDashboard({ isOpen, onClose, lang = 'am' }) {
                         </button>
                       )}
 
+                      {/* ደርሷል (Delivered) */}
+                      {currentStatus === 'Delivered' && (
+                        <button
+                          onClick={() => handleNextStatus(idx, order)}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <Truck size={13} /> {t.delivered[lang] || t.delivered.am}
+                        </button>
+                      )}
+
+                      {/* ተጠናቋል (Completed) */}
                       {currentStatus === 'Completed' && (
                         <button
                           disabled={true}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30 opacity-80 cursor-not-allowed flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-zinc-700 text-zinc-400 border border-zinc-600 opacity-80 cursor-not-allowed flex items-center gap-1"
                         >
                           <CheckCircle size={13} /> {t.completed[lang] || t.completed.am}
                         </button>

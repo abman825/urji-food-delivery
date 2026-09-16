@@ -1,26 +1,23 @@
 import React, { createContext, useContext, useState } from 'react';
-import axios from 'axios';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState([]);
-  
-  // 🎯 ተደራራቢ ትዕዛዝን ሙሉ በሙሉ የሚቆልፍ State
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cartItems, setCartItems] = useState([]); // የምግቦች ዝርዝር (Array of Objects)
 
   // 1. ምግብ ወደ ካርቶን መጨመሪያ
   const addToCart = (name, price) => {
     setCartItems(prevItems => {
+      // እቃው አስቀድሞ በካርቶኑ ውስጥ እንዳለ እንፈትሻለን
       const existingItem = prevItems.find(item => item.name === name);
 
       if (existingItem) {
+        // ካለ ብዛቱን (quantity) ብቻ +1 እንጨምራለን
         return prevItems.map(item =>
           item.name === name ? { ...item, quantity: item.quantity + 1 } : item
         );
       } else {
+        // ከሌለ አዲስ ምግብ አድርገን በ ብዛት 1 እንጨምረዋለን
         return [...prevItems, { name, price, quantity: 1 }];
       }
     });
@@ -34,8 +31,10 @@ export function CartProvider({ children }) {
       if (!existingItem) return prevItems;
 
       if (existingItem.quantity === 1) {
+        // ብዛቱ 1 ከሆነ ሙሉ በሙሉ ከዝርዝሩ እናስወግደዋለን
         return prevItems.filter(item => item.name !== name);
       } else {
+        // ብዛቱ ከ 1 በላይ ከሆነ -1 እንቀንሳለን
         return prevItems.map(item =>
           item.name === name ? { ...item, quantity: item.quantity - 1 } : item
         );
@@ -43,66 +42,17 @@ export function CartProvider({ children }) {
     });
   };
 
-  // 3. ካርቶኑን ባዶ ማድረግ
+  // 3. ካርቶኑን ባዶ ማድረጊያ
   const clearCart = () => setCartItems([]);
 
-  // 4. አጠቃላይ የላከውን የምግብ ብዛት ማሰቢያ
+  // 4. አጠቃላይ የላከውን የምግብ ብዛት ማሰቢያ (Total Items)
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // 5. አጠቃላይ ዋጋ ማሰቢያ
+  // 5. አጠቃላይ ዋጋ ማሰቢያ (Total Price)
   const totalPrice = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // 🎯 6. ትዕዛዝ መላኪያ (ሙሉ በሙሉ Locked የሚሆንበት አሰራር)
-  const submitOrder = async (customerDetails = {}) => {
-    // 1. አንድ ጊዜ ከተነካ ወይም ካርቱ ባዶ ከሆነ በፍጹም አይሰራም!
-    if (isSubmitting || cartItems.length === 0) return { success: false };
-
-    // 🔒 2. በተኑን እዚህ ጋር ቆለፍነው (Locked & Spinning ይሆናል)
-    setIsSubmitting(true); 
-
-    try {
-      const orderPayload = {
-        items: cartItems,
-        totalPrice,
-        ...customerDetails
-      };
-
-      const response = await axios.post(`${BACKEND_URL}/api/orders`, orderPayload);
-
-      if (response.status === 200 || response.status === 201) {
-        clearCart(); // ትዕዛዙ ከተሳካ ካርቱን ማጽዳት
-        
-        // 🎯 ትዕዛዙ ስለተሳካ UIው Modal ከተዘጋ በኋላ ብቻ እንዲከፈት ለአፍታ ቆይተን false እናደርጋለን
-        setTimeout(() => {
-          setIsSubmitting(false);
-        }, 1000);
-
-        return { success: true, data: response.data };
-      }
-    } catch (error) {
-      console.error("ትዕዛዝ ሲላክ ስህተት ተፈጠረ:", error);
-      alert("ትዕዛዝ መላክ አልተቻለም። እባክዎን የኔትወርክ ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።");
-      
-      // ❌ ስህተት ከተፈጠረ ብቻ እንደገና መጫን እንዲችል በተኑን እንከፍተዋለን
-      setIsSubmitting(false); 
-      return { success: false, error };
-    }
-  };
-
   return (
-    <CartContext.Provider 
-      value={{ 
-        cartItems, 
-        cartCount, 
-        totalPrice, 
-        isSubmitting, 
-        setIsSubmitting,
-        addToCart, 
-        removeFromCart, 
-        clearCart,
-        submitOrder
-      }}
-    >
+    <CartContext.Provider value={{ cartItems, cartCount, totalPrice, addToCart, removeFromCart, clearCart }}>
       {children}
     </CartContext.Provider>
   );

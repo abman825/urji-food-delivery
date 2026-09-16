@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, CreditCard, Utensils, CheckSquare, Square, Smartphone, Building2, Loader2, MessageSquare } from 'lucide-react';
+import { X, Upload, CreditCard, Utensils, CheckSquare, Square, Smartphone, Building2 } from 'lucide-react';
 import { io } from 'socket.io-client';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
@@ -21,13 +21,12 @@ export default function CheckoutModal({
 }) {
   const [checkoutType, setCheckoutType] = useState('table'); 
   const [isSelfPickUp, setIsSelfPickUp] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
   const modalText = {
     am: {
-      title: "ትዕዛዝዎን ያጠናቁ",
+      title: "ትዕዛዝዎን ያጠናቅቁ",
       orderByTable: "በወንበር ቁጥር ለማዘዝ",
       orderByPayment: "ክፍያ በመክፈል ለማዘዝ",
       dineIn: "እዚሁ (Dine-in)",
@@ -52,10 +51,7 @@ export default function CheckoutModal({
       payChapa: "በ Chapa ክፈል",
       paymentAccounts: "የክፍያ ሂሳብ ቁጥሮች",
       selectPaymentMethod: "የክፍያ መንገድ",
-      payWithChapa: "በ Chapa (ኦንላይን)",
-      // 🎯 የአስተያየት መፃፊያ ፅሁፎች
-      orderNoteLabel: "ተጨማሪ አስተያየት / ማስታወሻ",
-      orderNotePlaceholder: "ምሳሌ፦ ሽንኩርት አይገባበት፣ ጨው አይበዛበት፣ በርበሬ ቀንሱልኝ..."
+      payWithChapa: "በ Chapa (ኦንላይን)"
     },
     om: {
       title: "Ajaja Keessan Xumuraa",
@@ -83,9 +79,7 @@ export default function CheckoutModal({
       payChapa: "Chapa'n Kaffalaa",
       paymentAccounts: "Lakkoofsa Akkaawuntii Kaffaltii",
       selectPaymentMethod: "Filannoo Kaffaltii",
-      payWithChapa: "Chapa (Online)",
-      orderNoteLabel: "Yaada Dabalataa",
-      orderNotePlaceholder: "Fkn: Qullubbii diimaa keessa hin kaayinaa, Sogaa hin baay'isinaa..."
+      payWithChapa: "Chapa (Online)"
     },
     en: {
       title: "Complete Your Order",
@@ -113,9 +107,7 @@ export default function CheckoutModal({
       payChapa: "Pay with Chapa",
       paymentAccounts: "Payment Accounts",
       selectPaymentMethod: "Payment Method",
-      payWithChapa: "Chapa (Online)",
-      orderNoteLabel: "Special Instructions / Note",
-      orderNotePlaceholder: "e.g., No onions, less salt, extra spicy..."
+      payWithChapa: "Chapa (Online)"
     }
   };
 
@@ -138,9 +130,8 @@ export default function CheckoutModal({
     }
   };
 
-  const onSubmitClick = async () => {
-    if (isSubmitting) return;
-
+  const onSubmitClick = () => {
+    // Validation
     if (checkoutType === 'table' || (checkoutType === 'online' && customerInfo.orderType === 'Dine-in')) {
       if (!customerInfo.tableNo || !customerInfo.tableNo.trim()) {
         alert(lang === 'am' ? 'እባክዎን የወንበር ቁጥር ያስገቡ!' : 'Please enter table number!');
@@ -167,38 +158,34 @@ export default function CheckoutModal({
       }
     }
 
-    setIsSubmitting(true);
+    // ------------------ ወሳኙ ክፍል ------------------
+    const generatedReceiptId = `REC-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    try {
-      const generatedReceiptId = `REC-${Math.floor(100000 + Math.random() * 900000)}`;
+    const newOrderObj = {
+      receiptId: generatedReceiptId,
+      items: cartItems,
+      totalPrice: totalPrice,
+      status: 'Pending',
+      tableNo: customerInfo.tableNo || null,
+      customerInfo: customerInfo,
+      lang: lang,
+      createdAt: new Date().toISOString()
+    };
 
-      const newOrderObj = {
-        receiptId: generatedReceiptId,
-        items: cartItems,
-        totalPrice: totalPrice,
-        status: 'Pending',
-        tableNo: customerInfo.tableNo || null,
-        note: customerInfo.note || '', // 🎯 አስተያየቱ እዚህ ጋር አብሮ ይላካል
-        customerInfo: customerInfo,
-        lang: lang,
-        createdAt: new Date().toISOString()
-      };
-
-      if (socket) {
-        socket.emit('joinOrderRoom', generatedReceiptId);
-      }
-
-      localStorage.setItem('myCurrentOrder', JSON.stringify(newOrderObj));
-
-      const existingOrders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-      localStorage.setItem('myOrders', JSON.stringify([newOrderObj, ...existingOrders]));
-
-      await handleOrder(generatedReceiptId);
-
-    } catch (error) {
-      console.error("Order submission error:", error);
-      setIsSubmitting(false);
+    // 🟢 1. ደንበኛውን በ Socket.io ከዚህ Receipt ID Room ጋር ማቀላቀል
+    if (socket) {
+      socket.emit('joinOrderRoom', generatedReceiptId);
     }
+
+    // 2. ለ Order Tracker Modal / myorder.jsx
+    localStorage.setItem('myCurrentOrder', JSON.stringify(newOrderObj));
+
+    // 3. ለ My Orders ታሪክ
+    const existingOrders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+    localStorage.setItem('myOrders', JSON.stringify([newOrderObj, ...existingOrders]));
+
+    // 4. ዋናውን Order Handler መጥራት (ከነ receiptId ጋር)
+    handleOrder(generatedReceiptId);
   };
 
   return (
@@ -208,8 +195,7 @@ export default function CheckoutModal({
         {/* Close Button */}
         <button
           onClick={onClose}
-          disabled={isSubmitting}
-          className="absolute top-4 right-4 p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-full transition-all cursor-pointer disabled:opacity-50"
+          className="absolute top-4 right-4 p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-full transition-all cursor-pointer"
         >
           <X size={20} />
         </button>
@@ -222,7 +208,6 @@ export default function CheckoutModal({
         <div className="grid grid-cols-2 gap-3 mb-6">
           <button
             type="button"
-            disabled={isSubmitting}
             onClick={() => onCheckoutTypeChange('table')}
             className={`p-3.5 rounded-2xl border font-bold text-xs sm:text-sm flex flex-col items-center gap-2 transition-all cursor-pointer ${
               checkoutType === 'table'
@@ -236,7 +221,6 @@ export default function CheckoutModal({
 
           <button
             type="button"
-            disabled={isSubmitting}
             onClick={() => onCheckoutTypeChange('online')}
             className={`p-3.5 rounded-2xl border font-bold text-xs sm:text-sm flex flex-col items-center gap-2 transition-all cursor-pointer ${
               checkoutType === 'online'
@@ -281,9 +265,8 @@ export default function CheckoutModal({
                 type="text"
                 placeholder={t.tablePlaceholder}
                 value={customerInfo.tableNo || ''}
-                disabled={isSubmitting}
                 onChange={(e) => setCustomerInfo({ ...customerInfo, tableNo: e.target.value })}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
               />
             </div>
 
@@ -295,9 +278,8 @@ export default function CheckoutModal({
                 type="tel"
                 placeholder={t.phonePlaceholder}
                 value={customerInfo.phone || ''}
-                disabled={isSubmitting}
                 onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
               />
             </div>
 
@@ -308,13 +290,12 @@ export default function CheckoutModal({
               <p className="text-[11px] text-zinc-400 mb-2 leading-relaxed">
                 {t.uploadNote}
               </p>
-              <label className={`flex items-center justify-center gap-2 border border-dashed border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-300 py-3 rounded-xl cursor-pointer text-xs font-semibold transition-all ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <label className="flex items-center justify-center gap-2 border border-dashed border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-300 py-3 rounded-xl cursor-pointer text-xs font-semibold transition-all">
                 <Upload size={16} className="text-orange-500" />
                 <span>{selectedFile ? selectedFile.name : t.uploadBtn}</span>
                 <input
                   type="file"
                   accept="image/*"
-                  disabled={isSubmitting}
                   onChange={(e) => setSelectedFile(e.target.files[0])}
                   className="hidden"
                 />
@@ -329,7 +310,6 @@ export default function CheckoutModal({
             <div className="flex gap-2 p-1 bg-zinc-800 rounded-xl">
               <button
                 type="button"
-                disabled={isSubmitting}
                 onClick={() => handleOrderTypeChange('Dine-in')}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   customerInfo.orderType === 'Dine-in'
@@ -341,7 +321,6 @@ export default function CheckoutModal({
               </button>
               <button
                 type="button"
-                disabled={isSubmitting}
                 onClick={() => handleOrderTypeChange('Takeaway')}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   customerInfo.orderType === 'Takeaway'
@@ -375,9 +354,8 @@ export default function CheckoutModal({
                     type="text"
                     placeholder={t.tablePlaceholder}
                     value={customerInfo.tableNo || ''}
-                    disabled={isSubmitting}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, tableNo: e.target.value })}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
                   />
                 </div>
 
@@ -389,9 +367,8 @@ export default function CheckoutModal({
                     type="tel"
                     placeholder={t.phonePlaceholder}
                     value={customerInfo.phone || ''}
-                    disabled={isSubmitting}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
                   />
                 </div>
               </>
@@ -407,9 +384,8 @@ export default function CheckoutModal({
                     type="text"
                     placeholder={t.namePlaceholder}
                     value={customerInfo.name || ''}
-                    disabled={isSubmitting}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
                   />
                 </div>
 
@@ -421,9 +397,8 @@ export default function CheckoutModal({
                     type="tel"
                     placeholder={t.phonePlaceholder}
                     value={customerInfo.phone || ''}
-                    disabled={isSubmitting}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
                   />
                 </div>
 
@@ -434,16 +409,14 @@ export default function CheckoutModal({
                   <input
                     type="time"
                     value={customerInfo.time || ''}
-                    disabled={isSubmitting}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, time: e.target.value })}
                     onClick={(e) => e.target.showPicker && e.target.showPicker()}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 cursor-pointer [color-scheme:dark] disabled:opacity-50"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 cursor-pointer [color-scheme:dark]"
                   />
                 </div>
 
                 <button
                   type="button"
-                  disabled={isSubmitting}
                   onClick={() => {
                     const nextVal = !isSelfPickUp;
                     setIsSelfPickUp(nextVal);
@@ -453,7 +426,7 @@ export default function CheckoutModal({
                       setCustomerInfo(prev => ({ ...prev, address: '' }));
                     }
                   }}
-                  className="flex items-center gap-2.5 text-xs text-orange-400 hover:text-orange-300 cursor-pointer pt-1 disabled:opacity-50"
+                  className="flex items-center gap-2.5 text-xs text-orange-400 hover:text-orange-300 cursor-pointer pt-1"
                 >
                   {isSelfPickUp ? <CheckSquare size={18} /> : <Square size={18} />}
                   <span>{t.selfPickup}</span>
@@ -468,9 +441,8 @@ export default function CheckoutModal({
                       type="text"
                       placeholder={t.addressPlaceholder}
                       value={customerInfo.address || ''}
-                      disabled={isSubmitting}
                       onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
                     />
                   </div>
                 )}
@@ -478,23 +450,6 @@ export default function CheckoutModal({
             )}
           </div>
         )}
-
-        {/* 🎯 የተጨመረው የአስተያየት መፃፊያ ቦታ (Special Instructions Input) */}
-        <div className="mt-4 pt-3 border-t border-zinc-800">
-          <label className="flex items-center gap-1.5 text-xs font-bold mb-1.5 text-zinc-300">
-            <MessageSquare size={14} className="text-orange-500" />
-            <span>{t.orderNoteLabel}</span>
-            <span className="text-zinc-500 font-normal text-[11px]">{t.optionalTag}</span>
-          </label>
-          <textarea
-            rows="2"
-            placeholder={t.orderNotePlaceholder}
-            value={customerInfo.note || ''}
-            disabled={isSubmitting}
-            onChange={(e) => setCustomerInfo({ ...customerInfo, note: e.target.value })}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-white text-xs focus:outline-none focus:border-orange-500 resize-none disabled:opacity-50"
-          ></textarea>
-        </div>
 
         {/* Total Price & Submit Button */}
         <div className="mt-6 pt-4 border-t border-zinc-800 flex items-center justify-between">
@@ -506,21 +461,9 @@ export default function CheckoutModal({
           <button
             type="button"
             onClick={onSubmitClick}
-            disabled={isSubmitting}
-            className={`font-black px-6 py-3 rounded-2xl text-sm transition-all flex items-center justify-center gap-2 ${
-              isSubmitting 
-                ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed opacity-80' 
-                : 'bg-orange-600 hover:bg-orange-700 active:scale-95 text-white shadow-lg shadow-orange-600/30 cursor-pointer'
-            }`}
+            className="bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-black px-6 py-3 rounded-2xl text-sm transition-all shadow-lg shadow-orange-600/30 cursor-pointer"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={18} className="animate-spin text-orange-400" />
-                <span>በመላክ ላይ...</span>
-              </>
-            ) : (
-              paymentMethod === 'Chapa' ? t.payChapa : t.submitOrder
-            )}
+            {paymentMethod === 'Chapa' ? t.payChapa : t.submitOrder}
           </button>
         </div>
 
