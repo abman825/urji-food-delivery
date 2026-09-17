@@ -9,6 +9,7 @@ import HeroSection from '../components/HeroSection';
 import OrderTrackerModal from '../components/OrderTrackerModal';
 import { fetchMenuItems, initiateChapaPay, submitOrderFormData, verifyChapaPayment } from '../services/api';
 import { translations } from '../data/translations';
+import { menuItems as initialMenuItems } from '../data/menuData'; // <-- 1. menuData.js Import ተደርጓል
 import { useVideoScroll } from '../hooks/useVideoScroll';
 import { useCart } from '../context/CartContext';
 
@@ -37,8 +38,9 @@ export default function Home() {
   });
 
   const [selectedFile, setSelectedFile] = useState(null); 
-  const [menuItems, setMenuItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // 2. Initial state ላይ የ local menuData.js ን ሰጥተነዋል (Loading ሳያሳይ ወዲያው ይከፈታል)
+  const [menuItems, setMenuItems] = useState(initialMenuItems);
+  const [loading, setLoading] = useState(false); // Spinner አያስፈልግም
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTabIndex, setActiveTabIndex] = useState(0);
 
@@ -51,26 +53,24 @@ export default function Home() {
     ? ['Hunda', 'Nyaata', 'Fast Food', 'Juice', 'Dhugaatii Qabbanaawaa', "Dhugaatii Ho'aa"]
     : lang === 'en'
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
-    : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
+    : ['ሁሉንም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
   // 1. Fetch Menu from Backend Database on Load
   useEffect(() => {
     const loadMenu = async () => {
       try {
-        setLoading(true);
         const data = await fetchMenuItems();
-        if (data && Array.isArray(data)) {
+        // Backend ከነቃ በኋላ የነበረውን local data በ DB data ይተካዋል
+        if (data && Array.isArray(data) && data.length > 0) {
           setMenuItems(data);
           localStorage.setItem('customMenuItems', JSON.stringify(data));
         }
       } catch (err) {
-        console.error("Failed to load menu from DB:", err);
+        console.error("Failed to load menu from DB, using fallback menuData:", err);
         const saved = localStorage.getItem('customMenuItems');
         if (saved) {
           try { setMenuItems(JSON.parse(saved)); } catch (e) {}
         }
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -118,7 +118,7 @@ export default function Home() {
       const incomingReceiptId = String(data.receiptId || data.orderId || data.id || '').trim();
 
       if (currentReceiptId && incomingReceiptId && currentReceiptId === incomingReceiptId) {
-        if (data.status === 'Completed' || data.status === 'Finished' || data.status === 'Delivered' ||data.status === 'ተጠናቋል') {
+        if (data.status === 'Completed' || data.status === 'Finished' || data.status === 'Delivered' || data.status === 'ተጠናቋል') {
           setMyActiveOrder(null);
           setIsOrderTrackerOpen(false);
           localStorage.removeItem('myPersonalOrder');
