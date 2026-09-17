@@ -9,7 +9,7 @@ import HeroSection from '../components/HeroSection';
 import OrderTrackerModal from '../components/OrderTrackerModal';
 import { fetchMenuItems, initiateChapaPay, submitOrderFormData, verifyChapaPayment } from '../services/api';
 import { translations } from '../data/translations';
-import { menuItems as initialMenuItems } from '../data/menuData'; // <-- 1. menuData.js Import ተደርጓል
+import { menuItems as initialMenuItems } from '../data/menuData';
 import { useVideoScroll } from '../hooks/useVideoScroll';
 import { useCart } from '../context/CartContext';
 
@@ -38,9 +38,8 @@ export default function Home() {
   });
 
   const [selectedFile, setSelectedFile] = useState(null); 
-  // 2. Initial state ላይ የ local menuData.js ን ሰጥተነዋል (Loading ሳያሳይ ወዲያው ይከፈታል)
   const [menuItems, setMenuItems] = useState(initialMenuItems);
-  const [loading, setLoading] = useState(false); // Spinner አያስፈልግም
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTabIndex, setActiveTabIndex] = useState(0);
 
@@ -53,26 +52,28 @@ export default function Home() {
     ? ['Hunda', 'Nyaata', 'Fast Food', 'Juice', 'Dhugaatii Qabbanaawaa', "Dhugaatii Ho'aa"]
     : lang === 'en'
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
-    : ['ሁሉንም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
-// ገጹ ሲከፈት ከ URL ላይ የጠረጴዛ ቁጥር (Table No) እንዲያነብ
-useEffect(() => {
-  const queryParams = new URLSearchParams(window.location.search);
-  const tableParam = queryParams.get('table') || queryParams.get('tableNo');
+    : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
-  if (tableParam) {
-    setCustomerInfo((prev) => ({
-      ...prev,
-      tableNo: tableParam,
-      orderType: 'Dine-in'
-    }));
-  }
-}, []);
+  // ገጹ ሲከፈት ከ URL ላይ የጠረጴዛ ቁጥር (Table No) በማንበብ በ State እና በ LocalStorage ማስቀመጥ
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const tableParam = queryParams.get('table') || queryParams.get('tableNo');
+
+    if (tableParam) {
+      localStorage.setItem('tableNo', tableParam);
+      setCustomerInfo((prev) => ({
+        ...prev,
+        tableNo: tableParam,
+        orderType: 'Dine-in'
+      }));
+    }
+  }, []);
+
   // 1. Fetch Menu from Backend Database on Load
   useEffect(() => {
     const loadMenu = async () => {
       try {
         const data = await fetchMenuItems();
-        // Backend ከነቃ በኋላ የነበረውን local data በ DB data ይተካዋል
         if (data && Array.isArray(data) && data.length > 0) {
           setMenuItems(data);
           localStorage.setItem('customMenuItems', JSON.stringify(data));
@@ -130,7 +131,7 @@ useEffect(() => {
       const incomingReceiptId = String(data.receiptId || data.orderId || data.id || '').trim();
 
       if (currentReceiptId && incomingReceiptId && currentReceiptId === incomingReceiptId) {
-        if (data.status === 'Completed' || data.status === 'Finished' || data.status === 'Delivered' || data.status === 'ተጠናቋል') {
+        if (['Completed', 'Finished', 'Delivered', 'ተጠናቋል'].includes(data.status)) {
           setMyActiveOrder(null);
           setIsOrderTrackerOpen(false);
           localStorage.removeItem('myPersonalOrder');
@@ -204,7 +205,7 @@ useEffect(() => {
       alert(
         lang === 'om' ? "Dhiifama! Nyaatni/Dhugaatiin kun dhumateera." :
         lang === 'en' ? "Sorry, this item is currently out of stock!" :
-        "ይቅርታ! ይህ ምግብ/መጠጥ ለዛሬ አልቋል፤ እባክዎን ሌላ ይምረጡ።"
+        "ይቅርታ! ይህ ምግብ/መጠጥ ለዛሬ አልቋል እባክዎን ሌላ ይምረጡ።"
       );
       return;
     }
