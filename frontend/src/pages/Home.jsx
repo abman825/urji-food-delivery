@@ -54,7 +54,19 @@ export default function Home() {
     : lang === 'en'
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
     : ['ሁሉንም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
+// ገጹ ሲከፈት ከ URL ላይ የጠረጴዛ ቁጥር (Table No) እንዲያነብ
+useEffect(() => {
+  const queryParams = new URLSearchParams(window.location.search);
+  const tableParam = queryParams.get('table') || queryParams.get('tableNo');
 
+  if (tableParam) {
+    setCustomerInfo((prev) => ({
+      ...prev,
+      tableNo: tableParam,
+      orderType: 'Dine-in'
+    }));
+  }
+}, []);
   // 1. Fetch Menu from Backend Database on Load
   useEffect(() => {
     const loadMenu = async () => {

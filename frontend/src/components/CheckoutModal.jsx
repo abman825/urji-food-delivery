@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, CreditCard, Utensils, CheckSquare, Square, Smartphone, Building2, Loader2, MessageSquare } from 'lucide-react';
+import { X, Upload, CreditCard, Utensils, CheckSquare, Square, Smartphone, Building2, Loader2, MessageSquare, QrCode } from 'lucide-react';
 import { io } from 'socket.io-client';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
@@ -27,13 +27,13 @@ export default function CheckoutModal({
 
   const modalText = {
     am: {
-      title: "ትዕዛዝዎን ያጠናቁ",
+      title: "ትዕዛዝዎን ያጠናቅቁ",
       orderByTable: "በወንበር ቁጥር ለማዘዝ",
       orderByPayment: "ክፍያ በመክፈል ለማዘዝ",
       dineIn: "እዚሁ (Dine-in)",
       takeaway: "ይዞ ለመሄድ (Takeaway)",
       tableNumber: "የወንበር/ጠረጴዛ ቁጥር",
-      tablePlaceholder: "ምሳሌ: 5",
+      tablePlaceholder: "በ QR Code የተያዘ",
       phone: "ስልክ ቁጥር",
       optionalTag: "(ግዴታ አይደለም)",
       requiredTag: "(ግዴታ ነው)",
@@ -53,9 +53,9 @@ export default function CheckoutModal({
       paymentAccounts: "የክፍያ ሂሳብ ቁጥሮች",
       selectPaymentMethod: "የክፍያ መንገድ",
       payWithChapa: "በ Chapa (ኦንላይን)",
-      // 🎯 የአስተያየት መፃፊያ ፅሁፎች
       orderNoteLabel: "ተጨማሪ አስተያየት / ማስታወሻ",
-      orderNotePlaceholder: "ምሳሌ፦ ሽንኩርት አይገባበት፣ ጨው አይበዛበት፣ በርበሬ ቀንሱልኝ..."
+      orderNotePlaceholder: "ምሳሌ፡ ሽንኩርት አይግባበት፣ ጨው አይበዛበት፣ በርበሬ ቀንሱልኝ...",
+      qrNotice: "ጠረጴዛዎ ላይ ያለውን QR Code ስካን በማድረግ የመረጡት ወንበር ቁጥር፦"
     },
     om: {
       title: "Ajaja Keessan Xumuraa",
@@ -64,7 +64,7 @@ export default function CheckoutModal({
       dineIn: "Asumaa (Dine-in)",
       takeaway: "Fudhatanii Deemuuf",
       tableNumber: "Lakkoofsa Barcumaa/Minjaala",
-      tablePlaceholder: "Fakkeenya: 5",
+      tablePlaceholder: "QR Code 'n kan qabatame",
       phone: "Lakkoofsa Bilbilaa",
       optionalTag: "(Dirqama Mitii)",
       requiredTag: "(Dirqama)",
@@ -85,7 +85,8 @@ export default function CheckoutModal({
       selectPaymentMethod: "Filannoo Kaffaltii",
       payWithChapa: "Chapa (Online)",
       orderNoteLabel: "Yaada Dabalataa",
-      orderNotePlaceholder: "Fkn: Qullubbii diimaa keessa hin kaayinaa, Sogaa hin baay'isinaa..."
+      orderNotePlaceholder: "Fkn: Qullubbii diimaa keessa hin kaayinaa, Sogaa hin baay'isinaa...",
+      qrNotice: "Lakkoofsa minjaala QR Code scan gochuun argattan:"
     },
     en: {
       title: "Complete Your Order",
@@ -94,7 +95,7 @@ export default function CheckoutModal({
       dineIn: "Dine-in",
       takeaway: "Takeaway",
       tableNumber: "Table Number",
-      tablePlaceholder: "e.g., 5",
+      tablePlaceholder: "Set via QR Code",
       phone: "Phone Number",
       optionalTag: "(Optional)",
       requiredTag: "(Required)",
@@ -115,7 +116,8 @@ export default function CheckoutModal({
       selectPaymentMethod: "Payment Method",
       payWithChapa: "Chapa (Online)",
       orderNoteLabel: "Special Instructions / Note",
-      orderNotePlaceholder: "e.g., No onions, less salt, extra spicy..."
+      orderNotePlaceholder: "e.g., No onions, less salt, extra spicy...",
+      qrNotice: "Table detected from your scanned QR Code:"
     }
   };
 
@@ -141,24 +143,31 @@ export default function CheckoutModal({
   const onSubmitClick = async () => {
     if (isSubmitting) return;
 
-    if (checkoutType === 'table' || (checkoutType === 'online' && customerInfo.orderType === 'Dine-in')) {
-      if (!customerInfo.tableNo || !customerInfo.tableNo.trim()) {
-        alert(lang === 'am' ? 'እባክዎን የወንበር ቁጥር ያስገቡ!' : 'Please enter table number!');
+    // 🔴 1. Dine-In ከሆነ የጠረጴዛ ቁጥር በ QR Code መገኘቱን ማረጋገጥ
+    const isDineIn = checkoutType === 'table' || (checkoutType === 'online' && customerInfo.orderType === 'Dine-in');
+    if (isDineIn) {
+      if (!customerInfo.tableNo || !String(customerInfo.tableNo).trim()) {
+        alert(
+          lang === 'om' ? "Maaloo nagahee/tarree teessoo (Table No) QR code irraa scan godhaa!" :
+          lang === 'en' ? "Please scan the QR code on your table to set the Table Number before ordering!" :
+          "እባክዎን ማዘዝ እንዲችሉ አስቀድመው ጠረጴዛዎ ላይ ያለውን QR Code ያንብቡ!"
+        );
         return;
       }
     }
 
+    // 🔴 2. Takeaway Validation
     if (checkoutType === 'online' && customerInfo.orderType === 'Takeaway') {
       if (!customerInfo.name || !customerInfo.name.trim()) {
-        alert(lang === 'am' ? 'እባክዎን ሙሉ ስምዎን ያስገቡ!' : 'Please enter your name!');
+        alert(lang === 'am' ? 'እባክዎን ሙሉ ስምዎን ያስገቡ!' : lang === 'om' ? 'Maaloo maqaa guutuu galchaa!' : 'Please enter your name!');
         return;
       }
       if (!customerInfo.phone || !customerInfo.phone.trim()) {
-        alert(lang === 'am' ? 'እባክዎን ስልክ ቁጥርዎን ያስገቡ!' : 'Please enter your phone number!');
+        alert(lang === 'am' ? 'እባክዎን ስልክ ቁጥርዎን ያስገቡ!' : lang === 'om' ? 'Maaloo lakkoofsa bilbilaa galchaa!' : 'Please enter your phone number!');
         return;
       }
       if (!customerInfo.time) {
-        alert(lang === 'am' ? 'እባክዎን የተቀበያ ሰዓት ይምረጡ!' : 'Please select pickup time!');
+        alert(lang === 'am' ? 'እባክዎን የተቀበያ ሰዓት ይምረጡ!' : lang === 'om' ? "Maaloo sa'aatii fudhannaa filadhaa!" : 'Please select pickup time!');
         return;
       }
       if (!isSelfPickUp && (!customerInfo.address || !customerInfo.address.trim())) {
@@ -170,34 +179,30 @@ export default function CheckoutModal({
     setIsSubmitting(true);
 
     try {
-      // onSubmitClick ወይም handleOrder ውስጥ
-const generatedReceiptId = `REC-${Math.floor(100000 + Math.random() * 900000)}`;
+      const generatedReceiptId = `REC-${Math.floor(100000 + Math.random() * 900000)}`;
 
-const newOrderObj = {
-  receiptId: generatedReceiptId,
-  items: cartItems,
-  totalPrice: totalPrice,
-  status: 'Pending',
-  tableNo: customerInfo.tableNo || null,
-  customerInfo: customerInfo,
-  lang: lang,
-  createdAt: new Date().toISOString()
-};
+      const newOrderObj = {
+        receiptId: generatedReceiptId,
+        items: cartItems,
+        totalPrice: totalPrice,
+        status: 'Pending',
+        tableNo: customerInfo.tableNo || null,
+        customerInfo: customerInfo,
+        lang: lang,
+        createdAt: new Date().toISOString()
+      };
 
-// 1. ለደንበኛው የራሱ ስልክ ብቻ እንዲቀመጥ (ለ Home.jsx tracker)
-localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
+      localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-// 2. ለትዕዛዛት ታሪክ (My Orders Modal)
-const existingOrders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-localStorage.setItem('myOrders', JSON.stringify([newOrderObj, ...existingOrders]));
-
-// 3. ለ Admin Dashboard 
-localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
+      const existingOrders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+      localStorage.setItem('myOrders', JSON.stringify([newOrderObj, ...existingOrders]));
+      localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
 
       await handleOrder(generatedReceiptId);
 
     } catch (error) {
       console.error("Order submission error:", error);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -253,6 +258,19 @@ localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrde
         {/* ሀ) በወንበር ቁጥር ለማዘዝ (Dine-In) */}
         {checkoutType === 'table' && (
           <div className="space-y-4">
+            {/* የ QR Code / Table Badge ማሳያ */}
+            <div className="bg-orange-950/40 border border-orange-500/30 rounded-2xl p-4 flex items-center gap-3">
+              <div className="p-2.5 bg-orange-600/20 text-orange-500 rounded-xl">
+                <QrCode size={24} />
+              </div>
+              <div>
+                <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
+                <p className="text-lg font-black text-orange-400">
+                  {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተነበበም"}
+                </p>
+              </div>
+            </div>
+
             <div className="bg-zinc-800/70 border border-zinc-700/60 rounded-2xl p-3.5 space-y-2">
               <p className="text-[11px] font-bold text-orange-400 uppercase tracking-wider">{t.paymentAccounts}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -272,20 +290,6 @@ localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrde
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold mb-1.5 text-zinc-300">
-                {t.tableNumber} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder={t.tablePlaceholder}
-                value={customerInfo.tableNo || ''}
-                disabled={isSubmitting}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, tableNo: e.target.value })}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 disabled:opacity-50"
-              />
             </div>
 
             <div>
@@ -368,18 +372,16 @@ localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrde
 
             {customerInfo.orderType === 'Dine-in' && (
               <>
-                <div>
-                  <label className="block text-xs font-bold mb-1.5 text-zinc-300">
-                    {t.tableNumber} <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder={t.tablePlaceholder}
-                    value={customerInfo.tableNo || ''}
-                    disabled={isSubmitting}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, tableNo: e.target.value })}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 disabled:opacity-50"
-                  />
+                <div className="bg-orange-950/40 border border-orange-500/30 rounded-2xl p-4 flex items-center gap-3">
+                  <div className="p-2.5 bg-orange-600/20 text-orange-500 rounded-xl">
+                    <QrCode size={24} />
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
+                    <p className="text-lg font-black text-orange-400">
+                      {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተነበበም"}
+                    </p>
+                  </div>
                 </div>
 
                 <div>
@@ -480,7 +482,7 @@ localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrde
           </div>
         )}
 
-        {/* 🎯 የተጨመረው የአስተያየት መፃፊያ ቦታ (Special Instructions Input) */}
+        {/* Special Instructions Input */}
         <div className="mt-4 pt-3 border-t border-zinc-800">
           <label className="flex items-center gap-1.5 text-xs font-bold mb-1.5 text-zinc-300">
             <MessageSquare size={14} className="text-orange-500" />

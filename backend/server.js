@@ -18,21 +18,20 @@ app.use(cors());
 
 // Socket.io Config
 const io = new Server(httpServer, {
-  cors: { origin: "*", methods: ["GET", "POST"] }
+  cors: { origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] }
 });
 
 // Payload Limit
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Socket.io Instance ማዘጋጀት
+// Express Request ላይ Socket.io ማያያዝ
 app.set('socketio', io);
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
-// Telegram Webhook Route
 // Telegram Webhook Route
 app.post('/api/telegram-webhook', async (req, res) => {
   try {
@@ -45,7 +44,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // 2. አድሚኑ /today ወይም /stats ብሎ ሲፅፍ (ይህ ክፍል ነው ጎድሎ የነበረው)
+    // 2. አድሚኑ /today ወይም /stats ብሎ ሲጽፍ
     if (update && update.message && update.message.text) {
       const command = update.message.text.trim().toLowerCase();
 
@@ -58,7 +57,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
 
         // የዛሬዎቹን ትዕዛዞች ከ Database መፈለግ
         const todayOrders = await Order.find({
-          createdAt: { $gte: startOfDay, $lte: endOfDay }
+          createdAt: { $gte: startOfDay,$lte: endOfDay }
         });
 
         const totalOrdersCount = todayOrders.length;
@@ -77,40 +76,63 @@ app.post('/api/telegram-webhook', async (req, res) => {
   }
 });
 
+// API Routes
 app.use('/api', apiRoutes);
 
 // Socket.io Real-time Connection Logic
 io.on('connection', (socket) => {
   console.log('⚡ አዲስ ደንበኛ ተገናኝቷል:', socket.id);
 
+  // Menu Update Sync
   socket.on('updateMenu', (updatedMenu) => {
     io.emit('updateMenu', updatedMenu);
   });
 
+  // Admin Room Join
   socket.on('joinAdmin', () => socket.join('adminRoom'));
 
+  // Specific Order Room Join (ደንበኛው ትዕዛዙን ለመከታተል)
   socket.on('joinOrderRoom', (receiptId) => {
     if (receiptId) socket.join(`order_${String(receiptId).trim()}`);
   });
 
+  // Real-time Order Placement via Socket
   socket.on('placeOrder', async (orderData) => {
     try {
-      const newOrder = new Order({ ...orderData, socketId: socket.id });
+      const formattedOrder = {
+        receiptId: orderData.receiptId || `REC-${Math.floor(100000 + Math.random() * 900000)}`,
+        customerName: orderData.customerInfo?.name || orderData.customerName || '',
+        phone: orderData.customerInfo?.phone || orderData.phone || '-',
+        tableNo: orderData.customerInfo?.tableNo || orderData.tableNo || '-',
+        address: orderData.customerInfo?.address || orderData.address || '',
+        time: orderData.customerInfo?.time || orderData.time || '',
+        note: orderData.customerInfo?.note || orderData.note || '',
+        lang: orderData.lang || 'am',
+        orderType: orderData.customerInfo?.orderType || orderData.orderType || 'Dine-in',
+        paymentMethod: orderData.paymentMethod || 'Screenshot',
+        items: orderData.items || [],
+        totalPrice: Number(orderData.totalPrice) || 0,
+        socketId: socket.id
+      };
+
+      const newOrder = new Order(formattedOrder);
       await newOrder.save();
 
       io.to('adminRoom').emit('newOrder', newOrder);
+      io.emit('newOrderCreated', newOrder);
     } catch (err) {
-      console.error("Error saving order to MongoDB:", err);
+      console.error("Error saving order via Socket to MongoDB:", err);
     }
   });
 
+  // Order Status Update Real-time Event
   socket.on('updateOrderStatus', async (data) => {
     const { receiptId, status } = data;
     console.log(`🔄 Updating Order ${receiptId} to: ${status}`);
 
     try {
       const updatedOrder = await Order.findOneAndUpdate(
-        { receiptId: receiptId },
+        { receiptId: String(receiptId).trim() },
         { status: status },
         { new: true }
       );

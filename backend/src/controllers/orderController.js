@@ -43,7 +43,6 @@ export const handleChapaSuccess = async (req, res) => {
     const currentOrderType = pendingOrder?.orderType || 'Takeaway';
     const displayTableNo = currentOrderType === 'Takeaway' ? 'Takeaway' : (pendingOrder?.tableNo || '-');
 
-    // 🎯 Note ማውጣት
     const userNote = pendingOrder?.note || 'የለም';
 
     let details = '';
@@ -54,7 +53,7 @@ export const handleChapaSuccess = async (req, res) => {
     if (pendingOrder?.time) details += `<b>⏰ ሰዓት:</b> ${pendingOrder.time}\n`;
 
     const message = `
-<b>✅ የ Chapa ክፍያ ተፈጽሟል!</b>
+<b>✅ የ Chapa ክፍያ ተፈፅሟል!</b>
 
 <b>🆔 የደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
 <b>💳 Tx Ref:</b> <code>${trx_id || 'ልዩነቱ ያልታወቀ'}</code>
@@ -67,7 +66,7 @@ ${details}<b>📝 አስተያየት (Note):</b>
 <b>🛒 የታዘዙ የምግብ አይነቶች:</b>
 ${formattedItems}
 
-<b>💰 የተከፈለዉ ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
+<b>💰 የተከፈለው ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
 `;
 
     try {
@@ -95,7 +94,6 @@ ${formattedItems}
       });
       await newOrder.save();
 
-      // Socket ማስታወቂያ
       const io = req.app.get('socketio') || req.io;
       if (io) {
         io.to('adminRoom').emit('newOrder', newOrder);
@@ -164,7 +162,7 @@ export const initiateChapaPayment = async (req, res) => {
     if (response.data && response.data.status === 'success') {
       return res.status(200).json({ checkout_url: response.data.data.checkout_url });
     } else {
-      return res.status(400).json({ success: false, message: 'የ Chapa ሊንክ መፍቀድ አልተቻለም' });
+      return res.status(400).json({ success: false, message: 'የ Chapa ሊንክ መፈቀድ አልተቻለም' });
     }
 
   } catch (error) {
@@ -175,13 +173,12 @@ export const initiateChapaPayment = async (req, res) => {
   }
 };
 
-// 3. Main Order / Screenshot Submission Handler
+// 3. Main Order / Screenshot Submission Handler (ከ Table Validation ጋር)
 export const submitOrderFormData = async (req, res) => {
   try {
     const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod, note, customerInfo } = req.body;
     const file = req.file;
 
-    // 🎯 Note ማውጣት (በቀጥታ req.body.note ወይም በ JSON customerInfo ውስጥ የመጣውን መፈለግ)
     let parsedCustomerInfo = {};
     if (customerInfo) {
       try {
@@ -194,14 +191,19 @@ export const submitOrderFormData = async (req, res) => {
     const userNote = note || parsedCustomerInfo?.note || 'የለም';
     const currentOrderType = orderType || parsedCustomerInfo?.orderType || 'Dine-In';
 
-    if (currentOrderType === 'Dine-In' && (!tableNo && !parsedCustomerInfo?.tableNo)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'እባክዎን የወንበር ቁጥር ያስገቡ!' 
-      });
+    const inputTableNo = tableNo || parsedCustomerInfo?.tableNo;
+
+    // 🔒 QR Code / Table Number Check Validation
+    if (currentOrderType !== 'Takeaway') {
+      if (!inputTableNo || String(inputTableNo).trim() === '' || inputTableNo === 'null' || inputTableNo === 'undefined') {
+        if (req.file && req.file.path) fs.unlink(req.file.path, () => {});
+        return res.status(400).json({ 
+          success: false, 
+          message: 'እባክዎን ማዘዝ እንዲችሉ ጠረጴዛው ላይ ያለውን QR Code ያንብቡ!' 
+        });
+      }
     }
 
-    const inputTableNo = tableNo || parsedCustomerInfo?.tableNo;
     const displayTableNo = currentOrderType === 'Takeaway' ? 'Takeaway' : (inputTableNo || '-');
     const orderId = `REC-${Date.now().toString().slice(-6)}`;
     
@@ -212,7 +214,7 @@ export const submitOrderFormData = async (req, res) => {
       payMethodText = 'በስክሪንሾት / ባንክ';
     }
 
-    const hasReceipt = file ? '✅ አዎ (ከሰር ተያይዟል)' : '❌ አልተያያዘም (በካሽ የሚከፈል)';
+    const hasReceipt = file ? '✅ አዎ (ከስር ተያይዟል)' : '❌ አልተያያዘም (በካሽ የሚከፈል)';
 
     const customerName = name || parsedCustomerInfo?.name;
     const customerPhone = phone || parsedCustomerInfo?.phone;
@@ -303,7 +305,7 @@ ${formattedItems}
       console.error("MongoDB Order Save Error:", dbError);
     }
 
-    // 4. ወደ Frontend እና Admin Dashboard በ Socket.io መላክ
+    // ወደ Frontend እና Admin Dashboard በ Socket.io መላክ
     const orderData = savedOrder ? savedOrder.toObject() : {
       id: orderId,
       receiptId: orderId,
@@ -343,7 +345,7 @@ ${formattedItems}
   }
 };
 
-// 4. Toggle Availability Handler (ለዛሬ አለ / አልቋል መቀየሪያ)
+// 4. Toggle Availability Handler
 export const toggleAvailability = async (req, res) => {
   try {
     const { id } = req.params;
