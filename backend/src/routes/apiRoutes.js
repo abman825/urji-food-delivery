@@ -1,5 +1,6 @@
 import express from 'express';
 import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
 import { 
   createScreenshotOrder, 
   initiateChapaPayment, 
@@ -7,19 +8,46 @@ import {
   toggleAvailability 
 } from '../controllers/orderController.js';
 import MenuItem from '../models/MenuItem.js';
-import Order from '../models/Order.js'; // 1. የ Order ሞዴል ተጨምሯል
+import Order from '../models/Order.js';
 import { 
   handleTelegramCallback, 
   sendDailyReportToTelegram 
-} from '../services/telegramService.js'; // 2. የ Telegram Service ተጨምሯል
+} from '../services/telegramService.js';
 
 const router = express.Router();
 
-// Multer Config: የፋይል መጠኑን እስከ 10MB ይፈቅዳል
-const storage = multer.memoryStorage();
+// 1. Cloudinary Configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// 2. Multer Storage Config (ከ Memory/Disk ፋይል ለመቀበል)
+const storage = multer.diskStorage({});
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } 
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
+
+// --- 📸 CLOUDINARY FILE UPLOAD ROUTE ---
+router.post('/upload-image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // ፎቶውን ወደ Cloudinary መላክ
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'menu_images'
+    });
+
+    // Cloudinary የሰጠንን Secure URL መመለስ
+    res.json({ imageUrl: result.secure_url });
+  } catch (error) {
+    console.error('Cloudinary Upload Error:', error);
+    res.status(500).json({ error: 'Upload failed' });
+  }
 });
 
 // --- 🍔 MENU ROUTES ---
@@ -59,7 +87,7 @@ router.post('/chapa-pay', initiateChapaPayment);
 router.post('/chapa-success-notify', handleChapaSuccess);
 router.patch('/menu/:id/toggle', toggleAvailability);
 
-// --- 🤖 TELEGRAM BOT WEBHOOK ROUTE (አዲስ የተጨመረ) ---
+// --- 🤖 TELEGRAM BOT WEBHOOK ROUTE ---
 router.post('/telegram-webhook', async (req, res) => {
   try {
     const { callback_query, message } = req.body;
@@ -71,7 +99,7 @@ router.post('/telegram-webhook', async (req, res) => {
       return res.status(200).send('OK');
     }
 
-    // 2. አድሚኑ /today ወይም /stats ብሎ ሲፅፍ
+    // 2. አድሚኑ /today ወይም /stats ብሎ ሲጽፍ
     if (message && message.text) {
       const command = message.text.trim().toLowerCase();
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit3, Save, Eye, Lock, Utensils, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Edit3, Save, Eye, Lock, Utensils, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
@@ -13,6 +13,9 @@ export default function MenuManagementTab({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
+
+  const [uploadingNew, setUploadingNew] = useState(false);
+  const [uploadingEdit, setUploadingEdit] = useState(false);
 
   const MENU_ADMIN_PASSWORD = "123";
 
@@ -39,7 +42,7 @@ export default function MenuManagementTab({
     itemName: { am: "የምግብ ስም", om: "Maqaa Nyaataa", en: "Item Name" },
     itemPrice: { am: "ዋጋ (ETB)", om: "Gatii (ETB)", en: "Price (ETB)" },
     category: { am: "ምድብ", om: "Kutaa", en: "Category" },
-    imageNamePlaceholder: { am: "የፎቶ ስም (ምሳሌ: tebs.jpg)", om: "Maqaa Fakkii (fkn: tebs.jpg)", en: "Image Name (e.g. tebs.jpg)" },
+    imageNamePlaceholder: { am: "የፎቶ ስም ወይም URL (ወይም ፎቶ ምረጥ)", om: "Maqaa Fakkii", en: "Image Name or URL" },
     addVariant: { am: "+ አማራጭ/አይነት ጨምር (ትልቅ/ትንሽ...)", om: "+ Filannoo Dabali", en: "+ Add Variant" },
     addItemBtn: { am: "ምግብ ጨምር", om: "Nyaata Dabali", en: "Add Item" },
     save: { am: "አስቀምጥ", om: "Olka'i", en: "Save" },
@@ -50,6 +53,38 @@ export default function MenuManagementTab({
     from: { am: "ከ", om: "Kaa'immaa", en: "From" },
     availableToday: { am: "ለዛሬ አለ", om: "Har'a Jira", en: "Available Today" },
     soldOutToday: { am: "ለዛሬ አልቋል", om: "Har'a Dhumera", en: "Sold Out Today" }
+  };
+
+  // 📸 1. አዲስ ፎቶ Upload ማድረጊያ Function (Cloudinary)
+  const handleImageFileUpload = async (e, isEditMode = false) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      if (isEditMode) setUploadingEdit(true);
+      else setUploadingNew(true);
+
+      const res = await axios.post(`${BACKEND_URL}/api/upload-image`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const uploadedUrl = res.data.imageUrl;
+
+      if (isEditMode) {
+        setEditForm(prev => ({ ...prev, img: uploadedUrl }));
+      } else {
+        setNewItem(prev => ({ ...prev, img: uploadedUrl }));
+      }
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      alert("ፎቶ መጫን አልተቻለም! እባክዎ ድጋሚ ይሞክሩ።");
+    } finally {
+      if (isEditMode) setUploadingEdit(false);
+      else setUploadingNew(false);
+    }
   };
 
   const handlePasswordSubmit = (e) => {
@@ -113,7 +148,6 @@ export default function MenuManagementTab({
     });
   };
 
-  // 1. አዲስ ምግብ Database ውስጥ ለመጨመር (ተስተካክሏል!)
   const handleAddItem = async (e) => {
     e.preventDefault();
     if (!newItem.name || (!newItem.price && newItem.variants.length === 0)) {
@@ -132,7 +166,6 @@ export default function MenuManagementTab({
     const createdItem = {
       id: `item_${Date.now()}`,
       category: newItem.category || 'ምግብ',
-      // 🎯 ሁለቱንም image እና img መላካችን Database ሁልጊዜ እንዲያገኘው ያደርገዋል
       image: imageValue,
       img: imageValue,
       hasVariants: createdVariants.length > 0,
@@ -195,7 +228,6 @@ export default function MenuManagementTab({
     });
   };
 
-  // 2. የተስተካከለውን ምግብ Database ውስጥ ለማስቀመጥ (ተስተካክሏል!)
   const saveEdit = async (id) => {
     const updatedList = menuItems.map(item => {
       if ((item.id || item._id) === id) {
@@ -326,16 +358,30 @@ export default function MenuManagementTab({
           </select>
         </div>
 
-        {/* የፎቶ ስም በጽሁፍ ማስገቢያ */}
-        <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2 focus-within:border-orange-500">
-          <ImageIcon size={16} className="text-zinc-400" />
-          <input
-            type="text"
-            placeholder={t.imageNamePlaceholder[lang] || t.imageNamePlaceholder.am}
-            value={newItem.img}
-            onChange={e => setNewItem({ ...newItem, img: e.target.value })}
-            className="bg-transparent text-xs text-white w-full outline-none"
-          />
+        {/* 📸 የፎቶ Upload ማድረጊያ እና URL ማሳያ */}
+        <div className="flex flex-col md:flex-row gap-2">
+          <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2 focus-within:border-orange-500">
+            <ImageIcon size={16} className="text-zinc-400" />
+            <input
+              type="text"
+              placeholder={t.imageNamePlaceholder[lang] || t.imageNamePlaceholder.am}
+              value={newItem.img}
+              onChange={e => setNewItem({ ...newItem, img: e.target.value })}
+              className="bg-transparent text-xs text-white w-full outline-none"
+            />
+          </div>
+
+          <label className="cursor-pointer bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-xl px-3 py-2 text-xs font-bold flex items-center justify-center gap-2 transition">
+            {uploadingNew ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+            <span>{uploadingNew ? "እየተጫነ..." : "ከስልክ/ኮምፒውተር መርጥ"}</span>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={(e) => handleImageFileUpload(e, false)} 
+              className="hidden" 
+              disabled={uploadingNew}
+            />
+          </label>
         </div>
 
         <div className="space-y-2 pt-2">
@@ -377,7 +423,8 @@ export default function MenuManagementTab({
         <div className="flex justify-end items-center pt-2">
           <button
             type="submit"
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer transition shadow-lg"
+            disabled={uploadingNew}
+            className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer transition shadow-lg disabled:opacity-50"
           >
             <Plus size={14} /> {t.addItemBtn[lang] || t.addItemBtn.am}
           </button>
@@ -417,15 +464,30 @@ export default function MenuManagementTab({
                     </select>
                   </div>
 
-                  <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2">
-                    <ImageIcon size={14} className="text-zinc-400" />
-                    <input
-                      type="text"
-                      placeholder="የፎቶ ስም (ምሳሌ: tebs.jpg)"
-                      value={editForm.img}
-                      onChange={e => setEditForm({ ...editForm, img: e.target.value })}
-                      className="bg-transparent text-xs text-white w-full outline-none"
-                    />
+                  {/* 📸 Edit ሲደረግ ፎቶ Upload ማድረጊያ */}
+                  <div className="flex flex-col md:flex-row gap-2">
+                    <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2">
+                      <ImageIcon size={14} className="text-zinc-400" />
+                      <input
+                        type="text"
+                        placeholder="የፎቶ URL"
+                        value={editForm.img}
+                        onChange={e => setEditForm({ ...editForm, img: e.target.value })}
+                        className="bg-transparent text-xs text-white w-full outline-none"
+                      />
+                    </div>
+
+                    <label className="cursor-pointer bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-xl px-3 py-2 text-xs font-bold flex items-center justify-center gap-2 transition">
+                      {uploadingEdit ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      <span>{uploadingEdit ? "እየተጫነ..." : "ቀይር"}</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => handleImageFileUpload(e, true)} 
+                        className="hidden" 
+                        disabled={uploadingEdit}
+                      />
+                    </label>
                   </div>
 
                   <div className="space-y-2">
@@ -465,7 +527,8 @@ export default function MenuManagementTab({
                     <button
                       type="button"
                       onClick={() => saveEdit(id)}
-                      className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
+                      disabled={uploadingEdit}
+                      className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
                     >
                       <Save size={13} /> {t.save[lang] || t.save.am}
                     </button>
