@@ -6,7 +6,7 @@ import connectDB from './src/config/db.js';
 import Order from './src/models/Order.js';
 import { PORT as CONSTANT_PORT } from './src/config/constants.js';
 import apiRoutes from './src/routes/apiRoutes.js';
-import { handleTelegramCallback } from './src/services/telegramService.js';
+import { handleTelegramCallback, sendDailyReportToTelegram } from './src/services/telegramService.js';
 
 // 1. Connect to MongoDB
 connectDB();
@@ -33,14 +33,43 @@ app.use((req, res, next) => {
 });
 
 // Telegram Webhook Route
+// Telegram Webhook Route
 app.post('/api/telegram-webhook', async (req, res) => {
   try {
     const update = req.body;
     const socketIo = req.app.get('socketio');
 
+    // 1. አድሚኑ በቴሌግራም አዝራር (Button) ሲጫን
     if (update && update.callback_query) {
       await handleTelegramCallback(update.callback_query, socketIo);
+      return res.sendStatus(200);
     }
+
+    // 2. አድሚኑ /today ወይም /stats ብሎ ሲፅፍ (ይህ ክፍል ነው ጎድሎ የነበረው)
+    if (update && update.message && update.message.text) {
+      const command = update.message.text.trim().toLowerCase();
+
+      if (command === '/today' || command === '/stats') {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // የዛሬዎቹን ትዕዛዞች ከ Database መፈለግ
+        const todayOrders = await Order.find({
+          createdAt: { $gte: startOfDay, $lte: endOfDay }
+        });
+
+        const totalOrdersCount = todayOrders.length;
+        const totalRevenue = todayOrders.reduce((sum, order) => sum + (Number(order.totalPrice) || 0), 0);
+
+        // ሪፖርቱን ወደ ቴሌግራም መላክ
+        await sendDailyReportToTelegram(totalOrdersCount, totalRevenue);
+        return res.sendStatus(200);
+      }
+    }
+
     res.sendStatus(200);
   } catch (err) {
     console.error("Telegram Webhook Error:", err);
