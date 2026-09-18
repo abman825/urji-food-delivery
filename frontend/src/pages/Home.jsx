@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingBag, Search, X, Clock3 } from 'lucide-react';
 import { io } from 'socket.io-client';
-import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CheckoutModal from '../components/CheckoutModal';
@@ -20,9 +19,6 @@ const socket = io(BACKEND_URL);
 export default function Home() {
   const [lang, setLang] = useState('am');
   const t = translations?.[lang] || translations?.am || {};
-
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const { cartCount, totalPrice, cartItems, clearCart, addToCart } = useCart();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,9 +54,9 @@ export default function Home() {
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
     : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
-  // Table number handling using sessionStorage & URL cleanup
+  // Table number handling using sessionStorage & URL cleanup (no router package needed)
   useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
+    const queryParams = new URLSearchParams(window.location.search);
     const tableParam = queryParams.get('table') || queryParams.get('tableNo');
 
     if (tableParam) {
@@ -70,8 +66,8 @@ export default function Home() {
         tableNo: tableParam,
         orderType: 'Dine-in'
       }));
-      // Cleans up URL parameters so refresh/copy link doesn't share table number
-      navigate('/', { replace: true });
+      // Cleans URL query parameters without react-router
+      window.history.replaceState({}, document.title, window.location.pathname);
     } else {
       const savedTable = sessionStorage.getItem('tableNo');
       if (savedTable) {
@@ -82,7 +78,7 @@ export default function Home() {
         }));
       }
     }
-  }, [location, navigate]);
+  }, []);
 
   // 1. Fetch Menu from Backend Database on Load
   useEffect(() => {
