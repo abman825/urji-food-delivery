@@ -5,7 +5,9 @@ import {
   createScreenshotOrder, 
   initiateChapaPayment, 
   handleChapaSuccess,
-  toggleAvailability 
+  toggleAvailability,
+  getAdminDashboardStats,
+  submitOrderFormData
 } from '../controllers/orderController.js';
 import MenuItem from '../models/MenuItem.js';
 import Order from '../models/Order.js';
@@ -81,11 +83,14 @@ router.post('/menu/update', async (req, res) => {
   }
 });
 
-// --- 📦 ORDER ROUTES ---
+// --- 📦 ORDER & ADMIN ROUTES ---
 router.post('/orders', upload.single('screenshot'), createScreenshotOrder);
 router.post('/chapa-pay', initiateChapaPayment);
 router.post('/chapa-success-notify', handleChapaSuccess);
 router.patch('/menu/:id/toggle', toggleAvailability);
+
+// የአድሚን ዳሽቦርድ ዳታ መቀበያ route
+router.get('/admin/dashboard-stats', getAdminDashboardStats);
 
 // --- 🤖 TELEGRAM BOT WEBHOOK ROUTE ---
 router.post('/telegram-webhook', async (req, res) => {

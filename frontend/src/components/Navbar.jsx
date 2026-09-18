@@ -4,7 +4,9 @@ import {
   CheckCircle, ShoppingBag, Utensils, Lock 
 } from 'lucide-react';
 import { io } from 'socket.io-client';
-import MyOrder from "./Myorder" // በካፒታል M ተስተካክሏል
+import { Link } from 'react-router-dom';
+import axios from 'axios';
+import MyOrder from "./Myorder";
 import MenuManagementTab from './MenuManagementTab';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
@@ -23,11 +25,48 @@ export default function Navbar({
   const [isMyOrderOpen, setIsMyOrderOpen] = useState(false);
   const [isMenuEditorOpen, setIsMenuEditorOpen] = useState(false);
   const [orderNotification, setOrderNotification] = useState(null);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // 1. የ Pending ትዕዛዞችን ብዛት ከ Backend ወይም LocalStorage ማምጣት
+  const fetchPendingOrders = async () => {
+    try {
+      const response = await axios.get(`${BACKEND_URL}/api/admin/dashboard-stats`);
+      const allOrders = response.data.allOrders || [];
+      
+      // 'Pending' ወይም 'በመጠባበቅ ላይ' የሆኑትን ብቻ መቁጠር
+      const pending = allOrders.filter(order => 
+        !order.status || 
+        order.status === 'Pending' || 
+        order.status === 'በመጠባበቅ ላይ'
+      ).length;
+
+      setPendingCount(pending);
+    } catch (err) {
+      // ኤረር ከፈጠረ ከ LocalStorage ለማንበብ መሞከር
+      const cached = localStorage.getItem('admin_orders');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          const pending = parsed.filter(o => !o.status || o.status === 'Pending').length;
+          setPendingCount(pending);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  };
 
   useEffect(() => {
+    fetchPendingOrders();
+
+    // አዲስ ትዕዛዝ በ Socket ሲመጣ የ Pending ቁጥሩን በሪልታይም መጨመር
+    socket.on('newOrder', () => {
+      setPendingCount(prev => prev + 1);
+    });
+
     const handleOrderAccepted = (data) => {
       const userLang = data?.lang || lang;
-      let msg = 'ትዕዛዝዎ ተቀብለናል! በጥቂት ደቂቃዎች ውስጥ ይደርስዎታል፤';
+      let msg = 'ትዕዛዝዎ ተቀብለናል! በጥቂት ደቂቃዎች ውስጥ ይደርስዎታል።';
 
       if (userLang === 'om') {
         msg = "Ajajni keessan fudhatameera! Daqiiqawwan muraasa keessatti isin bira gaha.";
@@ -36,6 +75,7 @@ export default function Navbar({
       }
 
       setOrderNotification(msg);
+      fetchPendingOrders(); // ቁጥሩን ማዘመን
       setTimeout(() => setOrderNotification(null), 7000);
     };
 
@@ -46,28 +86,30 @@ export default function Navbar({
       const userLang = data?.lang || lang;
       const status = data?.status;
 
-      if (status === 'In Progress' || status === 'በመሥራት ላይ') {
+      if (status === 'In Progress' || status === 'በመስራት ላይ') {
         if (userLang === 'om') {
           setOrderNotification(`Nyaatni keessan #${data.receiptId || ''} hojjetamaa jira! 🧑‍🍳`);
         } else if (userLang === 'en') {
           setOrderNotification(`Your food #${data.receiptId || ''} is being prepared! 🧑‍🍳`);
         } else {
-          setOrderNotification(`ምግብዎ #${data.receiptId || ''} በመሥራት ላይ ይገኛል፤ በጥቂት ደቂቃዎች ውስጥ እንደርሳለን! 🧑‍🍳`);
+          setOrderNotification(`ምግብዎ #${data.receiptId || ''} በመስራት ላይ ይገኛል፤ በጥቂት ደቂቃዎች ውስጥ እንደርሳለን! 🧑‍🍳`);
         }
       } else if (status === 'Delivered' || status === 'Completed' || status === 'ተጠናቋል') {
         if (userLang === 'om') {
-          setOrderNotification(`Nyaatni keessan #${data.receiptId || ''} xumurameera! 🎉`);
+          setOrderNotification(`Nyaatni keessan #${data.receiptId || ''} xumurameera! 🍾`);
         } else if (userLang === 'en') {
-          setOrderNotification(`Your food #${data.receiptId || ''} has been delivered! 🎉`);
+          setOrderNotification(`Your food #${data.receiptId || ''} has been delivered! 🍾`);
         } else {
-          setOrderNotification(`ምግብዎ #${data.receiptId || ''} ደርሷል! መልካም ምግብ! 🎉`);
+          setOrderNotification(`ምግብዎ #${data.receiptId || ''} ደርሷል! መልካም ምግብ! 🍾`);
         }
       }
 
+      fetchPendingOrders(); // የትዕዛዝ ሁኔታ ሲቀየር ቁጥሩን ማዘመን
       setTimeout(() => setOrderNotification(null), 7000);
     });
 
     return () => {
+      socket.off('newOrder');
       socket.off('orderAcceptedNotification', handleOrderAccepted);
       socket.off('orderAccepted', handleOrderAccepted);
       socket.off('orderStatusUpdated');
@@ -138,6 +180,7 @@ export default function Navbar({
       <nav className="bg-white/90 backdrop-blur-md border-b border-gray-100 p-4 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           
+          {/* Logo Section */}
           <div className="flex items-center gap-2 group cursor-pointer" onClick={handleHomeClick}>
             <div className="bg-orange-600 p-2 rounded-2xl group-hover:rotate-12 transition-transform duration-300 shadow-lg shadow-orange-200">
               <UtensilsCrossed className="text-white" size={20} />
@@ -147,14 +190,30 @@ export default function Navbar({
             </h1>
           </div>
           
+          {/* Navigation Links */}
           <div className="hidden md:flex gap-8 text-sm font-bold text-gray-600">
             <a href="#home" onClick={handleHomeClick} className="hover:text-orange-600 transition-colors">{currentNav.home}</a>
             <a href="#menu" onClick={handleMenuClick} className="hover:text-orange-600 transition-colors">{currentNav.menu}</a>
             <a href="#footer" onClick={handleAboutClick} className="hover:text-orange-600 transition-colors">{currentNav.about}</a>
           </div>
 
+          {/* Action Buttons */}
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2">
+              
+              {/* Admin Panel Link + Pending Counter Badge */}
+              <Link 
+                to="/admin" 
+                className="relative bg-orange-500 hover:bg-orange-600 text-white font-bold py-1.5 px-3 rounded-2xl text-xs transition duration-200 shadow-sm flex items-center gap-1.5"
+              >
+                <span>Admin</span>
+                {pendingCount > 0 && (
+                  <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full border border-white animate-pulse">
+                    {pendingCount}
+                  </span>
+                )}
+              </Link>
+
               {/* Customer Orders Modal Button */}
               <button
                 onClick={() => setIsMyOrderOpen(true)}
@@ -175,6 +234,7 @@ export default function Navbar({
               </button>
             </div>
 
+            {/* Language Selector */}
             <select 
               value={lang} 
               onChange={(e) => setLang(e.target.value)}
@@ -185,6 +245,7 @@ export default function Navbar({
               <option value="en">🇬🇧 English</option>
             </select>
 
+            {/* Shopping Cart Icon */}
             <div 
               className="relative cursor-pointer hover:scale-105 active:scale-95 transition-all" 
               onClick={() => cartCount > 0 && onOpenCart()}
@@ -199,6 +260,7 @@ export default function Navbar({
               )}
             </div>
 
+            {/* Mobile Menu Toggle Button */}
             <button 
               className="md:hidden p-2 bg-gray-100 rounded-2xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-all border border-gray-200/50"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -209,6 +271,7 @@ export default function Navbar({
 
         </div>
 
+        {/* Mobile Dropdown Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-4 right-4 bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl p-4 mt-2 shadow-xl flex flex-col gap-3 font-bold text-gray-700 text-sm">
             <a href="#home" onClick={handleHomeClick} className="p-2 hover:bg-orange-50 rounded-xl hover:text-orange-600 transition-colors">{currentNav.home}</a>
@@ -216,6 +279,19 @@ export default function Navbar({
             <a href="#footer" onClick={handleAboutClick} className="hover:text-orange-600 transition-colors p-2">{currentNav.about}</a>
             
             <div className="border-t border-gray-100 pt-3 flex flex-col gap-2">
+              <Link 
+                to="/admin" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="bg-orange-500 hover:bg-orange-600 text-white text-center font-bold p-2.5 rounded-xl text-xs transition duration-200 flex items-center justify-center gap-2"
+              >
+                <span>Admin Panel</span>
+                {pendingCount > 0 && (
+                  <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full border border-white">
+                    {pendingCount}
+                  </span>
+                )}
+              </Link>
+
               <button
                 onClick={() => { setIsMobileMenuOpen(false); setIsMyOrderOpen(true); }}
                 className="flex items-center justify-between p-3 bg-zinc-900 text-white rounded-xl text-xs font-bold active:scale-98 transition-all"

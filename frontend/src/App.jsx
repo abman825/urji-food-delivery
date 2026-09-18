@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import Home from './pages/Home';
 import OrderTrackerModal from './components/OrderTrackerModal';
+import AdminDashboard from './components/AdminDashboard';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
@@ -14,22 +16,15 @@ export default function App() {
   const [lang, setLang] = useState('am');
   const [menuItems, setMenuItems] = useState([]);
 
-  // 1. Refresh ሲደረግ Scroll ወደ ላይ እንዲመለስ
+  // 1. Refresh ሲደረግ Scroll ወደ ላይ እንዲመለስ ማድረግ
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
     window.scrollTo(0, 0);
   }, []);
-useEffect(() => {
-  if (socket) {
-    socket.on('menuUpdated', (newMenuItems) => {
-      setMenuItems(newMenuItems);
-    });
-  }
-  return () => socket?.off('menuUpdated');
-}, [socket]);
-  // 2. ከ Database ሜኑውን መጫን እና በ Socket real-time ማዳመጥ
+
+  // 2. ከ Database ሜኑውን መጫን እና በ Socket Real-time ማዳመጥ
   useEffect(() => {
     const fetchMenu = async () => {
       try {
@@ -48,7 +43,9 @@ useEffect(() => {
       setMenuItems(updatedMenu);
     });
 
-    return () => socket.off('menuUpdated');
+    return () => {
+      socket.off('menuUpdated');
+    };
   }, []);
 
   // 3. ትዕዛዝ ሲላክ Tracker መክፈት
@@ -59,21 +56,40 @@ useEffect(() => {
 
   return (
     <CartProvider>
-      <div className="relative min-h-screen bg-black text-white">
-        <Home 
-          onPlaceOrder={handlePlaceOrder} 
-          menuItems={menuItems} 
-          setMenuItems={setMenuItems} 
-        />
+      <Router>
+        <div className="relative min-h-screen bg-black text-white">
+          <Routes>
+            {/* Home Route */}
+            <Route 
+              path="/" 
+              element={
+                <Home 
+                  onPlaceOrder={handlePlaceOrder} 
+                  menuItems={menuItems} 
+                  setMenuItems={setMenuItems} 
+                  lang={lang}
+                  setLang={setLang}
+                />
+              } 
+            />
 
-        <OrderTrackerModal
-          isOpen={isTrackerOpen}
-          onClose={() => setIsTrackerOpen(false)}
-          currentOrder={activeOrder}
-          setCurrentOrder={setActiveOrder}
-          lang={lang}
-        />
-      </div>
+            {/* Admin Dashboard Route */}
+            <Route 
+              path="/admin" 
+              element={<AdminDashboard />} 
+            />
+          </Routes>
+
+          {/* Order Tracker Modal */}
+          <OrderTrackerModal
+            isOpen={isTrackerOpen}
+            onClose={() => setIsTrackerOpen(false)}
+            currentOrder={activeOrder}
+            setCurrentOrder={setActiveOrder}
+            lang={lang}
+          />
+        </div>
+      </Router>
     </CartProvider>
   );
 }

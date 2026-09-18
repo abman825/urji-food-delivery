@@ -32,7 +32,56 @@ const formatOrderItems = (items) => {
   return String(items);
 };
 
-// 1. Chapa Success Order Handler
+// 1. Admin Dashboard Stats & Orders Handler
+export const getAdminDashboardStats = async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+
+    const now = new Date();
+    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+    let weeklySales = 0;
+    let monthlySales = 0;
+    let yearlySales = 0;
+    const itemSalesCount = {};
+
+    orders.forEach(order => {
+      const orderDate = new Date(order.createdAt);
+      const price = parseFloat(order.totalPrice) || 0;
+      
+      if (orderDate >= startOfWeek) weeklySales += price;
+      if (orderDate >= startOfMonth) monthlySales += price;
+      if (orderDate >= startOfYear) yearlySales += price;
+
+      if (order.items && Array.isArray(order.items)) {
+        order.items.forEach(item => {
+          const name = typeof item.name === 'object' ? (item.name.am || item.name.en) : item.name;
+          const qty = item.quantity || item.qty || 1;
+          if (name) {
+            itemSalesCount[name] = (itemSalesCount[name] || 0) + qty;
+          }
+        });
+      }
+    });
+
+    const topItems = Object.entries(itemSalesCount)
+      .map(([name, quantity]) => ({ name, quantity }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+
+    res.status(200).json({
+      allOrders: orders,
+      stats: { weeklySales, monthlySales, yearlySales },
+      topItems
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+// 2. Chapa Success Order Handler
 export const handleChapaSuccess = async (req, res) => {
   try {
     const { pendingOrder, trx_id } = req.body;
@@ -53,17 +102,17 @@ export const handleChapaSuccess = async (req, res) => {
     if (pendingOrder?.time) details += `<b>⏰ ሰዓት:</b> ${pendingOrder.time}\n`;
 
     const message = `
-<b>✅ የ Chapa ክፍያ ተፈፅሟል!</b>
+<b>✅ የ Chapa ክፍያ ተፈጽሟል!</b>
 
 <b>🆔 የደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
-<b>💳 Tx Ref:</b> <code>${trx_id || 'ልዩነቱ ያልታወቀ'}</code>
+<b>💳 Tx Ref:</b> <code>${trx_id || 'ልዩነቱ አልታወቀም'}</code>
 ${details}<b>📝 አስተያየት (Note):</b>
 <code>${userNote}</code>
 
-<b>📦 አይነት:</b> ${currentOrderType}
+<b>📦 ዓይነት:</b> ${currentOrderType}
 <b>💳 የመክፈያ መንገድ:</b> <b>Chapa Online Payment</b>
 
-<b>🛒 የታዘዙ የምግብ አይነቶች:</b>
+<b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
 ${formattedItems}
 
 <b>💰 የተከፈለው ዋጋ:</b> <b>${pendingOrder?.totalPrice || '0'} ETB</b>
@@ -118,7 +167,7 @@ ${formattedItems}
   }
 };
 
-// 2. Chapa Payment Initialization
+// 3. Chapa Payment Initialization
 export const initiateChapaPayment = async (req, res) => {
   try {
     const { amount, name, phone, returnUrl } = req.body;
@@ -173,7 +222,7 @@ export const initiateChapaPayment = async (req, res) => {
   }
 };
 
-// 3. Main Order / Screenshot Submission Handler (ከ Table Validation ጋር)
+// 4. Main Order / Screenshot Submission Handler (ከ Table Validation ጋር)
 export const submitOrderFormData = async (req, res) => {
   try {
     const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod, note, customerInfo } = req.body;
@@ -193,7 +242,7 @@ export const submitOrderFormData = async (req, res) => {
 
     const inputTableNo = tableNo || parsedCustomerInfo?.tableNo;
 
-    // 🔒 QR Code / Table Number Check Validation
+    // QR Code / Table Number Check Validation
     if (currentOrderType !== 'Takeaway') {
       if (!inputTableNo || String(inputTableNo).trim() === '' || inputTableNo === 'null' || inputTableNo === 'undefined') {
         if (req.file && req.file.path) fs.unlink(req.file.path, () => {});
@@ -237,11 +286,11 @@ export const submitOrderFormData = async (req, res) => {
 ${details}<b>📝 አስተያየት (Note):</b>
 <code>${userNote}</code>
 
-<b>📦 አይነት:</b> ${currentOrderType}
+<b>📦 ዓይነት:</b> ${currentOrderType}
 <b>💳 የመክፈያ መንገድ:</b> <b>${payMethodText}</b>
 <b>🧾 የክፍያ ስክሪንሾት:</b> ${hasReceipt}
 
-<b>🛒 የታዘዙ የምግብ አይነቶች:</b>
+<b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
 ${formattedItems}
 
 <b>💰 ጠቅላላ ዋጋ:</b> <b>${totalPrice || '0'} ETB</b>
@@ -345,7 +394,7 @@ ${formattedItems}
   }
 };
 
-// 4. Toggle Availability Handler
+// 5. Toggle Availability Handler
 export const toggleAvailability = async (req, res) => {
   try {
     const { id } = req.params;
