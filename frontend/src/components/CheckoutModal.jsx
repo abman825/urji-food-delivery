@@ -54,8 +54,8 @@ export default function CheckoutModal({
       selectPaymentMethod: "የክፍያ መንገድ",
       payWithChapa: "በ Chapa (ኦንላይን)",
       orderNoteLabel: "ተጨማሪ አስተያየት / ማስታወሻ",
-      orderNotePlaceholder: "ምሳሌ፡ ሽንኩርት አይግባበት፣ ጨው አይበዛበት፣ በርበሬ ቀንሱልኝ...",
-      qrNotice: "ጠረጴዛዎ ላይ ያለውን QR Code ስካን በማድረግ የመረጡት ወንበር ቁጥር፦"
+      orderNotePlaceholder: "ምሳሌ፤ ሽንኩርት አይግባበት፣ ጨው አይበዛበት፣ በርበሬ ቀንስልኝ...",
+      qrNotice: "ጠረጴዛዎ ላይ ያለውን QR Code ስካን በማድረግ የመረጡት ወንበር ቁጥር፡"
     },
     om: {
       title: "Ajaja Keessan Xumuraa",
@@ -70,7 +70,7 @@ export default function CheckoutModal({
       requiredTag: "(Dirqama)",
       phonePlaceholder: "09...",
       uploadReceipt: "Nagahee Kaffaltii",
-      uploadNote: "💡 Nagahee kaffaltii Telebirr fi Baankiin kaffaltan asitti maxxansuu drossuu.",
+      uploadNote: "💡 Nagahee kaffaltii Telebirr fi Baankiin kaffaltan asitti maxxansuu danda'tu.",
       uploadBtn: "Nagahee Maxxansaa",
       fullName: "Maqaa Guutuu",
       namePlaceholder: "Maqaa Keessan Galchaa",
@@ -167,7 +167,7 @@ export default function CheckoutModal({
         return;
       }
       if (!customerInfo.time) {
-        alert(lang === 'am' ? 'እባክዎን የተቀበያ ሰዓት ይምረጡ!' : lang === 'om' ? "Maaloo sa'aatii fudhannaa filadhaa!" : 'Please select pickup time!');
+        alert(lang === 'am' ? 'እባክዎን የመቀበያ ሰዓት ይምረጡ!' : lang === 'om' ? "Maaloo sa'aatii fudhannaa filadhaa!" : 'Please select pickup time!');
         return;
       }
       if (!isSelfPickUp && (!customerInfo.address || !customerInfo.address.trim())) {
@@ -181,17 +181,24 @@ export default function CheckoutModal({
     try {
       const generatedReceiptId = `REC-${Math.floor(100000 + Math.random() * 900000)}`;
 
+      // 🔴 የክፍያ መንገዱን በደንብ መወሰን (Chapa ወይም Screenshot/Cash)
+      const currentPaymentMethod = selectedFile 
+        ? 'Screenshot' 
+        : (paymentMethod || (checkoutType === 'online' ? 'Chapa' : 'Cash'));
+
       const newOrderObj = {
         receiptId: generatedReceiptId,
         items: cartItems,
         totalPrice: totalPrice,
         status: 'Pending',
+        paymentMethod: currentPaymentMethod, // ✅ ክፍያው Chapa መሆኑን በትክክል እዚህ ይይዛል
         tableNo: customerInfo.tableNo || null,
         customerInfo: customerInfo,
         lang: lang,
         createdAt: new Date().toISOString()
       };
 
+      // LocalStorage ላይ ማስቀመጥ
       localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
       const existingOrders = JSON.parse(localStorage.getItem('myOrders') || '[]');

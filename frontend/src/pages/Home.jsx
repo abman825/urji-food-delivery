@@ -54,7 +54,7 @@ export default function Home() {
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
     : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
-  // Table number handling using sessionStorage & URL cleanup (no router package needed)
+  // 1. Table number handling via QR code URL & cleanup
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
     const tableParam = queryParams.get('table') || queryParams.get('tableNo');
@@ -66,7 +66,6 @@ export default function Home() {
         tableNo: tableParam,
         orderType: 'Dine-in'
       }));
-      // Cleans URL query parameters without react-router
       window.history.replaceState({}, document.title, window.location.pathname);
     } else {
       const savedTable = sessionStorage.getItem('tableNo');
@@ -80,7 +79,7 @@ export default function Home() {
     }
   }, []);
 
-  // 1. Fetch Menu from Backend Database on Load
+  // 2. Fetch Menu from Backend
   useEffect(() => {
     const loadMenu = async () => {
       try {
@@ -90,7 +89,7 @@ export default function Home() {
           localStorage.setItem('customMenuItems', JSON.stringify(data));
         }
       } catch (err) {
-        console.error("Failed to load menu from DB, using fallback menuData:", err);
+        console.error("Failed to load menu from DB:", err);
         const saved = localStorage.getItem('customMenuItems');
         if (saved) {
           try { setMenuItems(JSON.parse(saved)); } catch (e) {}
@@ -101,7 +100,7 @@ export default function Home() {
     loadMenu();
   }, []);
 
-  // 2. REAL-TIME MENU SYNC WITH SOCKET.IO
+  // 3. Socket.io Real-time Menu Update
   useEffect(() => {
     socket.on('updateMenu', (updatedMenu) => {
       if (Array.isArray(updatedMenu)) {
@@ -126,7 +125,7 @@ export default function Home() {
     };
   }, []);
 
-  // 3. Active Order Tracker Logic
+  // 4. Active Order Tracking
   useEffect(() => {
     const savedOrder = localStorage.getItem('myPersonalOrder');
     if (savedOrder) {
@@ -161,7 +160,7 @@ export default function Home() {
     };
   }, [myActiveOrder]);
 
-  // 4. Verify Chapa Payment Callback
+  // 5. Verify Chapa Payment Callback
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
     const trx_id = queryParams.get('trx_id') || queryParams.get('tx_ref') || queryParams.get('reference');
@@ -201,6 +200,11 @@ export default function Home() {
               lang === 'om' ? "Kaffaltiin Chapa'n Milkaa'era!" :
               lang === 'en' ? "Chapa Payment Successful!" : "ክፍያው በ Chapa ተሳክቷል!"
             );
+
+            // የጠረጴዛ ቁጥሩን ማጥፋት
+            sessionStorage.removeItem('tableNo');
+            setCustomerInfo((prev) => ({ ...prev, tableNo: '' }));
+
             clearCart();
             localStorage.removeItem('pendingChapaOrder');
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -227,6 +231,21 @@ export default function Home() {
   };
 
   const handleOrder = async (receiptId) => {
+    // ✅ 'Dine-in' (እዚያው የሚበላ) ከሆነ ብቻ የጠረጴዛ ቁጥር ይፈልጋል። Takeaway ከሆነ አያግድም።
+    const isDineIn = customerInfo.orderType === 'Dine-in';
+    const currentTable = customerInfo.tableNo || sessionStorage.getItem('tableNo');
+
+    if (isDineIn && !currentTable) {
+      alert(
+        lang === 'om' 
+          ? "Maaloo ajajuuf koodii QR minjaala irra jiru ammas Scan godhaa." 
+          : lang === 'en' 
+          ? "Please scan the table QR code again to place a new order!" 
+          : "እባክዎን አዲስ ትዕዛዝ ለማዘዝ የጠረጴዛውን QR Code በድጋሚ Scan ያድርጉ!"
+      );
+      return;
+    }
+
     if (paymentMethod === 'Chapa') {
       try {
         const orderPayload = {
@@ -303,6 +322,11 @@ export default function Home() {
         setIsModalOpen(false); 
         clearCart();
         setSelectedFile(null);
+
+        // ትዕዛዙ ከተላከ በኋላ የጠረጴዛ ቁጥሩን ማጥፋት
+        sessionStorage.removeItem('tableNo');
+        setCustomerInfo((prev) => ({ ...prev, tableNo: '' }));
+
       } catch (err) { 
         console.error("Order submit error:", err);
         alert(lang === 'om' ? "Ajaja ergachuun al-danda'ame!" : lang === 'en' ? "Failed to send order!" : "ትዕዛዙን መላክ አልተቻለም!"); 
@@ -362,7 +386,7 @@ export default function Home() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
               <div>
                 <h3 className="text-3xl md:text-5xl font-black text-white mb-3 tracking-tight">
-                  {t?.popularTitle || (lang === 'om' ? "Nyaataa fi Dhugaatii Beekamoo" : lang === 'en' ? "Popular Foods & Drinks" : "ታዋቂ የምግቦች እና መጠጦች")}
+                  {t?.popularTitle || (lang === 'om' ? "Nyaataa fi Dhugaatii Beekamoo" : lang === 'en' ? "Popular Foods & Drinks" : "ታዋቂ የምግብ እና የመጠጥ")}
                 </h3>
                 <div className="h-1.5 w-24 bg-orange-600 rounded-full shadow-lg shadow-orange-600/50"></div>
               </div>
@@ -499,4 +523,4 @@ export default function Home() {
       )}
     </>
   );
-}
+}   

@@ -211,10 +211,10 @@ export const submitOrderFormData = async (req, res) => {
     if (paymentMethod && paymentMethod.toLowerCase().includes('chapa')) {
       payMethodText = 'Chapa Online Payment';
     } else if (file) {
-      payMethodText = 'በስክሪንሾት / ባንክ';
+      payMethodText = 'በስክሪንሾት/ ባንክ';
     }
 
-    const hasReceipt = file ? '✅ አዎ (ከስር ተያይዟል)' : '❌ አልተያያዘም (በካሽ የሚከፈል)';
+    const hasReceipt = file ? '✅ አዎ (ስክሪንሾት ተያይዟል)' : '❌ አልተያያዘም (በካሽ የሚከፈል)';
 
     const customerName = name || parsedCustomerInfo?.name;
     const customerPhone = phone || parsedCustomerInfo?.phone;

@@ -4,7 +4,7 @@ import {
   CheckCircle, ShoppingBag, Utensils, Lock 
 } from 'lucide-react';
 import { io } from 'socket.io-client';
-import AdminDashboard from './AdminDashboard';
+import MyOrder from "./Myorder" // በካፒታል M ተስተካክሏል
 import MenuManagementTab from './MenuManagementTab';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
@@ -20,14 +20,14 @@ export default function Navbar({
   setMenuItems 
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAdminDashOpen, setIsAdminDashOpen] = useState(false);
+  const [isMyOrderOpen, setIsMyOrderOpen] = useState(false);
   const [isMenuEditorOpen, setIsMenuEditorOpen] = useState(false);
   const [orderNotification, setOrderNotification] = useState(null);
 
   useEffect(() => {
     const handleOrderAccepted = (data) => {
       const userLang = data?.lang || lang;
-      let msg = 'ትዕዛዝዎ ተቀብለናል! በጥቂት ደቂቃዎች ውስጥ ይደርስዎታል።';
+      let msg = 'ትዕዛዝዎ ተቀብለናል! በጥቂት ደቂቃዎች ውስጥ ይደርስዎታል፤';
 
       if (userLang === 'om') {
         msg = "Ajajni keessan fudhatameera! Daqiiqawwan muraasa keessatti isin bira gaha.";
@@ -46,13 +46,13 @@ export default function Navbar({
       const userLang = data?.lang || lang;
       const status = data?.status;
 
-      if (status === 'In Progress' || status === 'በመስራት ላይ') {
+      if (status === 'In Progress' || status === 'በመሥራት ላይ') {
         if (userLang === 'om') {
           setOrderNotification(`Nyaatni keessan #${data.receiptId || ''} hojjetamaa jira! 🧑‍🍳`);
         } else if (userLang === 'en') {
           setOrderNotification(`Your food #${data.receiptId || ''} is being prepared! 🧑‍🍳`);
         } else {
-          setOrderNotification(`ምግብዎ #${data.receiptId || ''} በመስራት ላይ ይገኛል፤ በጥቂት ደቂቃዎች ውስጥ እናደርሳለን! 🧑‍🍳`);
+          setOrderNotification(`ምግብዎ #${data.receiptId || ''} በመሥራት ላይ ይገኛል፤ በጥቂት ደቂቃዎች ውስጥ እንደርሳለን! 🧑‍🍳`);
         }
       } else if (status === 'Delivered' || status === 'Completed' || status === 'ተጠናቋል') {
         if (userLang === 'om') {
@@ -155,14 +155,16 @@ export default function Navbar({
 
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2">
+              {/* Customer Orders Modal Button */}
               <button
-                onClick={() => setIsAdminDashOpen(true)}
+                onClick={() => setIsMyOrderOpen(true)}
                 className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-zinc-700/60 active:scale-95 shadow-sm"
               >
                 <ShoppingBag size={16} className="text-orange-400" />
                 <span>{currentNav.ordersBtn}</span>
               </button>
 
+              {/* Menu Management Button */}
               <button
                 onClick={() => setIsMenuEditorOpen(true)}
                 className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-zinc-700/60 active:scale-95 shadow-sm"
@@ -215,7 +217,7 @@ export default function Navbar({
             
             <div className="border-t border-gray-100 pt-3 flex flex-col gap-2">
               <button
-                onClick={() => { setIsMobileMenuOpen(false); setIsAdminDashOpen(true); }}
+                onClick={() => { setIsMobileMenuOpen(false); setIsMyOrderOpen(true); }}
                 className="flex items-center justify-between p-3 bg-zinc-900 text-white rounded-xl text-xs font-bold active:scale-98 transition-all"
               >
                 <div className="flex items-center gap-2">
@@ -239,14 +241,16 @@ export default function Navbar({
         )}
       </nav>
 
-      {isAdminDashOpen && (
-        <AdminDashboard 
-          isOpen={isAdminDashOpen} 
-          onClose={() => setIsAdminDashOpen(false)} 
+      {/* Customer Order Modal */}
+      {isMyOrderOpen && (
+        <MyOrder 
+          isOpen={isMyOrderOpen} 
+          onClose={() => setIsMyOrderOpen(false)} 
           lang={lang}
         />
       )}
 
+      {/* Menu Management Modal */}
       {isMenuEditorOpen && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
           <div className="relative w-full max-w-5xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
