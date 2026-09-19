@@ -6,9 +6,8 @@ import connectDB from './src/config/db.js';
 import Order from './src/models/Order.js';
 import { PORT as CONSTANT_PORT } from './src/config/constants.js';
 import apiRoutes from './src/routes/apiRoutes.js';
-import { handleTelegramCallback, sendDailyReportToTelegram } from './src/services/telegramService.js';
 
-// 1. Tengjast MongoDB gagnagrunni
+// 1. Connect to MongoDB
 connectDB();
 
 const app = express();
@@ -16,87 +15,47 @@ const httpServer = createServer(app);
 
 app.use(cors());
 
-// Socket.io Stillingar
+// Socket.io Config
 const io = new Server(httpServer, {
   cors: { origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] }
 });
 
-// Stærðarmörk fyrir JSON payload
+// Payload Limit
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Tengja Socket.io við Express Request
+// Express Request ላይ Socket.io ማያያዝ
 app.set('socketio', io);
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
-// Telegram Webhook Route
-app.post('/api/telegram-webhook', async (req, res) => {
-  try {
-    const update = req.body;
-    const socketIo = req.app.get('socketio');
-
-    // 1. Þegar stjórnandi ýtir á hnapp í Telegram
-    if (update && update.callback_query) {
-      await handleTelegramCallback(update.callback_query, socketIo);
-      return res.sendStatus(200);
-    }
-
-    // 2. Þegar stjórnandi skrifar /today eða /stats
-    if (update && update.message && update.message.text) {
-      const command = update.message.text.trim().toLowerCase();
-
-      if (command === '/today' || command === '/stats') {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
-
-        // Sækja pantanir dagsins úr gagnagrunni
-        const todayOrders = await Order.find({
-          createdAt: { $gte: startOfDay, $lte: endOfDay }
-        });
-
-        const totalOrdersCount = todayOrders.length;
-        const totalRevenue = todayOrders.reduce((sum, order) => sum + (Number(order.totalPrice) || 0), 0);
-
-        // Senda skýrslu á Telegram
-        await sendDailyReportToTelegram(totalOrdersCount, totalRevenue);
-        return res.sendStatus(200);
-      }
-    }
-
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("Telegram Webhook Error:", err);
-    res.sendStatus(500);
-  }
-});
-
-// API Routes
+// API Routes (Webhook እና ሌሎች የኤፒአይ መንገዶች እዚህ ይስተናገዳሉ)
 app.use('/api', apiRoutes);
 
-// Socket.io Rauntímatengingar (Real-time Connection)
+// Socket.io Real-time Connection Logic
 io.on('connection', (socket) => {
-  console.log('⚡ Nýr notandi tengdur:', socket.id);
+  console.log('⚡ አዲስ ደንበኛ ተገናኝቷል:', socket.id);
 
-  // Uppfæra matseðil (Menu Update Sync)
+  // Menu Update Sync
   socket.on('updateMenu', (updatedMenu) => {
     io.emit('updateMenu', updatedMenu);
   });
 
-  // Tengjast stjórnendasvæði (Admin Room Join)
+  // Admin Room Join
   socket.on('joinAdmin', () => socket.join('adminRoom'));
 
-  // Tengjast ákveðnu pöntunarrými (einstakur viðskiptavinur)
+  // Specific Order Room Join (ደንበኛው ትዕዛዙን ለመከታተል)
   socket.on('joinOrderRoom', (receiptId) => {
-    if (receiptId) socket.join(`order_${String(receiptId).trim()}`);
+    if (receiptId) {
+      const roomName = `order_${String(receiptId).trim()}`;
+      socket.join(roomName);
+      console.log(`📌 Socket ${socket.id} joined room: ${roomName}`);
+    }
   });
 
-  // Skrá nýja pöntun í gegnum Socket
+  // Real-time Order Placement via Socket
   socket.on('placeOrder', async (orderData) => {
     try {
       const formattedOrder = {
@@ -125,10 +84,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Breyta stöðu pöntunar í rauntíma
+  // Order Status Update Real-time Event
   socket.on('updateOrderStatus', async (data) => {
     const { receiptId, status } = data;
-    console.log(`🔄 Uppfæri pöntun ${receiptId} í stöðu: ${status}`);
+    console.log(`🔄 Updating Order ${receiptId} to: ${status}`);
 
     try {
       const updatedOrder = await Order.findOneAndUpdate(
@@ -155,9 +114,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('❌ Notandi aftengdur:', socket.id);
+    console.log('❌ ደንበኛ ተቋርጧል:', socket.id);
   });
 });
 
 const PORT = process.env.PORT || CONSTANT_PORT || 5000;
-httpServer.listen(PORT, () => console.log(`🚀 Þjónn keyrir á tengi (port) ${PORT}`));
+httpServer.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

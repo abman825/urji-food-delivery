@@ -6,8 +6,8 @@ import {
   initiateChapaPayment, 
   handleChapaSuccess,
   toggleAvailability,
-  getAdminDashboardStats, // <-- ለአድሚን ዳሽቦርድ
-  getAllOrders            // <-- ሁሉንም ትዕዛዞች ለማምጣት
+  getAdminDashboardStats,
+  getAllOrders
 } from '../controllers/orderController.js';
 import MenuItem from '../models/MenuItem.js';
 import Order from '../models/Order.js';
@@ -32,7 +32,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-// --- 📸 CLOUDINARY FILE UPLOAD ROUTE ---
+// --- CLOUDINARY FILE UPLOAD ROUTE ---
 router.post('/upload-image', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -50,9 +50,7 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
   }
 });
 
-// --- 🍔 MENU ROUTES ---
-
-// 1. ሁሉንም ሜኑ ከ Database ለማንበብ
+// --- MENU ROUTES ---
 router.get('/menu', async (req, res) => {
   try {
     const items = await MenuItem.find();
@@ -62,7 +60,6 @@ router.get('/menu', async (req, res) => {
   }
 });
 
-// 2. ሜኑ ሲቀየር/ሲጨመር Database እና Socket ማደሻ (Real-time Broadcast)
 router.post('/menu/update', async (req, res) => {
   try {
     const { items } = req.body;
@@ -81,21 +78,21 @@ router.post('/menu/update', async (req, res) => {
   }
 });
 
-// --- 📦 ORDER ROUTES ---
+// --- ORDER ROUTES ---
 router.post('/orders', upload.single('screenshot'), createScreenshotOrder);
 router.post('/chapa-pay', initiateChapaPayment);
 router.post('/chapa-success-notify', handleChapaSuccess);
 router.patch('/menu/:id/toggle', toggleAvailability);
 
-// --- 📊 ADMIN DASHBOARD ROUTES ---
+// --- ADMIN DASHBOARD ROUTES ---
 router.get('/admin/dashboard-stats', getAdminDashboardStats);
 router.get('/admin/orders', getAllOrders);
 
-// --- 🤖 TELEGRAM BOT WEBHOOK ROUTE ---
+// --- TELEGRAM BOT WEBHOOK ROUTE (/api/telegram-webhook) ---
 router.post('/telegram-webhook', async (req, res) => {
   try {
     const { callback_query, message } = req.body;
-    const io = req.app.get('socketio') || req.app.get('io');
+    const io = req.app.get('socketio');
 
     // 1. አድሚኑ በቴሌግራም አዝራር (Button) ሲጫን
     if (callback_query) {
