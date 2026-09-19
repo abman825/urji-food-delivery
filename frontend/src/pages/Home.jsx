@@ -54,7 +54,7 @@ export default function Home() {
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
     : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
-  // 1. የጠረጴዛ ቁጥር ከ QR Code URL መቀበል
+  // 1. Table number handling via QR code URL & cleanup
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
     const tableParam = queryParams.get('table') || queryParams.get('tableNo');
@@ -79,7 +79,7 @@ export default function Home() {
     }
   }, []);
 
-  // 2. የምግብ ዝርዝር (Menu) ከ Database መጫን
+  // 2. Fetch Menu from Backend
   useEffect(() => {
     const loadMenu = async () => {
       try {
@@ -100,7 +100,7 @@ export default function Home() {
     loadMenu();
   }, []);
 
-  // 3. Socket.io በቀጥታ (Real-time) የምግብ ዝርዝር ማሻሻያ
+  // 3. Socket.io Real-time Menu Update
   useEffect(() => {
     socket.on('updateMenu', (updatedMenu) => {
       if (Array.isArray(updatedMenu)) {
@@ -125,31 +125,19 @@ export default function Home() {
     };
   }, []);
 
-  // 4. አሁን ያለውን ትዕዛዝ ሁኔታ መከታተል (Order Tracking) + Socket Room መቀላቀል
+  // 4. Active Order Tracking
   useEffect(() => {
     const savedOrder = localStorage.getItem('myPersonalOrder');
     if (savedOrder) {
-      try { 
-        const parsed = JSON.parse(savedOrder);
-        setMyActiveOrder(parsed);
-        if (parsed?.receiptId) {
-          // ደንበኛውን ከደቂቃዎች በፊት የታዘዘው ትዕዛዝ Room ጋር ማያያዝ
-          socket.emit('joinOrderRoom', parsed.receiptId);
-        }
-      } catch (e) {}
+      try { setMyActiveOrder(JSON.parse(savedOrder)); } catch (e) {}
     }
   }, []);
 
   useEffect(() => {
-    if (!myActiveOrder) return;
-
-    // አክቲቭ ትዕዛዝ ሲኖር ሁሌም Socket Room መቀላቀሉን ማረጋገጥ
-    const currentReceiptId = String(myActiveOrder.receiptId || myActiveOrder.id || '').trim();
-    if (currentReceiptId) {
-      socket.emit('joinOrderRoom', currentReceiptId);
-    }
-
     const handleStatusUpdate = (data) => {
+      if (!myActiveOrder) return;
+
+      const currentReceiptId = String(myActiveOrder.receiptId || myActiveOrder.id || '').trim();
       const incomingReceiptId = String(data.receiptId || data.orderId || data.id || '').trim();
 
       if (currentReceiptId && incomingReceiptId && currentReceiptId === incomingReceiptId) {
@@ -172,7 +160,7 @@ export default function Home() {
     };
   }, [myActiveOrder]);
 
-  // 5. የ Chapa ክፍያን ማረጋገጫ (Callback)
+  // 5. Verify Chapa Payment Callback
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
     const trx_id = queryParams.get('trx_id') || queryParams.get('tx_ref') || queryParams.get('reference');
@@ -208,14 +196,12 @@ export default function Home() {
             setMyActiveOrder(newOrderObj);
             localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-            // አዲሱን ደረሰኝ ቁጥር ለ Socket ማሳወቅ
-            socket.emit('joinOrderRoom', receiptId);
-
             alert(
               lang === 'om' ? "Kaffaltiin Chapa'n Milkaa'era!" :
               lang === 'en' ? "Chapa Payment Successful!" : "ክፍያው በ Chapa ተሳክቷል!"
             );
 
+            // የጠረጴዛ ቁጥሩን ማጥፋት
             sessionStorage.removeItem('tableNo');
             setCustomerInfo((prev) => ({ ...prev, tableNo: '' }));
 
@@ -244,7 +230,8 @@ export default function Home() {
     }
   };
 
-  const handleOrder = async (orderPayload) => {
+  const handleOrder = async (receiptId) => {
+    // ✅ 'Dine-in' (እዚያው የሚበላ) ከሆነ ብቻ የጠረጴዛ ቁጥር ይፈልጋል። Takeaway ከሆነ አያግድም።
     const isDineIn = customerInfo.orderType === 'Dine-in';
     const currentTable = customerInfo.tableNo || sessionStorage.getItem('tableNo');
 
@@ -254,17 +241,15 @@ export default function Home() {
           ? "Maaloo ajajuuf koodii QR minjaala irra jiru ammas Scan godhaa." 
           : lang === 'en' 
           ? "Please scan the table QR code again to place a new order!" 
-          : "እባክዎን አዲስ ትዕዛዝ ለማዘዝ የጠረጴዛውን QR Code በድጋሜ Scan ያድርጉ!"
+          : "እባክዎን አዲስ ትዕዛዝ ለማዘዝ የጠረጴዛውን QR Code በድጋሚ Scan ያድርጉ!"
       );
       return;
     }
 
-    const currentSocketId = socket && socket.id ? socket.id : '';
-
-    if (orderPayload.paymentMethod === 'Chapa') {
+    if (paymentMethod === 'Chapa') {
       try {
-        const payload = {
-          receiptId: orderPayload.receiptId || `REC-${Date.now().toString().slice(-6)}`,
+        const orderPayload = {
+          receiptId: receiptId || `REC-${Date.now().toString().slice(-6)}`,
           name: customerInfo.name,
           phone: customerInfo.phone,
           address: customerInfo.address,
@@ -274,11 +259,10 @@ export default function Home() {
           paymentMethod: 'Chapa',
           totalPrice: totalPrice,
           items: cartItems,
-          orderType: customerInfo.orderType,
-          socketId: currentSocketId
+          orderType: customerInfo.orderType
         };
 
-        localStorage.setItem('pendingChapaOrder', JSON.stringify(payload));
+        localStorage.setItem('pendingChapaOrder', JSON.stringify(orderPayload));
 
         const data = await initiateChapaPay({ 
           amount: totalPrice, 
@@ -297,35 +281,29 @@ export default function Home() {
     } else {
       try {
         const formData = new FormData();
-        
-        const finalReceiptId = orderPayload.receiptId || `REC-${Date.now().toString().slice(-6)}`;
-        formData.append('receiptId', finalReceiptId);
-        formData.append('socketId', currentSocketId);
+        formData.append('receiptId', receiptId);
+        formData.append('socketId', socket ? socket.id : '');
         formData.append('lang', lang);
         formData.append('tableNo', customerInfo.tableNo || '');
         formData.append('phone', customerInfo.phone || '');
         formData.append('orderType', customerInfo.orderType || 'Dine-in');
         formData.append('note', customerInfo.note || '');
-        formData.append('paymentMethod', orderPayload.paymentMethod || paymentMethod);
+        formData.append('paymentMethod', paymentMethod);
         formData.append('totalPrice', totalPrice);
-        formData.append('customerName', customerInfo.name || '');
-        formData.append('address', customerInfo.address || '');
-        formData.append('time', customerInfo.time || '');
-
         formData.append('items', JSON.stringify(cartItems));
-        formData.append('customerInfo', JSON.stringify({ ...customerInfo, socketId: currentSocketId }));
+        formData.append('customerInfo', JSON.stringify(customerInfo));
 
         if (selectedFile) {
-          formData.append('screenshot', selectedFile); 
+          formData.append('screenshot', selectedFile);
         }
 
         const result = await submitOrderFormData(formData);
-        const actualReceiptId = result?.receiptId || finalReceiptId;
+        const finalReceiptId = result?.receiptId || receiptId || `REC-${Date.now().toString().slice(-6)}`;
 
         const newOrderObj = {
-          receiptId: actualReceiptId,
+          receiptId: finalReceiptId,
           status: 'Pending',
-          paymentMethod: orderPayload.paymentMethod || paymentMethod,
+          paymentMethod: paymentMethod,
           totalPrice,
           items: cartItems,
           orderType: customerInfo.orderType,
@@ -338,16 +316,14 @@ export default function Home() {
         setMyActiveOrder(newOrderObj);
         localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-        // ደንበኛውን የራሱ የትዕዛዝ Room ውስጥ በቅጽበት ማቀላቀል
-        socket.emit('joinOrderRoom', actualReceiptId);
-
         const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተልኳል! ደረሰኝ ቁጥር:";
-        alert(`✅ ${successText} ${actualReceiptId}`);
+        alert(`✅ ${successText} ${finalReceiptId}`);
         
         setIsModalOpen(false); 
         clearCart();
         setSelectedFile(null);
 
+        // ትዕዛዙ ከተላከ በኋላ የጠረጴዛ ቁጥሩን ማጥፋት
         sessionStorage.removeItem('tableNo');
         setCustomerInfo((prev) => ({ ...prev, tableNo: '' }));
 
@@ -547,4 +523,4 @@ export default function Home() {
       )}
     </>
   );
-}
+}   
