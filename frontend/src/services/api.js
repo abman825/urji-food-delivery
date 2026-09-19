@@ -1,15 +1,15 @@
 import axios from 'axios';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
 const API_BASE = `${BACKEND_URL}/api`;
 
-// 1. የሜኑ እቃዎችን መፈለጊያ (ከ /menu-items ወደ /menu ተቀይሯል)
+// 1. የሜኑ ዕቃዎችን መፈለጊያ (ከ /menu-items ወደ /menu የተቀየረው)
 export const fetchMenuItems = async () => {
   try {
     const res = await axios.get(`${API_BASE}/menu`);
     return res.data;
   } catch (err) {
-    console.error("Error fetching menu:", err);
+    console.error("ሜኑዎችን ከሰርቨር ማምጣት አልተቻለም:", err);
     return [];
   }
 };
@@ -20,7 +20,7 @@ export const initiateChapaPay = async (paymentData) => {
     const res = await axios.post(`${API_BASE}/chapa-pay`, paymentData);
     return res.data;
   } catch (err) {
-    console.error("Chapa payment initiation error:", err);
+    console.error("የ Chapa ክፍያ ማስጀመር ስህተት:", err);
     throw err;
   }
 };
@@ -34,7 +34,7 @@ export const verifyChapaPayment = async (pendingOrder, trx_id) => {
     });
     return res.data;
   } catch (err) {
-    console.error("Chapa verification error:", err);
+    console.error("የ Chapa ማረጋገጫ ስህተት:", err);
     throw err;
   }
 };
@@ -45,7 +45,7 @@ export const submitOrderFormData = async (formData) => {
     const res = await axios.post(`${API_BASE}/orders`, formData);
     return res.data;
   } catch (err) {
-    console.error("Submit order error:", err);
+    console.error("ትዕዛዝ መላክ አልተቻለም:", err);
     throw err;
   }
 };

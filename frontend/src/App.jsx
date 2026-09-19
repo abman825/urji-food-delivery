@@ -8,7 +8,7 @@ import axios from 'axios';
 import { io } from 'socket.io-client';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
-const socket = io(BACKEND_URL);
+const socket = io(BACKEND_URL, { autoConnect: true });
 
 export default function App() {
   const [isTrackerOpen, setIsTrackerOpen] = useState(false);
@@ -16,7 +16,7 @@ export default function App() {
   const [lang, setLang] = useState('am');
   const [menuItems, setMenuItems] = useState([]);
 
-  // 1. Refresh ሲደረግ Scroll ወደ ላይ እንዲመለስ ማድረግ
+  // 1. ገጹ ሪፍሬሽ ሲደረግ ስክሮል ወደ ላይ እንዲመለስ ማድረግ
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
@@ -24,7 +24,7 @@ export default function App() {
     window.scrollTo(0, 0);
   }, []);
 
-  // 2. ከ Database ሜኑውን መጫን እና በ Socket Real-time ማዳመጥ
+  // 2. ከ Database ሜኑዎችን መጫን እና በ Socket Real-time ማዳመጥ
   useEffect(() => {
     const fetchMenu = async () => {
       try {
@@ -33,7 +33,7 @@ export default function App() {
           setMenuItems(res.data);
         }
       } catch (err) {
-        console.error("Error loading menu:", err);
+        console.error("ሜኑዎችን መጫን አልተቻለም:", err);
       }
     };
 
