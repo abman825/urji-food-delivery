@@ -8,7 +8,7 @@ import { PORT as CONSTANT_PORT } from './src/config/constants.js';
 import apiRoutes from './src/routes/apiRoutes.js';
 import { handleTelegramCallback, sendDailyReportToTelegram } from './src/services/telegramService.js';
 
-// 1. Connect to MongoDB
+// 1. Tengjast MongoDB gagnagrunni
 connectDB();
 
 const app = express();
@@ -16,16 +16,16 @@ const httpServer = createServer(app);
 
 app.use(cors());
 
-// Socket.io Config
+// Socket.io Stillingar
 const io = new Server(httpServer, {
   cors: { origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] }
 });
 
-// Payload Limit
+// Stærðarmörk fyrir JSON payload
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Express Request ላይ Socket.io ማያያዝ
+// Tengja Socket.io við Express Request
 app.set('socketio', io);
 app.use((req, res, next) => {
   req.io = io;
@@ -38,13 +38,13 @@ app.post('/api/telegram-webhook', async (req, res) => {
     const update = req.body;
     const socketIo = req.app.get('socketio');
 
-    // 1. አድሚኑ በቴሌግራም አዝራር (Button) ሲጫን
+    // 1. Þegar stjórnandi ýtir á hnapp í Telegram
     if (update && update.callback_query) {
       await handleTelegramCallback(update.callback_query, socketIo);
       return res.sendStatus(200);
     }
 
-    // 2. አድሚኑ /today ወይም /stats ብሎ ሲጽፍ
+    // 2. Þegar stjórnandi skrifar /today eða /stats
     if (update && update.message && update.message.text) {
       const command = update.message.text.trim().toLowerCase();
 
@@ -55,15 +55,15 @@ app.post('/api/telegram-webhook', async (req, res) => {
         const endOfDay = new Date();
         endOfDay.setHours(23, 59, 59, 999);
 
-        // የዛሬዎቹን ትዕዛዞች ከ Database መፈለግ
+        // Sækja pantanir dagsins úr gagnagrunni
         const todayOrders = await Order.find({
-          createdAt: { $gte: startOfDay,$lte: endOfDay }
+          createdAt: { $gte: startOfDay, $lte: endOfDay }
         });
 
         const totalOrdersCount = todayOrders.length;
         const totalRevenue = todayOrders.reduce((sum, order) => sum + (Number(order.totalPrice) || 0), 0);
 
-        // ሪፖርቱን ወደ ቴሌግራም መላክ
+        // Senda skýrslu á Telegram
         await sendDailyReportToTelegram(totalOrdersCount, totalRevenue);
         return res.sendStatus(200);
       }
@@ -79,24 +79,24 @@ app.post('/api/telegram-webhook', async (req, res) => {
 // API Routes
 app.use('/api', apiRoutes);
 
-// Socket.io Real-time Connection Logic
+// Socket.io Rauntímatengingar (Real-time Connection)
 io.on('connection', (socket) => {
-  console.log('⚡ አዲስ ደንበኛ ተገናኝቷል:', socket.id);
+  console.log('⚡ Nýr notandi tengdur:', socket.id);
 
-  // Menu Update Sync
+  // Uppfæra matseðil (Menu Update Sync)
   socket.on('updateMenu', (updatedMenu) => {
     io.emit('updateMenu', updatedMenu);
   });
 
-  // Admin Room Join
+  // Tengjast stjórnendasvæði (Admin Room Join)
   socket.on('joinAdmin', () => socket.join('adminRoom'));
 
-  // Specific Order Room Join (ደንበኛው ትዕዛዙን ለመከታተል)
+  // Tengjast ákveðnu pöntunarrými (einstakur viðskiptavinur)
   socket.on('joinOrderRoom', (receiptId) => {
     if (receiptId) socket.join(`order_${String(receiptId).trim()}`);
   });
 
-  // Real-time Order Placement via Socket
+  // Skrá nýja pöntun í gegnum Socket
   socket.on('placeOrder', async (orderData) => {
     try {
       const formattedOrder = {
@@ -125,10 +125,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Order Status Update Real-time Event
+  // Breyta stöðu pöntunar í rauntíma
   socket.on('updateOrderStatus', async (data) => {
     const { receiptId, status } = data;
-    console.log(`🔄 Updating Order ${receiptId} to: ${status}`);
+    console.log(`🔄 Uppfæri pöntun ${receiptId} í stöðu: ${status}`);
 
     try {
       const updatedOrder = await Order.findOneAndUpdate(
@@ -155,9 +155,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('❌ ደንበኛ ተቋርጧል:', socket.id);
+    console.log('❌ Notandi aftengdur:', socket.id);
   });
 });
 
 const PORT = process.env.PORT || CONSTANT_PORT || 5000;
-httpServer.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+httpServer.listen(PORT, () => console.log(`🚀 Þjónn keyrir á tengi (port) ${PORT}`));

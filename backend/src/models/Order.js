@@ -3,17 +3,17 @@ import mongoose from 'mongoose';
 const orderSchema = new mongoose.Schema({
   receiptId: { type: String, required: true, unique: true },
   
-  // Customer Info Fields
+  // የደስታኛ መረጃዎች (Customer Info Fields)
   customerName: { type: String, default: '' },
   phone: { type: String, default: '-' },
   tableNo: { type: String, default: '-' },
   address: { type: String, default: '' },
   time: { type: String, default: '' },
-  note: { type: String, default: '' }, // 추가: Special instructions
+  note: { type: String, default: '' },
   lang: { type: String, default: 'am' },
 
-  orderType: { type: String, default: 'Dine-in' }, // Dine-in, Takeaway
-  paymentMethod: { type: String, default: 'Cash' }, // Chapa, Screenshot, Cash
+  orderType: { type: String, default: 'Dine-in' }, 
+  paymentMethod: { type: String, default: 'Cash' }, 
   paymentStatus: { 
     type: String, 
     enum: ['Unpaid', 'Paid', 'Pending Verification'], 

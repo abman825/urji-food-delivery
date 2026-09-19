@@ -54,7 +54,7 @@ export default function Home() {
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
     : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
-  // 1. Table number handling via QR code URL & cleanup
+  // 1. የጠረጴዛ ቁጥር ከ QR Code URL መቀበል
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
     const tableParam = queryParams.get('table') || queryParams.get('tableNo');
@@ -79,7 +79,7 @@ export default function Home() {
     }
   }, []);
 
-  // 2. Fetch Menu from Backend
+  // 2. የምግብ ዝርዝር (Menu) ከ Database መጫን
   useEffect(() => {
     const loadMenu = async () => {
       try {
@@ -100,7 +100,7 @@ export default function Home() {
     loadMenu();
   }, []);
 
-  // 3. Socket.io Real-time Menu Update
+  // 3. Socket.io በቀጥታ (Real-time) የምግብ ዝርዝር ማሻሻያ
   useEffect(() => {
     socket.on('updateMenu', (updatedMenu) => {
       if (Array.isArray(updatedMenu)) {
@@ -125,7 +125,7 @@ export default function Home() {
     };
   }, []);
 
-  // 4. Active Order Tracking
+  // 4. አሁን ያለውን ትዕዛዝ ሁኔታ መከታተል (Order Tracking)
   useEffect(() => {
     const savedOrder = localStorage.getItem('myPersonalOrder');
     if (savedOrder) {
@@ -160,7 +160,7 @@ export default function Home() {
     };
   }, [myActiveOrder]);
 
-  // 5. Verify Chapa Payment Callback
+  // 5. የ Chapa ክፍያን ማረጋገጫ (Callback)
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
     const trx_id = queryParams.get('trx_id') || queryParams.get('tx_ref') || queryParams.get('reference');
@@ -201,7 +201,6 @@ export default function Home() {
               lang === 'en' ? "Chapa Payment Successful!" : "ክፍያው በ Chapa ተሳክቷል!"
             );
 
-            // የጠረጴዛ ቁጥሩን ማጥፋት
             sessionStorage.removeItem('tableNo');
             setCustomerInfo((prev) => ({ ...prev, tableNo: '' }));
 
@@ -230,8 +229,7 @@ export default function Home() {
     }
   };
 
-  const handleOrder = async (receiptId) => {
-    // ✅ 'Dine-in' (እዚያው የሚበላ) ከሆነ ብቻ የጠረጴዛ ቁጥር ይፈልጋል። Takeaway ከሆነ አያግድም።
+  const handleOrder = async (orderPayload) => {
     const isDineIn = customerInfo.orderType === 'Dine-in';
     const currentTable = customerInfo.tableNo || sessionStorage.getItem('tableNo');
 
@@ -241,15 +239,17 @@ export default function Home() {
           ? "Maaloo ajajuuf koodii QR minjaala irra jiru ammas Scan godhaa." 
           : lang === 'en' 
           ? "Please scan the table QR code again to place a new order!" 
-          : "እባክዎን አዲስ ትዕዛዝ ለማዘዝ የጠረጴዛውን QR Code በድጋሚ Scan ያድርጉ!"
+          : "እባክዎን አዲስ ትዕዛዝ ለማዘዝ የጠረጴዛውን QR Code በድጋሜ Scan ያድርጉ!"
       );
       return;
     }
 
-    if (paymentMethod === 'Chapa') {
+    const currentSocketId = socket && socket.id ? socket.id : '';
+
+    if (orderPayload.paymentMethod === 'Chapa') {
       try {
-        const orderPayload = {
-          receiptId: receiptId || `REC-${Date.now().toString().slice(-6)}`,
+        const payload = {
+          receiptId: orderPayload.receiptId || `REC-${Date.now().toString().slice(-6)}`,
           name: customerInfo.name,
           phone: customerInfo.phone,
           address: customerInfo.address,
@@ -259,10 +259,11 @@ export default function Home() {
           paymentMethod: 'Chapa',
           totalPrice: totalPrice,
           items: cartItems,
-          orderType: customerInfo.orderType
+          orderType: customerInfo.orderType,
+          socketId: currentSocketId
         };
 
-        localStorage.setItem('pendingChapaOrder', JSON.stringify(orderPayload));
+        localStorage.setItem('pendingChapaOrder', JSON.stringify(payload));
 
         const data = await initiateChapaPay({ 
           amount: totalPrice, 
@@ -281,29 +282,34 @@ export default function Home() {
     } else {
       try {
         const formData = new FormData();
-        formData.append('receiptId', receiptId);
-        formData.append('socketId', socket ? socket.id : '');
+        
+        formData.append('receiptId', orderPayload.receiptId || `REC-${Date.now().toString().slice(-6)}`);
+        formData.append('socketId', currentSocketId);
         formData.append('lang', lang);
         formData.append('tableNo', customerInfo.tableNo || '');
         formData.append('phone', customerInfo.phone || '');
         formData.append('orderType', customerInfo.orderType || 'Dine-in');
         formData.append('note', customerInfo.note || '');
-        formData.append('paymentMethod', paymentMethod);
+        formData.append('paymentMethod', orderPayload.paymentMethod || paymentMethod);
         formData.append('totalPrice', totalPrice);
+        formData.append('customerName', customerInfo.name || '');
+        formData.append('address', customerInfo.address || '');
+        formData.append('time', customerInfo.time || '');
+
         formData.append('items', JSON.stringify(cartItems));
-        formData.append('customerInfo', JSON.stringify(customerInfo));
+        formData.append('customerInfo', JSON.stringify({ ...customerInfo, socketId: currentSocketId }));
 
         if (selectedFile) {
-          formData.append('screenshot', selectedFile);
+          formData.append('screenshot', selectedFile); 
         }
 
         const result = await submitOrderFormData(formData);
-        const finalReceiptId = result?.receiptId || receiptId || `REC-${Date.now().toString().slice(-6)}`;
+        const finalReceiptId = result?.receiptId || orderPayload.receiptId || `REC-${Date.now().toString().slice(-6)}`;
 
         const newOrderObj = {
           receiptId: finalReceiptId,
           status: 'Pending',
-          paymentMethod: paymentMethod,
+          paymentMethod: orderPayload.paymentMethod || paymentMethod,
           totalPrice,
           items: cartItems,
           orderType: customerInfo.orderType,
@@ -323,7 +329,6 @@ export default function Home() {
         clearCart();
         setSelectedFile(null);
 
-        // ትዕዛዙ ከተላከ በኋላ የጠረጴዛ ቁጥሩን ማጥፋት
         sessionStorage.removeItem('tableNo');
         setCustomerInfo((prev) => ({ ...prev, tableNo: '' }));
 
@@ -523,4 +528,4 @@ export default function Home() {
       )}
     </>
   );
-}   
+}

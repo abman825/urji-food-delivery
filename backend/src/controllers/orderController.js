@@ -1,6 +1,7 @@
 import { sendPhotoToTelegram, sendMessageToTelegram } from '../services/telegramService.js';
 import axios from 'axios';
 import fs from 'fs';
+import { v2 as cloudinary } from 'cloudinary';
 import { CHAPA_SECRET_KEY } from '../config/constants.js';
 import Order from '../models/Order.js';
 
@@ -32,16 +33,27 @@ const formatOrderItems = (items) => {
   return String(items);
 };
 
-// 1. Admin Dashboard Stats & Orders Handler
+// 1. Admin Dashboard Stats Handler
+// 1. Admin Dashboard Stats Handler (የሳምንቱ ስሌት የተስተካከለበት)
 export const getAdminDashboardStats = async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
 
     const now = new Date();
-    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+
+    // 1. የዛሬ ጅምር (Start of Today - 00:00:00)
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // 2. የሳምንቱ ጅምር (Start of Week - እሁድ 00:00:00)
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+
+    // 3. የወሩ ጅምር (Start of Month)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // 4. የዓመቱ ጅምር (Start of Year)
     const startOfYear = new Date(now.getFullYear(), 0, 1);
 
+    let dailySales = 0;
     let weeklySales = 0;
     let monthlySales = 0;
     let yearlySales = 0;
@@ -51,6 +63,7 @@ export const getAdminDashboardStats = async (req, res) => {
       const orderDate = new Date(order.createdAt);
       const price = parseFloat(order.totalPrice) || 0;
       
+      if (orderDate >= startOfToday) dailySales += price;
       if (orderDate >= startOfWeek) weeklySales += price;
       if (orderDate >= startOfMonth) monthlySales += price;
       if (orderDate >= startOfYear) yearlySales += price;
@@ -73,7 +86,7 @@ export const getAdminDashboardStats = async (req, res) => {
 
     res.status(200).json({
       allOrders: orders,
-      stats: { weeklySales, monthlySales, yearlySales },
+      stats: { dailySales, weeklySales, monthlySales, yearlySales },
       topItems
     });
   } catch (error) {
@@ -81,7 +94,17 @@ export const getAdminDashboardStats = async (req, res) => {
   }
 };
 
-// 2. Chapa Success Order Handler
+// 2. Get All Orders Handler
+export const getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+    return res.status(200).json(orders);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// 3. Chapa Success Order Handler
 export const handleChapaSuccess = async (req, res) => {
   try {
     const { pendingOrder, trx_id } = req.body;
@@ -124,7 +147,7 @@ ${formattedItems}
       console.error('⚠️ Chapa Telegram Notification Failed:', telegramErr.message);
     }
 
-    // Database ውስጥ ማስቀመጥ
+    // Database ውስጥ ማስቀመጥ (socketId ጨምሮ)
     try {
       const parsedItems = typeof pendingOrder?.items === 'string' ? JSON.parse(pendingOrder.items) : pendingOrder?.items;
       const newOrder = new Order({
@@ -138,6 +161,7 @@ ${formattedItems}
         note: userNote,
         customerInfo: { ...pendingOrder, note: userNote },
         paymentMethod: 'Chapa Online Payment',
+        socketId: pendingOrder?.socketId || '',
         status: 'Pending',
         createdAt: new Date()
       });
@@ -167,7 +191,7 @@ ${formattedItems}
   }
 };
 
-// 3. Chapa Payment Initialization
+// 4. Chapa Payment Initialization
 export const initiateChapaPayment = async (req, res) => {
   try {
     const { amount, name, phone, returnUrl } = req.body;
@@ -217,15 +241,15 @@ export const initiateChapaPayment = async (req, res) => {
   } catch (error) {
     console.error('Chapa Init Error:', error?.response?.data || error.message);
     if (!res.headersSent) {
-      return res.status(500).json({ success: false, message: 'Chapa ክፍያ ማስመርመር አልተቻለም' });
+      return res.status(500).json({ success: false, message: 'Chapa ክፍያ ማሰመርመም አልተቻለም' });
     }
   }
 };
 
-// 4. Main Order / Screenshot Submission Handler (ከ Table Validation ጋር)
+// 5. Main Order / Screenshot Submission Handler
 export const submitOrderFormData = async (req, res) => {
   try {
-    const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod, note, customerInfo } = req.body;
+    const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod, note, customerInfo, socketId } = req.body;
     const file = req.file;
 
     let parsedCustomerInfo = {};
@@ -296,30 +320,34 @@ ${formattedItems}
 <b>💰 ጠቅላላ ዋጋ:</b> <b>${totalPrice || '0'} ETB</b>
 `;
 
-    let screenshotBase64 = null;
+    let screenshotCloudinaryUrl = "";
 
+    // 📸 1. ፎቶ ከተላከ ወደ Cloudinary Upload ማድረግ
     if (file) {
-      const fileBuffer = file.buffer || (file.path ? fs.readFileSync(file.path) : null);
+      const filePath = file.path;
+      const fileBuffer = file.buffer || (filePath ? fs.readFileSync(filePath) : null);
 
       if (fileBuffer) {
-        const mimeType = file.mimetype || 'image/png';
-        screenshotBase64 = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
-
         try {
           await sendPhotoToTelegram(fileBuffer, caption, orderId);
         } catch (telegramErr) {
           console.error('⚠️ Telegram Photo Send Error:', telegramErr.message);
         }
-      } else {
-        try {
-          await sendMessageToTelegram(caption, orderId);
-        } catch (telegramErr) {
-          console.error('⚠️ Telegram Text Send Error:', telegramErr.message);
-        }
       }
 
-      if (file.path) {
-        fs.unlink(file.path, () => {});
+      try {
+        if (filePath) {
+          const cloudResult = await cloudinary.uploader.upload(filePath, {
+            folder: 'payment_screenshots'
+          });
+          screenshotCloudinaryUrl = cloudResult.secure_url;
+        }
+      } catch (cloudErr) {
+        console.error('⚠️ Cloudinary Upload Error in Order:', cloudErr.message);
+      }
+
+      if (filePath) {
+        fs.unlink(filePath, () => {});
       }
     } else {
       try {
@@ -331,9 +359,11 @@ ${formattedItems}
 
     const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
 
-    // Database ላይ ሴቭ ማድረግ
+    // 💾 2. Database ላይ አዲሱን Order ከ socketId ጋር ሴቭ ማድረግ
     let savedOrder = null;
     try {
+      const finalSocketId = socketId || parsedCustomerInfo?.socketId || req.body.socketId || '';
+
       const newOrder = new Order({
         receiptId: orderId,
         name: customerName || 'እንግዳ',
@@ -345,7 +375,8 @@ ${formattedItems}
         note: userNote,
         customerInfo: { ...parsedCustomerInfo, name: customerName, phone: customerPhone, tableNo: displayTableNo, note: userNote },
         paymentMethod: payMethodText,
-        screenshot: screenshotBase64,
+        screenshotUrl: screenshotCloudinaryUrl,
+        socketId: finalSocketId,
         status: 'Pending',
         createdAt: new Date()
       });
@@ -354,7 +385,6 @@ ${formattedItems}
       console.error("MongoDB Order Save Error:", dbError);
     }
 
-    // ወደ Frontend እና Admin Dashboard በ Socket.io መላክ
     const orderData = savedOrder ? savedOrder.toObject() : {
       id: orderId,
       receiptId: orderId,
@@ -366,7 +396,8 @@ ${formattedItems}
       items: parsedItems,
       note: userNote,
       paymentMethod: payMethodText,
-      screenshot: screenshotBase64,
+      screenshotUrl: screenshotCloudinaryUrl,
+      socketId: socketId || '',
       status: 'Pending',
       createdAt: new Date()
     };
@@ -394,7 +425,7 @@ ${formattedItems}
   }
 };
 
-// 5. Toggle Availability Handler
+// 6. Toggle Availability Handler
 export const toggleAvailability = async (req, res) => {
   try {
     const { id } = req.params;

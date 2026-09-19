@@ -6,8 +6,8 @@ import {
   initiateChapaPayment, 
   handleChapaSuccess,
   toggleAvailability,
-  getAdminDashboardStats,
-  submitOrderFormData
+  getAdminDashboardStats, // <-- ለአድሚን ዳሽቦርድ
+  getAllOrders            // <-- ሁሉንም ትዕዛዞች ለማምጣት
 } from '../controllers/orderController.js';
 import MenuItem from '../models/MenuItem.js';
 import Order from '../models/Order.js';
@@ -25,7 +25,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// 2. Multer Storage Config (ከ Memory/Disk ፋይል ለመቀበል)
+// 2. Multer Storage Config
 const storage = multer.diskStorage({});
 const upload = multer({
   storage: storage,
@@ -39,12 +39,10 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // ፎቶውን ወደ Cloudinary መላክ
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: 'menu_images'
     });
 
-    // Cloudinary የሰጠንን Secure URL መመለስ
     res.json({ imageUrl: result.secure_url });
   } catch (error) {
     console.error('Cloudinary Upload Error:', error);
@@ -54,7 +52,7 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
 
 // --- 🍔 MENU ROUTES ---
 
-// 1. ሁሉንም ሜኑ ከ Database ለመክፈት
+// 1. ሁሉንም ሜኑ ከ Database ለማንበብ
 router.get('/menu', async (req, res) => {
   try {
     const items = await MenuItem.find();
@@ -83,14 +81,15 @@ router.post('/menu/update', async (req, res) => {
   }
 });
 
-// --- 📦 ORDER & ADMIN ROUTES ---
+// --- 📦 ORDER ROUTES ---
 router.post('/orders', upload.single('screenshot'), createScreenshotOrder);
 router.post('/chapa-pay', initiateChapaPayment);
 router.post('/chapa-success-notify', handleChapaSuccess);
 router.patch('/menu/:id/toggle', toggleAvailability);
 
-// የአድሚን ዳሽቦርድ ዳታ መቀበያ route
+// --- 📊 ADMIN DASHBOARD ROUTES ---
 router.get('/admin/dashboard-stats', getAdminDashboardStats);
+router.get('/admin/orders', getAllOrders);
 
 // --- 🤖 TELEGRAM BOT WEBHOOK ROUTE ---
 router.post('/telegram-webhook', async (req, res) => {
@@ -115,7 +114,6 @@ router.post('/telegram-webhook', async (req, res) => {
         const endOfDay = new Date();
         endOfDay.setHours(23, 59, 59, 999);
 
-        // የዛሬዎቹን ትዕዛዞች ከ Database መፈለግ
         const todayOrders = await Order.find({
           createdAt: { $gte: startOfDay, $lte: endOfDay }
         });
@@ -123,7 +121,6 @@ router.post('/telegram-webhook', async (req, res) => {
         const totalOrdersCount = todayOrders.length;
         const totalRevenue = todayOrders.reduce((sum, order) => sum + (Number(order.totalPrice) || 0), 0);
 
-        // ሪፖርቱን ወደ ቴሌግራም መላክ
         await sendDailyReportToTelegram(totalOrdersCount, totalRevenue);
         return res.status(200).send('OK');
       }
