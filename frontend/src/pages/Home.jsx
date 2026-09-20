@@ -129,7 +129,14 @@ export default function Home() {
   useEffect(() => {
     const savedOrder = localStorage.getItem('myPersonalOrder');
     if (savedOrder) {
-      try { setMyActiveOrder(JSON.parse(savedOrder)); } catch (e) {}
+      try { 
+        const parsed = JSON.parse(savedOrder);
+        setMyActiveOrder(parsed);
+        // Socket Room Join ማድረግ
+        if (parsed?.receiptId) {
+          socket.emit('joinOrderRoom', parsed.receiptId);
+        }
+      } catch (e) {}
     }
   }, []);
 
@@ -196,12 +203,14 @@ export default function Home() {
             setMyActiveOrder(newOrderObj);
             localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
+            // Socket Room Join ማድረግ
+            socket.emit('joinOrderRoom', receiptId);
+
             alert(
               lang === 'om' ? "Kaffaltiin Chapa'n Milkaa'era!" :
               lang === 'en' ? "Chapa Payment Successful!" : "ክፍያው በ Chapa ተሳክቷል!"
             );
 
-            // የጠረጴዛ ቁጥሩን ማጥፋት
             sessionStorage.removeItem('tableNo');
             setCustomerInfo((prev) => ({ ...prev, tableNo: '' }));
 
@@ -231,7 +240,6 @@ export default function Home() {
   };
 
   const handleOrder = async (receiptId) => {
-    // ✅ 'Dine-in' (እዚያው የሚበላ) ከሆነ ብቻ የጠረጴዛ ቁጥር ይፈልጋል። Takeaway ከሆነ አያግድም።
     const isDineIn = customerInfo.orderType === 'Dine-in';
     const currentTable = customerInfo.tableNo || sessionStorage.getItem('tableNo');
 
@@ -316,14 +324,18 @@ export default function Home() {
         setMyActiveOrder(newOrderObj);
         localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-        const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተልኳል! ደረሰኝ ቁጥር:";
+        // Socket Room Join ማድረግ
+        if (socket) {
+          socket.emit('joinOrderRoom', finalReceiptId);
+        }
+
+        const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተልኳል! ደረስኝ ቁጥር:";
         alert(`✅ ${successText} ${finalReceiptId}`);
         
         setIsModalOpen(false); 
         clearCart();
         setSelectedFile(null);
 
-        // ትዕዛዙ ከተላከ በኋላ የጠረጴዛ ቁጥሩን ማጥፋት
         sessionStorage.removeItem('tableNo');
         setCustomerInfo((prev) => ({ ...prev, tableNo: '' }));
 
@@ -523,4 +535,4 @@ export default function Home() {
       )}
     </>
   );
-}   
+}
