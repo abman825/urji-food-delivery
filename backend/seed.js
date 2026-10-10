@@ -5,15 +5,7 @@ import MenuItem from './src/models/MenuItem.js';
 dotenv.config();
 
 const initialMenu = [
-  // ================= 1. Nyaata / ምግብ =================
-  {
-    id: "tibs",
-    category: "ምግብ",
-    image: "tebs.png", // 👈 img የነበረው image ተደርጓል
-    hasVariants: false,
-    price: 400,
-    name: { am: "ጥብስ", om: "Xibsii Noormaali", en: "Beef Cubes" }
-  },
+ 
   {
     id: "firfir",
     category: "ምግብ",

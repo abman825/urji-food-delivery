@@ -8,10 +8,10 @@ export default function HeroSection({ t }) {
 
   const cardData = [
     { title: t?.features?.[0]?.title || "ትኩስ እና ጥራት ያለው", desc: t?.features?.[0]?.desc || "በየቀኑ በተመረጡ እና ትኩስ ግብአቶች የተዘጋጁ ጣፋጭ የምግብ ዓይነቶችን እናቀርባለን።", position: "left" },
-   // { title: t?.features?.[1]?.title || "ፈጣን ማድረስ", desc: t?.features?.[1]?.desc || "ያዘዙትን ምግብ ባሉበት ቦታ በጥራት እና በሙቀቱ በቅጽበት እናደርሳለን።", position: "right" },
+   { title: t?.features?.[1]?.title || "ፈጣን ማድረስ", desc: t?.features?.[1]?.desc || "ያዘዙትን ምግብ ባሉበት ቦታ በጥራት እና በሙቀቱ በቅጽበት እናደርሳለን።", position: "right" },
     { title: t?.features?.[2]?.title || "ንፅህናው የተጠበቀ", desc: t?.features?.[2]?.desc || "በከፍተኛ ንፅህና እና ደረጃውን በጠበቀ ኩሽና ውስጥ በሙያተኞች የሚዘጋጅ።", position: "right" },
     { title: t?.features?.[3]?.title || "ተመጣጣኝ ዋጋ", desc: t?.features?.[3]?.desc || "ምርጥ እና አሪፍ አገልግሎት ከተመጣጣኝ ዋጋ ጋር ያገኛሉ።", position: "left" },
-   // { title: t?.features?.[4]?.title || "ቀላል ክፍያ", desc: t?.features?.[4]?.desc || "በ Chapa እና በባንክ ማስተላለፊያ በቀላሉ ክፍያዎን መፈጸም ይችላሉ።", position: "left" },
+   { title: t?.features?.[4]?.title || "ቀላል ክፍያ", desc: t?.features?.[4]?.desc || "በ Chapa እና በባንክ ማስተላለፊያ በቀላሉ ክፍያዎን መፈጸም ይችላሉ።", position: "left" },
     { title: t?.features?.[5]?.title || "ሁልጊዜ ዝግጁ", desc: t?.features?.[5]?.desc || "በማንኛውም ሰዓት ትዕዛዝዎን ለመቀበል እና ለማስተናገድ ዝግጁ ነን።", position: "right" }
   ];
 
@@ -31,9 +31,9 @@ export default function HeroSection({ t }) {
           // 3. ጽሁፎቹ ሲያልቁ ወደ Order Button ያልፋል
           setStep(2);
         }
-      }, 4000); // ልክ እንደጠየቅከው 4 ሰከንድ (4000ms)
+      }, 3000); // ልክ እንደጠየቅከው 4 ሰከንድ (4000ms)
 
-    }, 4000); // የመጀመሪያው ጽሁፍ 4 ሰከንድ
+    }, 3000); // የመጀመሪያው ጽሁፍ 4 ሰከንድ
 
     return () => clearTimeout(welcomeTimer);
   }, []);

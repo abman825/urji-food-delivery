@@ -33,16 +33,23 @@ const formatOrderItems = (items) => {
   return String(items);
 };
 
-// 1. Admin Dashboard Stats Handler
+// 1. Admin Dashboard Stats Handler (የሳምንቱ ስሌት የተስተካከለበት)
 export const getAdminDashboardStats = async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
 
     const now = new Date();
 
+    // 1. የዛሬ ጅምር (Start of Today - 00:00:00)
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // 2. የሳምንቱ ጅምር (Start of Week - እሁድ 00:00:00)
     const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+
+    // 3. የወሩ ጅምር (Start of Month)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // 4. የዓመቱ ጅምር (Start of Year)
     const startOfYear = new Date(now.getFullYear(), 0, 1);
 
     let dailySales = 0;
@@ -119,7 +126,7 @@ export const handleChapaSuccess = async (req, res) => {
     const message = `
 <b>✅ የ Chapa ክፍያ ተፈጽሟል!</b>
 
-<b>🆔 የደራሰኝ ቁጥር:</b> <code>${receiptId}</code>
+<b>🆔 የደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
 <b>💳 Tx Ref:</b> <code>${trx_id || 'ልዩነቱ አልታወቀም'}</code>
 ${details}<b>📝 አስተያየት (Note):</b>
 <code>${userNote}</code>
@@ -139,7 +146,7 @@ ${formattedItems}
       console.error('⚠️ Chapa Telegram Notification Failed:', telegramErr.message);
     }
 
-    // Database ውስጥ ማስቀመጥ
+    // Database ውስጥ ማስቀመጥ (socketId ጨምሮ)
     try {
       const parsedItems = typeof pendingOrder?.items === 'string' ? JSON.parse(pendingOrder.items) : pendingOrder?.items;
       const newOrder = new Order({
@@ -255,6 +262,7 @@ export const submitOrderFormData = async (req, res) => {
 
     const userNote = note || parsedCustomerInfo?.note || 'የለም';
     const currentOrderType = orderType || parsedCustomerInfo?.orderType || 'Dine-In';
+
     const inputTableNo = tableNo || parsedCustomerInfo?.tableNo;
 
     // QR Code / Table Number Check Validation
@@ -297,7 +305,7 @@ export const submitOrderFormData = async (req, res) => {
     const caption = `
 <b>🛒 አዲስ ትዕዛዝ ደርሷል!</b>
 
-<b>🆔 የደራሰኝ ቁጥር:</b> <code>${orderId}</code>
+<b>🆔 የደረሰኝ ቁጥር:</b> <code>${orderId}</code>
 ${details}<b>📝 አስተያየት (Note):</b>
 <code>${userNote}</code>
 
@@ -313,7 +321,7 @@ ${formattedItems}
 
     let screenshotCloudinaryUrl = "";
 
-    // 1. ፎቶ ከተላከ ወደ Cloudinary Upload ማድረግ እና Telegram መላክ
+    // 📸 1. ፎቶ ከተላከ ወደ Cloudinary Upload ማድረግ
     if (file) {
       const filePath = file.path;
       const fileBuffer = file.buffer || (filePath ? fs.readFileSync(filePath) : null);
@@ -350,7 +358,7 @@ ${formattedItems}
 
     const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
 
-    // 2. Database ላይ አዲሱን Order ከ socketId ጋር ሴቭ ማድረግ
+    // 💾 2. Database ላይ አዲሱን Order ከ socketId ጋር ሴቭ ማድረግ
     let savedOrder = null;
     try {
       const finalSocketId = socketId || parsedCustomerInfo?.socketId || req.body.socketId || '';
