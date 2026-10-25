@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, TrendingUp, DollarSign, ShoppingBag, 
-  Eye, X, User, Phone, CreditCard, FileText, CheckCircle 
+  Eye, X, User, Phone, CreditCard, FileText, CheckCircle, ArrowLeft 
 } from 'lucide-react';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({ 
     dailySales: 0, 
@@ -25,7 +27,6 @@ const AdminDashboard = () => {
       const fetchedOrders = response.data.allOrders || [];
       setOrders(fetchedOrders);
       
-      // ከስታቲስቲክስ በተጨማሪ የዛሬ ቀን ሽያጭን ማስላት
       const todayStr = new Date().toISOString().split('T')[0];
       const todayTotal = fetchedOrders
         .filter(o => o.createdAt && o.createdAt.startsWith(todayStr))
@@ -64,16 +65,28 @@ const AdminDashboard = () => {
     <div className="p-4 md:p-8 bg-slate-900 min-h-screen text-white font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* Title and Refresh */}
-        <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-          <h1 className="text-2xl md:text-3xl font-black text-orange-500">
-            የአድሚን ዳሽቦርድ (Admin Dashboard)
-          </h1>
+        {/* Title, Back Button and Refresh */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            {/* 🔙 ወደ ኋላ ለመመለስ የሚረድ ቁልፍ (Back Button) */}
+            <button
+              onClick={() => navigate('/')}
+              className="p-2.5 bg-slate-800 hover:bg-orange-600 text-slate-300 hover:text-white rounded-2xl transition flex items-center gap-2 border border-slate-700 font-bold text-xs cursor-pointer shadow-md"
+              title="ወደ መነሻ ተመለስ"
+            >
+              <ArrowLeft size={18} />
+              <span className="hidden sm:inline">ተመለስ</span>
+            </button>
+            <h1 className="text-xl md:text-3xl font-black text-orange-500">
+              የአድሚን ዳሽቦርድ (Admin Dashboard)
+            </h1>
+          </div>
+
           <button 
             onClick={fetchDashboardData}
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition shadow-md"
+            className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer"
           >
-            አድስ (Refresh)
+            እድስ (Refresh)
           </button>
         </div>
 
@@ -140,7 +153,7 @@ const AdminDashboard = () => {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-900 text-slate-400 uppercase border-b border-slate-700">
                 <tr>
-                  <th className="p-3">የትዕዛዝ ID</th>
+                  <th className="p-3">የእዕዛዝ ID</th>
                   <th className="p-3">የደንበኛ ስም</th>
                   <th className="p-3">ስልክ</th>
                   <th className="p-3">ዋጋ</th>
@@ -166,7 +179,7 @@ const AdminDashboard = () => {
                     </td>
                     <td className="p-3">
                       <span className={`px-2.5 py-1 text-[11px] rounded-lg font-bold border ${
-                        order.status === 'Completed' || order.status === 'ተጠናቋል'
+                        order.status === 'Completed' || order.status === 'ተጠናቀዋል'
                           ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
                           : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
                       }`}>
@@ -179,7 +192,7 @@ const AdminDashboard = () => {
                     <td className="p-3 text-center">
                       <button 
                         onClick={() => setSelectedOrder(order)}
-                        className="bg-slate-900 hover:bg-orange-600 text-slate-200 hover:text-white px-3 py-1.5 rounded-xl transition flex items-center justify-center gap-1 mx-auto font-bold border border-slate-700"
+                        className="bg-slate-900 hover:bg-orange-600 text-slate-200 hover:text-white px-3 py-1.5 rounded-xl transition flex items-center justify-center gap-1 mx-auto font-bold border border-slate-700 cursor-pointer"
                       >
                         <Eye size={14} />
                         <span>እይ</span>
@@ -209,7 +222,7 @@ const AdminDashboard = () => {
 
             <h3 className="text-xl font-black text-orange-500 mb-4 border-b border-slate-800 pb-3 flex items-center gap-2">
               <FileText size={20} />
-              የትዕዛዝ ሙሉ መረጃ (#{selectedOrder.receiptId || selectedOrder._id?.slice(-6)})
+              የእዕዛዝ ሙሉ መርማሪ (#{selectedOrder.receiptId || selectedOrder._id?.slice(-6)})
             </h3>
 
             {/* Customer Details */}
@@ -220,11 +233,11 @@ const AdminDashboard = () => {
               </p>
               <p className="flex items-center gap-2 text-slate-300">
                 <Phone size={14} className="text-orange-400" />
-                <span className="font-bold">ስልክ:</span> {selectedOrder.phone || selectedOrder.phoneNumber || selectedOrder.customerInfo?.phone || 'አልተጠቀሰም'}
+                <span className="font-bold">ስልክ:</span> {selectedOrder.phone || selectedOrder.phoneNumber || selectedOrder.customerInfo?.phone || 'አልተመዘገበም'}
               </p>
               <p className="flex items-center gap-2 text-slate-300">
                 <CreditCard size={14} className="text-orange-400" />
-                <span className="font-bold">የክፍያ መንገድ:</span> 
+                <span className="font-bold">የክፍያ መሠገ መንገድ:</span> 
                 <span className="font-bold text-orange-400 uppercase ml-1">
                   {selectedOrder.paymentMethod || 'Chapa / Cash'}
                 </span>
@@ -232,7 +245,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Ordered Items List */}
-            <h4 className="font-bold text-xs text-slate-400 mb-2">የታዘዙ ምግቦች ዝርዝር፦</h4>
+            <h4 className="font-bold text-xs text-slate-400 mb-2">የታዘዙ ምግቦች ዝርዝር፥</h4>
             <div className="space-y-2 mb-4">
               {(selectedOrder.items || selectedOrder.cartItems || []).map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-xs">
@@ -250,7 +263,7 @@ const AdminDashboard = () => {
             {/* Screenshot Preview (If available) */}
             {selectedOrder.screenshotUrl && (
               <div className="mb-4">
-                <h4 className="font-bold text-xs text-slate-400 mb-2">የክፍያ ደረሰኝ (Screenshot):</h4>
+                <h4 className="font-bold text-xs text-slate-400 mb-2">የክፍያ ደርሰኝ (Screenshot):</h4>
                 <img 
                   src={selectedOrder.screenshotUrl} 
                   alt="Receipt Screenshot" 
