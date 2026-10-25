@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   UtensilsCrossed, ShoppingCart, Menu, X, 
-  CheckCircle, ShoppingBag, Utensils, Lock 
+  CheckCircle, ShoppingBag, Utensils, Lock, KeyRound 
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { Link } from 'react-router-dom';
@@ -23,17 +23,32 @@ export default function Navbar({
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMyOrderOpen, setIsMyOrderOpen] = useState(false);
+  
+  // Admin Authentication & Options States
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [showAdminOptions, setShowAdminOptions] = useState(false);
+  
+  // Change Password States (Backend Driven)
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [oldPasswordInput, setOldPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [passwordChangeError, setPasswordChangeError] = useState('');
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
+
+  // Menu Management Modal State
   const [isMenuEditorOpen, setIsMenuEditorOpen] = useState(false);
+
   const [orderNotification, setOrderNotification] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
 
-  // 1. የ Pending ትዕዛዞችን ብዛት ከ Backend ወይም LocalStorage ማምጣት
+  // 1. Pending ትዕዛዞችን ብዛት ከ Backend ወይም LocalStorage ማወቅ
   const fetchPendingOrders = async () => {
     try {
       const response = await axios.get(`${BACKEND_URL}/api/admin/dashboard-stats`);
       const allOrders = response.data.allOrders || [];
       
-      // 'Pending' ወይም 'በመጠባበቅ ላይ' የሆኑትን ብቻ መቁጠር
       const pending = allOrders.filter(order => 
         !order.status || 
         order.status === 'Pending' || 
@@ -42,7 +57,6 @@ export default function Navbar({
 
       setPendingCount(pending);
     } catch (err) {
-      // ኤረር ከፈጠረ ከ LocalStorage ለማንበብ መሞከር
       const cached = localStorage.getItem('admin_orders');
       if (cached) {
         try {
@@ -59,14 +73,13 @@ export default function Navbar({
   useEffect(() => {
     fetchPendingOrders();
 
-    // አዲስ ትዕዛዝ በ Socket ሲመጣ የ Pending ቁጥሩን በሪልታይም መጨመር
     socket.on('newOrder', () => {
       setPendingCount(prev => prev + 1);
     });
 
     const handleOrderAccepted = (data) => {
       const userLang = data?.lang || lang;
-      let msg = 'ትዕዛዝዎ ተቀብለናል! በጥቂት ደቂቃዎች ውስጥ ይደርስዎታል።';
+      let msg = 'ትዕዛዞ ተቀባይቷል! በቅርብ ደቂቃዎች ውስጥ ይደርሰንታል።';
 
       if (userLang === 'om') {
         msg = "Ajajni keessan fudhatameera! Daqiiqawwan muraasa keessatti isin bira gaha.";
@@ -75,7 +88,7 @@ export default function Navbar({
       }
 
       setOrderNotification(msg);
-      fetchPendingOrders(); // ቁጥሩን ማዘመን
+      fetchPendingOrders();
       setTimeout(() => setOrderNotification(null), 7000);
     };
 
@@ -92,19 +105,19 @@ export default function Navbar({
         } else if (userLang === 'en') {
           setOrderNotification(`Your food #${data.receiptId || ''} is being prepared! 🧑‍🍳`);
         } else {
-          setOrderNotification(`ምግብዎ #${data.receiptId || ''} በመስራት ላይ ይገኛል፤ በጥቂት ደቂቃዎች ውስጥ እንደርሳለን! 🧑‍🍳`);
+          setOrderNotification(`ምግብዎ #${data.receiptId || ''} በመስራት ላይ ይገኛል! በቅርብ ደቂቃዎች ውስጥ እንልክልዎታለን! 🧑‍🍳`);
         }
-      } else if (status === 'Delivered' || status === 'Completed' || status === 'ተጠናቋል') {
+      } else if (status === 'Delivered' || status === 'Completed' || status === 'ተጠናቀዋል') {
         if (userLang === 'om') {
-          setOrderNotification(`Nyaatni keessan #${data.receiptId || ''} xumurameera! 🍾`);
+          setOrderNotification(`Nyaatni keessan #${data.receiptId || ''} xumurameera! 🍷`);
         } else if (userLang === 'en') {
-          setOrderNotification(`Your food #${data.receiptId || ''} has been delivered! 🍾`);
+          setOrderNotification(`Your food #${data.receiptId || ''} has been delivered! 🍷`);
         } else {
-          setOrderNotification(`ምግብዎ #${data.receiptId || ''} ደርሷል! መልካም ምግብ! 🍾`);
+          setOrderNotification(`ምግብዎ #${data.receiptId || ''} ደርሷል! መልካም ምግብ! 🍷`);
         }
       }
 
-      fetchPendingOrders(); // የትዕዛዝ ሁኔታ ሲቀየር ቁጥሩን ማዘመን
+      fetchPendingOrders();
       setTimeout(() => setOrderNotification(null), 7000);
     });
 
@@ -117,9 +130,9 @@ export default function Navbar({
   }, [lang]);
 
   const navLabels = {
-    am: { home: "መነሻ", menu: "ሜኑ", about: "ስለ እኛ", title: "ኡርጂ", subTitle: "ምግብ ቤት", ordersBtn: "የእኔ ትዕዛዞች", menuBtn: "የሜኑ ማስተካከያ" },
-    om: { home: "Ka'umsa", menu: "Meenuu", about: "Waayee Keenya", title: "Urjii", subTitle: "Mana Nyata", ordersBtn: "Ajajawwan Ko", menuBtn: "Jijjiiruf Meenuu" },
-    en: { home: "Home", menu: "Menu", about: "About Us", title: "Urji", subTitle: "Restaurant", ordersBtn: "My Orders", menuBtn: "Fix Menu" }
+    am: { home: "መነሻ", menu: "ሜኑ", about: "ስለ እኛ", title: "ኡርጂ", subTitle: "ምግብ ቤት", ordersBtn: "የእኛ ትዕዛዞች" },
+    om: { home: "Ka'umsa", menu: "Meenuu", about: "Waayee Keenya", title: "Urjii", subTitle: "Mana Nyata", ordersBtn: "Ajajawwan Ko" },
+    en: { home: "Home", menu: "Menu", about: "About Us", title: "Urji", subTitle: "Restaurant", ordersBtn: "My Orders" }
   };
 
   const currentNav = navLabels[lang] || navLabels.am;
@@ -154,6 +167,48 @@ export default function Navbar({
     }
   };
 
+  // Admin Password Verification Handler (Backend MongoDB)
+  const handleAdminPasswordSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post(`${BACKEND_URL}/api/admin/verify-password`, { 
+        password: passwordInput 
+      });
+      if (res.data.success) {
+        setPasswordError(false);
+        setShowAdminOptions(true);
+      }
+    } catch (err) {
+      setPasswordError(true);
+    }
+  };
+
+  // Change Password Handler (Backend MongoDB)
+  const handleChangePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPasswordChangeError('');
+    setPasswordChangeSuccess('');
+
+    try {
+      const res = await axios.post(`${BACKEND_URL}/api/admin/change-password`, {
+        oldPassword: oldPasswordInput,
+        newPassword: newPasswordInput
+      });
+
+      if (res.data.success) {
+        setPasswordChangeSuccess('የይለፍ ቃልዎ በተሳካ ሁኔታ ተቀይሯል!');
+        setOldPasswordInput('');
+        setNewPasswordInput('');
+        setTimeout(() => {
+          setIsChangingPassword(false);
+          setPasswordChangeSuccess('');
+        }, 1500);
+      }
+    } catch (err) {
+      setPasswordChangeError(err.response?.data?.message || 'የይለፍ ቃል መቀየር አልተሳካም!');
+    }
+  };
+
   return (
     <>
       {/* REAL-TIME NOTIFICATION TOAST */}
@@ -163,15 +218,10 @@ export default function Navbar({
             <CheckCircle size={22} />
           </div>
           <div className="flex-1 text-xs">
-            <h4 className="font-bold text-green-400 text-sm mb-0.5">
-              {lang === 'om' ? "Odeeffannoo Ajaja!" : lang === 'en' ? "Order Notification!" : "የትዕዛዝ ማስታወቂያ!"}
-            </h4>
+            <h4 className="font-bold text-green-400 text-sm mb-0.5">የእስደርደር ማስታወቂያ!</h4>
             <p className="text-zinc-200 leading-relaxed font-semibold">{orderNotification}</p>
           </div>
-          <button 
-            onClick={() => setOrderNotification(null)}
-            className="text-zinc-400 hover:text-white p-1"
-          >
+          <button onClick={() => setOrderNotification(null)} className="text-zinc-400 hover:text-white p-1">
             <X size={16} />
           </button>
         </div>
@@ -201,18 +251,25 @@ export default function Navbar({
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2">
               
-              {/* Admin Panel Link + Pending Counter Badge */}
-              <Link 
-                to="/admin" 
-                className="relative bg-orange-500 hover:bg-orange-600 text-white font-bold py-1.5 px-3 rounded-2xl text-xs transition duration-200 shadow-sm flex items-center gap-1.5"
+              {/* Admin Button */}
+              <button 
+                onClick={() => {
+                  setIsAdminModalOpen(true);
+                  setShowAdminOptions(false);
+                  setIsChangingPassword(false);
+                  setPasswordInput('');
+                  setPasswordError(false);
+                }}
+                className="relative bg-orange-500 hover:bg-orange-600 text-white font-bold py-1.5 px-3 rounded-2xl text-xs transition duration-200 shadow-sm flex items-center gap-1.5 cursor-pointer"
               >
+                <Lock size={12} />
                 <span>Admin</span>
                 {pendingCount > 0 && (
                   <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full border border-white animate-pulse">
                     {pendingCount}
                   </span>
                 )}
-              </Link>
+              </button>
 
               {/* Customer Orders Modal Button */}
               <button
@@ -221,16 +278,6 @@ export default function Navbar({
               >
                 <ShoppingBag size={16} className="text-orange-400" />
                 <span>{currentNav.ordersBtn}</span>
-              </button>
-
-              {/* Menu Management Button */}
-              <button
-                onClick={() => setIsMenuEditorOpen(true)}
-                className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-zinc-700/60 active:scale-95 shadow-sm"
-              >
-                <Utensils size={16} className="text-orange-400" />
-                <span>{currentNav.menuBtn}</span>
-                <Lock size={12} className="text-zinc-400 ml-0.5" />
               </button>
             </div>
 
@@ -279,18 +326,25 @@ export default function Navbar({
             <a href="#footer" onClick={handleAboutClick} className="hover:text-orange-600 transition-colors p-2">{currentNav.about}</a>
             
             <div className="border-t border-gray-100 pt-3 flex flex-col gap-2">
-              <Link 
-                to="/admin" 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="bg-orange-500 hover:bg-orange-600 text-white text-center font-bold p-2.5 rounded-xl text-xs transition duration-200 flex items-center justify-center gap-2"
+              <button 
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsAdminModalOpen(true);
+                  setShowAdminOptions(false);
+                  setIsChangingPassword(false);
+                  setPasswordInput('');
+                  setPasswordError(false);
+                }}
+                className="bg-orange-500 hover:bg-orange-600 text-white text-center font-bold p-2.5 rounded-xl text-xs transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
               >
+                <Lock size={12} />
                 <span>Admin Panel</span>
                 {pendingCount > 0 && (
                   <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full border border-white">
                     {pendingCount}
                   </span>
                 )}
-              </Link>
+              </button>
 
               <button
                 onClick={() => { setIsMobileMenuOpen(false); setIsMyOrderOpen(true); }}
@@ -301,17 +355,6 @@ export default function Navbar({
                   <span>{currentNav.ordersBtn}</span>
                 </div>
               </button>
-
-              <button
-                onClick={() => { setIsMobileMenuOpen(false); setIsMenuEditorOpen(true); }}
-                className="flex items-center justify-between p-3 bg-zinc-900 text-white rounded-xl text-xs font-bold active:scale-98 transition-all"
-              >
-                <div className="flex items-center gap-2">
-                  <Utensils size={16} className="text-orange-400" />
-                  <span>{currentNav.menuBtn}</span>
-                </div>
-                <Lock size={12} className="text-zinc-400" />
-              </button>
             </div>
           </div>
         )}
@@ -319,11 +362,191 @@ export default function Navbar({
 
       {/* Customer Order Modal */}
       {isMyOrderOpen && (
-        <MyOrder 
-          isOpen={isMyOrderOpen} 
-          onClose={() => setIsMyOrderOpen(false)} 
-          lang={lang}
-        />
+        <MyOrder isOpen={isMyOrderOpen} onClose={() => setIsMyOrderOpen(false)} lang={lang} />
+      )}
+
+      {/* Admin Auth & Options Modal */}
+      {isAdminModalOpen && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl">
+            <button
+              onClick={() => {
+                setIsAdminModalOpen(false);
+                setShowAdminOptions(false);
+                setIsChangingPassword(false);
+              }}
+              className="absolute top-4 right-4 p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-full transition-all cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            {!showAdminOptions && !isChangingPassword ? (
+              /* Phase 1: Password Input Form */
+              <form onSubmit={handleAdminPasswordSubmit} className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-3 bg-orange-600/20 text-orange-500 rounded-2xl">
+                    <Lock size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black">አድሚን መግቢያ (Admin Login)</h3>
+                    <p className="text-xs text-zinc-400">እባክዎ የይለፍ ቃል ያስገቡ</p>
+                  </div>
+                </div>
+
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="የይለፍ ቃል (Password)"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 font-bold tracking-widest text-center"
+                  autoFocus
+                />
+
+                {passwordError && (
+                  <p className="text-red-400 text-xs text-center font-bold animate-shake">
+                    የገባችሁት የይለፍ ቃል ትክክል አይደለም!
+                  </p>
+                )}
+
+                <div className="flex flex-col gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl transition-all shadow-lg shadow-orange-600/30 text-sm cursor-pointer"
+                  >
+                    ግባ
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsChangingPassword(true);
+                      setPasswordChangeError('');
+                      setPasswordChangeSuccess('');
+                    }}
+                    className="text-xs text-zinc-400 hover:text-orange-400 text-center py-2 transition font-bold cursor-pointer"
+                  >
+                    🔑 የይለፍ ቃል መቀየር (Change Password)
+                  </button>
+                </div>
+              </form>
+            ) : isChangingPassword ? (
+              /* Change Password Form */
+              <form onSubmit={handleChangePasswordSubmit} className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-3 bg-orange-600/20 text-orange-500 rounded-2xl">
+                    <KeyRound size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black">የይለፍ ቃል መቀየሪያ</h3>
+                    <p className="text-xs text-zinc-400">የቀድሞውን እና አዲሱን የይለፍ ቃል ያስገቡ</p>
+                  </div>
+                </div>
+
+                <input
+                  type="password"
+                  value={oldPasswordInput}
+                  onChange={(e) => setOldPasswordInput(e.target.value)}
+                  placeholder="የቀድሞው የይለፍ ቃል (Old Password)"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 font-bold text-center"
+                  autoFocus
+                />
+
+                <input
+                  type="password"
+                  value={newPasswordInput}
+                  onChange={(e) => setNewPasswordInput(e.target.value)}
+                  placeholder="አዲሱ የይለፍ ቃል (New Password)"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 font-bold text-center"
+                />
+
+                {passwordChangeError && (
+                  <p className="text-red-400 text-xs text-center font-bold animate-shake">
+                    {passwordChangeError}
+                  </p>
+                )}
+
+                {passwordChangeSuccess && (
+                  <p className="text-green-400 text-xs text-center font-bold">
+                    {passwordChangeSuccess}
+                  </p>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl transition-all shadow-lg text-xs cursor-pointer"
+                  >
+                    ቀይር
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsChangingPassword(false)}
+                    className="px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl transition-all text-xs cursor-pointer"
+                  >
+                    ተመለስ
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* Phase 2: Selection Options (Report vs Menu Management) */
+              <div className="flex flex-col gap-4">
+                <div className="text-center mb-2">
+                  <h3 className="text-lg font-black text-white">የአስተዳዳሪ ምርጫዎች</h3>
+                  <p className="text-xs text-zinc-400">ማከናወን የሚፈልጉትን ይምረጡ</p>
+                </div>
+
+                {/* 1. ሪፖርት (Report / Admin Dashboard) */}
+                <Link
+                  to="/admin"
+                  onClick={() => setIsAdminModalOpen(false)}
+                  className="flex items-center justify-between p-4 bg-zinc-800 hover:bg-orange-600/20 border border-zinc-700 hover:border-orange-500 rounded-2xl transition-all group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-orange-500/20 text-orange-400 rounded-xl group-hover:scale-110 transition-transform">
+                      <ShoppingBag size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-sm text-white">ሪፖርት (Admin Dashboard)</h4>
+                      <p className="text-xs text-zinc-400">የትዕዛዞች እና የገቢ ሪፖርት መመልከቻ</p>
+                    </div>
+                  </div>
+                </Link>
+
+                {/* 2. ምናሌ ማስተካከያ (Menu Management) */}
+                <button
+                  onClick={() => {
+                    setIsAdminModalOpen(false);
+                    setIsMenuEditorOpen(true);
+                  }}
+                  className="flex items-center justify-between p-4 bg-zinc-800 hover:bg-orange-600/20 border border-zinc-700 hover:border-orange-500 rounded-2xl transition-all group cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-orange-500/20 text-orange-400 rounded-xl group-hover:scale-110 transition-transform">
+                      <Utensils size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-sm text-white">ምናሌ ማስተካከያ (Menu Management)</h4>
+                      <p className="text-xs text-zinc-400">ምግቦችን መጨመር፣ ማስተካከል እና ማጥፋት</p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Change Password Option inside Menu */}
+                <button
+                  onClick={() => {
+                    setIsChangingPassword(true);
+                    setShowAdminOptions(false);
+                    setPasswordChangeError('');
+                    setPasswordChangeSuccess('');
+                  }}
+                  className="text-xs text-zinc-400 hover:text-orange-400 text-center py-2 transition font-bold cursor-pointer"
+                >
+                  🔑 የይለፍ ቃል መቀየር
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Menu Management Modal */}
@@ -337,7 +560,7 @@ export default function Navbar({
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-white">
-                    {lang === 'om' ? 'Sirreessaa Meenuu' : lang === 'en' ? 'Menu Management' : 'የሜኑ ማስተካከያ'}
+                    {lang === 'om' ? 'Sirreessaa Meenuu' : lang === 'en' ? 'Menu Management' : 'የምናሌ ማስተካከያ'}
                   </h2>
                 </div>
               </div>

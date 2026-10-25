@@ -15,6 +15,7 @@ import {
   handleTelegramCallback, 
   sendDailyReportToTelegram 
 } from '../services/telegramService.js';
+import Admin from '../models/Admin.js';
 
 const router = express.Router();
 
@@ -30,6 +31,55 @@ const storage = multer.diskStorage({});
 const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
+
+// --- ADMIN PASSWORD ROUTES ---
+// 1. ጽሑፍ/የይለፍ ቃል ማረጋገጥ (Verify Password)
+router.post('/admin/verify-password', async (req, res) => {
+  try {
+    const { password } = req.body;
+    let admin = await Admin.findOne({ username: 'admin' });
+    
+    // አድሚን ከሌለ በነባሪ '123' ብሎ ይፍጠረው
+    if (!admin) {
+      admin = await Admin.create({ username: 'admin', password: '123' });
+    }
+
+    if (admin.password === password) {
+      return res.json({ success: true, message: "የይለፍ ቃል ትክክል ነው" });
+    } else {
+      return res.status(400).json({ success: false, message: "የገባው የይለፍ ቃል ስህተት ነው" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. የይለፍ ቃል መቀየር (Change Password)
+router.post('/admin/change-password', async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    let admin = await Admin.findOne({ username: 'admin' });
+
+    if (!admin) {
+      admin = await Admin.create({ username: 'admin', password: '123' });
+    }
+
+    if (admin.password !== oldPassword) {
+      return res.status(400).json({ success: false, message: "የቀድሞው የይለፍ ቃል ስህተት ነው!" });
+    }
+
+    if (!newPassword || newPassword.length < 3) {
+      return res.status(400).json({ success: false, message: "አዲሱ የይለፍ ቃል ቢያንስ 3 ፊደላት መሆን አለበት!" });
+    }
+
+    admin.password = newPassword;
+    await admin.save();
+
+    res.json({ success: true, message: "የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል!" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- CLOUDINARY FILE UPLOAD ROUTE ---
@@ -94,13 +144,13 @@ router.post('/telegram-webhook', async (req, res) => {
     const { callback_query, message } = req.body;
     const io = req.app.get('socketio');
 
-    // 1. አድሚኑ በቴሌግራም አዝራር (Button) ሲጫን
+    // 1. ከቴሌግራም ቁልፍ (Button) ሲጫን
     if (callback_query) {
       await handleTelegramCallback(callback_query, io);
       return res.status(200).send('OK');
     }
 
-    // 2. አድሚኑ /today ወይም /stats ብሎ ሲጽፍ
+    // 2. /today ወይም /stats ትዕዛዝ ሲሰጥ
     if (message && message.text) {
       const command = message.text.trim().toLowerCase();
 

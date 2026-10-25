@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit3, Save, Eye, Lock, Utensils, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit3, Save, Eye, Utensils, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
@@ -10,14 +10,8 @@ export default function MenuManagementTab({
   socket, 
   lang = 'am' 
 }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [passwordError, setPasswordError] = useState(false);
-
   const [uploadingNew, setUploadingNew] = useState(false);
   const [uploadingEdit, setUploadingEdit] = useState(false);
-
-  const MENU_ADMIN_PASSWORD = "123";
 
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', price: '', img: '', category: '', variants: [] });
@@ -30,32 +24,28 @@ export default function MenuManagementTab({
     variants: [] 
   });
 
-  const categories = ['ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
+  const categories = ['ምግብ', 'Fast Food', 'Juice', 'ቅዝቃዜ መጠጥ', 'ሞቅ ያለ መጠጥ'];
 
   const t = {
-    title: { am: "የሜኑ ማስተካከያ", om: "Sirreessaa Meenuu", en: "Menu Editor" },
-    enterPasswordTitle: { am: "የሜኑ ማስተካከያ የይለፍ ቃል ያስገቡ", om: "Jecha darbi meenuu galchaa", en: "Enter Menu Password" },
-    passwordPlaceholder: { am: "የይለፍ ቃል...", om: "Jecha darbi...", en: "Password..." },
-    submitPassword: { am: "ግባ", om: "Seeni", en: "Submit" },
-    wrongPassword: { am: "የተሳሳተ የይለፍ ቃል ነው!", om: "Jechi darbi dogoggora!", en: "Incorrect Password!" },
+    title: { am: "የምናሌ ማስተካከያ", om: "Sirreessaa Meenuu", en: "Menu Editor" },
     addTitle: { am: "አዲስ የምግብ አይነት ጨምር", om: "Gosa Nyaataa Haarawa Dabali", en: "Add New Item" },
     itemName: { am: "የምግብ ስም", om: "Maqaa Nyaataa", en: "Item Name" },
     itemPrice: { am: "ዋጋ (ETB)", om: "Gatii (ETB)", en: "Price (ETB)" },
     category: { am: "ምድብ", om: "Kutaa", en: "Category" },
     imageNamePlaceholder: { am: "የፎቶ ስም ወይም URL (ወይም ፎቶ ምረጥ)", om: "Maqaa Fakkii", en: "Image Name or URL" },
-    addVariant: { am: "+ አማራጭ/አይነት ጨምር (ትልቅ/ትንሽ...)", om: "+ Filannoo Dabali", en: "+ Add Variant" },
+    addVariant: { am: "+ አማራጭ/አይነት ጨምር (ትንሽ/መካከለኛ...)", om: "+ Filannoo Dabali", en: "+ Add Variant" },
     addItemBtn: { am: "ምግብ ጨምር", om: "Nyaata Dabali", en: "Add Item" },
     save: { am: "አስቀምጥ", om: "Olka'i", en: "Save" },
     cancel: { am: "ሰርዝ", om: "Dhiisi", en: "Cancel" },
-    confirmDeleteItem: { am: "ይሁንም ምግብ ማጥፋት እርግጠኛ ነዎት?", om: "Nyaata kana haquuf mirkanaa'aadhaa?", en: "Are you sure you want to delete this item?" },
-    fillRequired: { am: "እባክዎን ስም እና ዋጋ (ወይም አማራጮችን) ያስገቡ!", om: "Maaloo maqaa fi gatii (ykn filannoowwan) galchaa!", en: "Please enter name and price (or variants)!" },
+    confirmDeleteItem: { am: "ይህንን ምግብ ማጥፋት እርግጠኛ ዎደህ?", om: "Nyaata kana haquuf mirkanaa'aadhaa?", en: "Are you sure you want to delete this item?" },
+    fillRequired: { am: "እባክዎ ስም እና ዋጋ (ወይም አማራጮችን) ያስገቡ!", om: "Maaloo maqaa fi gatii (ykn filannoowwan) galchaa!", en: "Please enter name and price (or variants)!" },
     priceNotSet: { am: "ዋጋ አልተወሰነም", om: "Gatiin Hin Murtaa'ine", en: "Price not set" },
     from: { am: "ከ", om: "Kaa'immaa", en: "From" },
     availableToday: { am: "ለዛሬ አለ", om: "Har'a Jira", en: "Available Today" },
-    soldOutToday: { am: "ለዛሬ አልቋል", om: "Har'a Dhumera", en: "Sold Out Today" }
+    soldOutToday: { am: "ለዛሬ አልተካም", om: "Har'a Dhumera", en: "Sold Out Today" }
   };
 
-  // 📸 1. አዲስ ፎቶ Upload ማድረጊያ Function (Cloudinary)
+  // 📸 1. አዲስ ፎቶ Upload ማደረጊያ Function (Cloudinary)
   const handleImageFileUpload = async (e, isEditMode = false) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -80,21 +70,10 @@ export default function MenuManagementTab({
       }
     } catch (err) {
       console.error("Image upload failed:", err);
-      alert("ፎቶ መጫን አልተቻለም! እባክዎ ድጋሚ ይሞክሩ።");
+      alert("ፎቶ መጫን አልተሳካም! እባክዎ ደግመው ይሞክሩ።");
     } finally {
       if (isEditMode) setUploadingEdit(false);
       else setUploadingNew(false);
-    }
-  };
-
-  const handlePasswordSubmit = (e) => {
-    e.preventDefault();
-    if (passwordInput === MENU_ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      setPasswordError(false);
-      setPasswordInput('');
-    } else {
-      setPasswordError(true);
     }
   };
 
@@ -288,46 +267,9 @@ export default function MenuManagementTab({
     return item.price ? `${item.price} ETB` : (t.priceNotSet[lang] || t.priceNotSet.am);
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 bg-zinc-800/30 border border-zinc-800 rounded-3xl p-6 max-w-md mx-auto text-center animate-fadeIn">
-        <div className="p-4 bg-orange-600/20 border border-orange-500/30 rounded-full text-orange-500 mb-4">
-          <Lock size={32} />
-        </div>
-        <h3 className="text-lg font-bold text-white mb-2">{t.enterPasswordTitle[lang] || t.enterPasswordTitle.am}</h3>
-        <p className="text-xs text-zinc-400 mb-6">የምግብ እና የፋክቶር ማስተካከያ ገጽ ለመክፈት የይለፍ ቃል ያስገቡ</p>
-
-        <form onSubmit={handlePasswordSubmit} className="w-full space-y-4">
-          <div>
-            <input
-              type="password"
-              placeholder={t.passwordPlaceholder[lang] || t.passwordPlaceholder.am}
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-700 focus:border-orange-500 rounded-xl px-4 py-3 text-sm text-white text-center focus:outline-none transition"
-              autoFocus
-            />
-            {passwordError && (
-              <p className="text-xs text-red-400 mt-2 font-bold animate-shake">
-                {t.wrongPassword[lang] || t.wrongPassword.am}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-lg"
-          >
-            {t.submitPassword[lang] || t.submitPassword.am}
-          </button>
-        </form>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* አዲስ ምግብ መጨመሪያ Form */}
+      {/* አዲስ ምግብ መመዝገቢያ Form */}
       <form onSubmit={handleAddItem} className="bg-zinc-800/40 border border-zinc-800 rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <Utensils size={16} className="text-orange-500" />
@@ -358,7 +300,7 @@ export default function MenuManagementTab({
           </select>
         </div>
 
-        {/* 📸 የፎቶ Upload ማድረጊያ እና URL ማሳያ */}
+        {/* 📸 ፎቶ Upload ማደረጊያ እና URL ማሳያ */}
         <div className="flex flex-col md:flex-row gap-2">
           <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2 focus-within:border-orange-500">
             <ImageIcon size={16} className="text-zinc-400" />
@@ -373,7 +315,7 @@ export default function MenuManagementTab({
 
           <label className="cursor-pointer bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-xl px-3 py-2 text-xs font-bold flex items-center justify-center gap-2 transition">
             {uploadingNew ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-            <span>{uploadingNew ? "እየተጫነ..." : "ከስልክ/ኮምፒውተር መርጥ"}</span>
+            <span>{uploadingNew ? "እየተጫነ..." : "ከሰአል/ኮምፒውተር መምረጥ"}</span>
             <input 
               type="file" 
               accept="image/*" 
@@ -389,7 +331,7 @@ export default function MenuManagementTab({
             <div key={v.id || vIdx} className="flex gap-2 items-center">
               <input
                 type="text"
-                placeholder="የአማራጭ ስም (ምሳሌ፤ ሙሉ/ግማሽ)"
+                placeholder="የአማራጭ ስም (ለምሳሌ፦ ሙሉ/ግማሽ)"
                 value={v.nameStr}
                 onChange={e => handleNewVariantChange(vIdx, 'nameStr', e.target.value)}
                 className="bg-zinc-900 border border-zinc-700 rounded-xl p-2 text-xs text-white flex-1 outline-none"
@@ -464,7 +406,7 @@ export default function MenuManagementTab({
                     </select>
                   </div>
 
-                  {/* 📸 Edit ሲደረግ ፎቶ Upload ማድረጊያ */}
+                  {/* 📸 Edit ሲደረግ ፎቶ Upload ማደረጊያ */}
                   <div className="flex flex-col md:flex-row gap-2">
                     <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2">
                       <ImageIcon size={14} className="text-zinc-400" />
