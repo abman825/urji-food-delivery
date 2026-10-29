@@ -19,16 +19,20 @@ export default function MenuManagementTab({
     name: '', 
     price: '', 
     img: '', 
-    category: 'ምግብ', 
+    category: lang === 'en' ? 'Food' : lang === 'om' ? 'Nyaata' : 'ምግብ', 
     hasVariants: false, 
     variants: [] 
   });
 
-  const categories = ['ምግብ', 'Fast Food', 'Juice', 'ቅዝቃዜ መጠጥ', 'ሞቅ ያለ መጠጥ'];
+  const categories = lang === 'en' 
+    ? ['Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
+    : lang === 'om'
+    ? ['Nyaata', 'Fast Food', 'Juice', 'Dhugaatii Qabbanaawaa', "Dhugaatii Ho'aa"]
+    : ['ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ሙቅ መጠጥ'];
 
   const t = {
-    title: { am: "የምናሌ ማስተካከያ", om: "Sirreessaa Meenuu", en: "Menu Editor" },
-    addTitle: { am: "አዲስ የምግብ አይነት ጨምር", om: "Gosa Nyaataa Haarawa Dabali", en: "Add New Item" },
+    title: { am: "የሜኑ ማስተካከያ", om: "Sirreessaa Meenuu", en: "Menu Editor" },
+    addTitle: { am: "አዲስ የምግብ ዓይነት ጨምር", om: "Gosa Nyaataa Haarawa Dabali", en: "Add New Item" },
     itemName: { am: "የምግብ ስም", om: "Maqaa Nyaataa", en: "Item Name" },
     itemPrice: { am: "ዋጋ (ETB)", om: "Gatii (ETB)", en: "Price (ETB)" },
     category: { am: "ምድብ", om: "Kutaa", en: "Category" },
@@ -37,15 +41,18 @@ export default function MenuManagementTab({
     addItemBtn: { am: "ምግብ ጨምር", om: "Nyaata Dabali", en: "Add Item" },
     save: { am: "አስቀምጥ", om: "Olka'i", en: "Save" },
     cancel: { am: "ሰርዝ", om: "Dhiisi", en: "Cancel" },
-    confirmDeleteItem: { am: "ይህንን ምግብ ማጥፋት እርግጠኛ ዎደህ?", om: "Nyaata kana haquuf mirkanaa'aadhaa?", en: "Are you sure you want to delete this item?" },
+    confirmDeleteItem: { am: "ይህንን ምግብ ማጥፋት እርግጠኛ ነህ?", om: "Nyaata kana haquuf mirkanaa'aadhaa?", en: "Are you sure you want to delete this item?" },
     fillRequired: { am: "እባክዎ ስም እና ዋጋ (ወይም አማራጮችን) ያስገቡ!", om: "Maaloo maqaa fi gatii (ykn filannoowwan) galchaa!", en: "Please enter name and price (or variants)!" },
     priceNotSet: { am: "ዋጋ አልተወሰነም", om: "Gatiin Hin Murtaa'ine", en: "Price not set" },
     from: { am: "ከ", om: "Kaa'immaa", en: "From" },
-    availableToday: { am: "ለዛሬ አለ", om: "Har'a Jira", en: "Available Today" },
-    soldOutToday: { am: "ለዛሬ አልተካም", om: "Har'a Dhumera", en: "Sold Out Today" }
+    availableToday: { am: "ለጊዜው አለ", om: "Har'a Jira", en: "Available Today" },
+    soldOutToday: { am: "ለጊዜው አልተሸጣም", om: "Har'a Dhumera", en: "Sold Out Today" },
+    uploadBtn: { am: "ከፋይል/ኮምፒውተር ምረጥ", om: "Fakkii Fe'i", en: "Upload Image" },
+    uploading: { am: "በመጫን ላይ...", om: "Fe'amaa jira...", en: "Uploading..." },
+    editBtn: { am: "ቀይር", om: "Jijjiiri", en: "Edit" },
+    addVariantEdit: { am: "+ አማራጭ ጨምር", om: "+ Filannoo Dabali", en: "+ Add Variant" }
   };
 
-  // 📸 1. አዲስ ፎቶ Upload ማደረጊያ Function (Cloudinary)
   const handleImageFileUpload = async (e, isEditMode = false) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -70,7 +77,7 @@ export default function MenuManagementTab({
       }
     } catch (err) {
       console.error("Image upload failed:", err);
-      alert("ፎቶ መጫን አልተሳካም! እባክዎ ደግመው ይሞክሩ።");
+      alert("ፎቶ መጫን አልተሳካም! እባክዎ እንደገና ይሞክሩ።");
     } finally {
       if (isEditMode) setUploadingEdit(false);
       else setUploadingNew(false);
@@ -157,7 +164,7 @@ export default function MenuManagementTab({
     const updatedList = [createdItem, ...menuItems];
     await syncWithDatabase(updatedList);
 
-    setNewItem({ name: '', price: '', img: '', category: 'ምግብ', hasVariants: false, variants: [] });
+    setNewItem({ name: '', price: '', img: '', category: lang === 'en' ? 'Food' : lang === 'om' ? 'Nyaata' : 'ምግብ', hasVariants: false, variants: [] });
   };
 
   const startEdit = (item) => {
@@ -300,7 +307,7 @@ export default function MenuManagementTab({
           </select>
         </div>
 
-        {/* 📸 ፎቶ Upload ማደረጊያ እና URL ማሳያ */}
+        {/* ፎቶ Upload ማድረጊያ እና URL ማሰቀመጫ */}
         <div className="flex flex-col md:flex-row gap-2">
           <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2 focus-within:border-orange-500">
             <ImageIcon size={16} className="text-zinc-400" />
@@ -315,7 +322,7 @@ export default function MenuManagementTab({
 
           <label className="cursor-pointer bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-xl px-3 py-2 text-xs font-bold flex items-center justify-center gap-2 transition">
             {uploadingNew ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-            <span>{uploadingNew ? "እየተጫነ..." : "ከሰአል/ኮምፒውተር መምረጥ"}</span>
+            <span>{uploadingNew ? (t.uploading[lang] || t.uploading.am) : (t.uploadBtn[lang] || t.uploadBtn.am)}</span>
             <input 
               type="file" 
               accept="image/*" 
@@ -380,6 +387,11 @@ export default function MenuManagementTab({
           const isEditing = editingId === id;
           const isAvailable = item.isAvailable !== false;
 
+          // ቋንቋው ሲቀየር የምግብ ምድብ ስም (Category) እንዲተረጎም ማድረግ
+          const displayCategory = item.category === 'ምግብ' || item.category === 'Food' || item.category === 'Nyaata'
+            ? (lang === 'en' ? 'Food' : lang === 'om' ? 'Nyaata' : 'ምግብ')
+            : item.category;
+
           return (
             <div key={id} className={`bg-zinc-800/40 border rounded-2xl p-4 transition-all ${isAvailable ? 'border-zinc-800' : 'border-red-900/40 opacity-75'}`}>
               {isEditing ? (
@@ -406,7 +418,7 @@ export default function MenuManagementTab({
                     </select>
                   </div>
 
-                  {/* 📸 Edit ሲደረግ ፎቶ Upload ማደረጊያ */}
+                  {/* Edit ጊዜ ፎቶ Upload ማድረጊያ */}
                   <div className="flex flex-col md:flex-row gap-2">
                     <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2">
                       <ImageIcon size={14} className="text-zinc-400" />
@@ -421,7 +433,7 @@ export default function MenuManagementTab({
 
                     <label className="cursor-pointer bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-xl px-3 py-2 text-xs font-bold flex items-center justify-center gap-2 transition">
                       {uploadingEdit ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                      <span>{uploadingEdit ? "እየተጫነ..." : "ቀይር"}</span>
+                      <span>{uploadingEdit ? (t.uploading[lang] || t.uploading.am) : (t.editBtn[lang] || t.editBtn.am)}</span>
                       <input 
                         type="file" 
                         accept="image/*" 
@@ -461,7 +473,7 @@ export default function MenuManagementTab({
                       onClick={addVariantToEditForm}
                       className="text-xs text-orange-400 hover:underline font-bold cursor-pointer"
                     >
-                      + አማራጭ ጨምር
+                      {t.addVariantEdit[lang] || t.addVariantEdit.am}
                     </button>
                   </div>
 
@@ -495,7 +507,7 @@ export default function MenuManagementTab({
                       <h4 className="text-xs font-bold text-white">{getTranslatedItemName(item.name)}</h4>
                       <p className="text-[11px] text-orange-400 font-semibold">{renderPriceTag(item)}</p>
                       <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full border border-zinc-700/50 inline-block mt-1">
-                        {item.category || 'ምግብ'}
+                        {displayCategory}
                       </span>
                     </div>
                   </div>

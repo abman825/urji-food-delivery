@@ -3,10 +3,21 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, TrendingUp, DollarSign, ShoppingBag, 
-  Eye, X, User, Phone, CreditCard, FileText, CheckCircle, ArrowLeft 
+  Eye, X, User, Phone, CreditCard, FileText, ArrowLeft 
 } from 'lucide-react';
 
-const AdminDashboard = () => {
+const AdminDashboard = ({ lang: propLang }) => {
+  const [lang, setLang] = useState(() => {
+    return propLang || localStorage.getItem('app_lang') || 'am';
+  });
+
+  useEffect(() => {
+    if (propLang) {
+      setLang(propLang);
+      localStorage.setItem('app_lang', propLang);
+    }
+  }, [propLang]);
+
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({ 
@@ -20,6 +31,99 @@ const AdminDashboard = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
 
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
+  // Multilingual labels for Admin Dashboard
+  const adminLabels = {
+    am: {
+      title: "የአድሚን ዳሽቦርድ (Admin Dashboard)",
+      back: "ተመለስ",
+      refresh: "እድስ (Refresh)",
+      daily: "የዛሬ ቀን ሽያጭ",
+      weekly: "የሳምንት ሽያጭ",
+      monthly: "የወር ሽያጭ",
+      yearly: "የአመት ሽያጭ",
+      topItemsTitle: "በከፍተኛ ሁኔታ የተሸጡ ምግቦች (Top Items)",
+      sold: "ተሸጧል",
+      noTopItems: "ምንም የተሸጠ ምግብ የለም",
+      allOrdersTitle: "የሁሉም ትዕዛዞች ዝርዝር",
+      orderId: "የትዕዛዝ ID",
+      customerName: "የደንበኛ ስም",
+      phone: "ስልክ",
+      price: "ዋጋ",
+      status: "ሁኔታ",
+      date: "ቀን",
+      details: "ዝርዝር",
+      view: "እይ",
+      guest: "እንግዳ",
+      notRecorded: "አልተመዘገበም",
+      orderDetailsTitle: "የትዕዛዝ ሙሉ መረጃ",
+      paymentMethod: "የክፍያ መንገድ:",
+      orderedItems: "የታዘዙ ምግቦች ዝርዝር:",
+      screenshot: "የክፍያ ደረሰኝ (Screenshot):",
+      totalPrice: "ጠቅላላ ዋጋ:",
+      loadingText: "የአድሚን ዳሽቦርድ በመጫን ላይ ነው..."
+    },
+    om: {
+      title: "Daashboardii Bulchaa (Admin Dashboard)",
+      back: "Deebi'i",
+      refresh: "Haaromsi (Refresh)",
+      daily: "Gurgurtaa Har'aa",
+      weekly: "Gurgurtaa Torbanootaa",
+      monthly: "Gurgurtaa Ji'aa",
+      yearly: "Gurgurtaa Waggaa",
+      topItemsTitle: "Nyaata Baay'inaan Gurguraman (Top Items)",
+      sold: "Gurgurameera",
+      noTopItems: "Nyaanni gurgurame hin jiru",
+      allOrdersTitle: "Tarree Ajajawwan Hundaa",
+      orderId: "ID Ajajaa",
+      customerName: "Maqaa Maamilaa",
+      phone: "Bilbila",
+      price: "Gatii",
+      status: "Haala",
+      date: "Guyyaa",
+      details: "Bal'ina",
+      view: "Ilaali",
+      guest: "Keessummaa",
+      notRecorded: "Hin galmoofne",
+      orderDetailsTitle: "Bal'ina Ajajaa",
+      paymentMethod: "Madda Kaffaltii:",
+      orderedItems: "Tarree Nyaata Ajajamanii:",
+      screenshot: "Ragaan Kaffaltii (Screenshot):",
+      totalPrice: "Gatii Waliigalaa:",
+      loadingText: "Daashboardiin bulchaa fe'amaa jira..."
+    },
+    en: {
+      title: "Admin Dashboard",
+      back: "Back",
+      refresh: "Refresh",
+      daily: "Daily Sales",
+      weekly: "Weekly Sales",
+      monthly: "Monthly Sales",
+      yearly: "Yearly Sales",
+      topItemsTitle: "Top Selling Items",
+      sold: "sold",
+      noTopItems: "No top items available",
+      allOrdersTitle: "All Orders List",
+      orderId: "Order ID",
+      customerName: "Customer Name",
+      phone: "Phone",
+      price: "Price",
+      status: "Status",
+      date: "Date",
+      details: "Details",
+      view: "View",
+      guest: "Guest",
+      notRecorded: "Not recorded",
+      orderDetailsTitle: "Order Details",
+      paymentMethod: "Payment Method:",
+      orderedItems: "Ordered Items List:",
+      screenshot: "Payment Screenshot:",
+      totalPrice: "Total Price:",
+      loadingText: "Loading admin dashboard..."
+    }
+  };
+
+  const t = adminLabels[lang] || adminLabels.am;
 
   const fetchDashboardData = async () => {
     try {
@@ -41,7 +145,7 @@ const AdminDashboard = () => {
 
       setTopItems(response.data.topItems || []);
     } catch (err) {
-      console.error("የዳሽቦርድ ዳታ መጫን አልተቻለም:", err);
+      console.error("Error fetching dashboard data:", err);
     } finally {
       setLoading(false);
     }
@@ -55,7 +159,7 @@ const AdminDashboard = () => {
     return (
       <div className="p-6 bg-slate-900 min-h-screen text-white flex items-center justify-center">
         <p className="text-lg font-bold text-orange-500 animate-pulse">
-          የአድሚን ዳሽቦርድ በመጫን ላይ ነው...
+          {t.loadingText}
         </p>
       </div>
     );
@@ -68,17 +172,16 @@ const AdminDashboard = () => {
         {/* Title, Back Button and Refresh */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">
-            {/* 🔙 ወደ ኋላ ለመመለስ የሚረድ ቁልፍ (Back Button) */}
             <button
               onClick={() => navigate('/')}
               className="p-2.5 bg-slate-800 hover:bg-orange-600 text-slate-300 hover:text-white rounded-2xl transition flex items-center gap-2 border border-slate-700 font-bold text-xs cursor-pointer shadow-md"
-              title="ወደ መነሻ ተመለስ"
+              title={t.back}
             >
               <ArrowLeft size={18} />
-              <span className="hidden sm:inline">ተመለስ</span>
+              <span className="hidden sm:inline">{t.back}</span>
             </button>
             <h1 className="text-xl md:text-3xl font-black text-orange-500">
-              የአድሚን ዳሽቦርድ (Admin Dashboard)
+              {t.title}
             </h1>
           </div>
 
@@ -86,16 +189,16 @@ const AdminDashboard = () => {
             onClick={fetchDashboardData}
             className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer"
           >
-            እድስ (Refresh)
+            {t.refresh}
           </button>
         </div>
 
-        {/* 1. የሽያጭ ስታቲስቲክስ ካርዶች (Daily, Weekly, Monthly, Yearly) */}
+        {/* 1. Sales Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-lg">
             <div className="flex items-center gap-2 text-emerald-400 mb-2">
               <Calendar size={18} />
-              <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider">የዛሬ ቀን ሽያጭ</h3>
+              <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider">{t.daily}</h3>
             </div>
             <p className="text-2xl font-black text-emerald-400">{stats.dailySales.toLocaleString()} ETB</p>
           </div>
@@ -103,7 +206,7 @@ const AdminDashboard = () => {
           <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-lg">
             <div className="flex items-center gap-2 text-emerald-400 mb-2">
               <TrendingUp size={18} />
-              <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider">የሳምንት ሽያጭ</h3>
+              <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider">{t.weekly}</h3>
             </div>
             <p className="text-2xl font-black text-emerald-400">{stats.weeklySales.toLocaleString()} ETB</p>
           </div>
@@ -111,7 +214,7 @@ const AdminDashboard = () => {
           <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-lg">
             <div className="flex items-center gap-2 text-emerald-400 mb-2">
               <DollarSign size={18} />
-              <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider">የወር ሽያጭ</h3>
+              <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider">{t.monthly}</h3>
             </div>
             <p className="text-2xl font-black text-emerald-400">{stats.monthlySales.toLocaleString()} ETB</p>
           </div>
@@ -119,16 +222,16 @@ const AdminDashboard = () => {
           <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-lg">
             <div className="flex items-center gap-2 text-emerald-400 mb-2">
               <ShoppingBag size={18} />
-              <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider">የዓመት ሽያጭ</h3>
+              <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider">{t.yearly}</h3>
             </div>
             <p className="text-2xl font-black text-emerald-400">{stats.yearlySales.toLocaleString()} ETB</p>
           </div>
         </div>
 
-        {/* 2. በከፍተኛ ሁኔታ የተሸጡ ምግቦች (Top Items) */}
+        {/* 2. Top Items */}
         <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700/80 shadow-xl">
           <h2 className="text-lg font-bold text-orange-400 mb-4">
-            በከፍተኛ ሁኔታ የተሸጡ ምግቦች (Top Items)
+            {t.topItemsTitle}
           </h2>
           <div className="space-y-3">
             {topItems.length > 0 ? (
@@ -136,30 +239,30 @@ const AdminDashboard = () => {
                 <div key={index} className="flex justify-between items-center bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">
                   <span className="font-bold text-slate-200 text-sm">{index + 1}. {item.name || item.title}</span>
                   <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs px-3 py-1 rounded-lg font-bold">
-                    {item.quantity || item.count || 0} ተሸጧል
+                    {item.quantity || item.count || 0} {t.sold}
                   </span>
                 </div>
               ))
             ) : (
-              <p className="text-xs text-slate-500">ምንም የተሸጠ ምግብ የለም</p>
+              <p className="text-xs text-slate-500">{t.noTopItems}</p>
             )}
           </div>
         </div>
 
-        {/* 3. የሁሉም ትዕዛዞች ዝርዝር (All Orders List Table) */}
+        {/* 3. All Orders List Table */}
         <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700/80 shadow-xl overflow-hidden">
-          <h2 className="text-lg font-bold text-orange-400 mb-4">የሁሉም ትዕዛዞች ዝርዝር</h2>
+          <h2 className="text-lg font-bold text-orange-400 mb-4">{t.allOrdersTitle}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-900 text-slate-400 uppercase border-b border-slate-700">
                 <tr>
-                  <th className="p-3">የእዕዛዝ ID</th>
-                  <th className="p-3">የደንበኛ ስም</th>
-                  <th className="p-3">ስልክ</th>
-                  <th className="p-3">ዋጋ</th>
-                  <th className="p-3">ሁኔታ</th>
-                  <th className="p-3">ቀን</th>
-                  <th className="p-3 text-center">ዝርዝር</th>
+                  <th className="p-3">{t.orderId}</th>
+                  <th className="p-3">{t.customerName}</th>
+                  <th className="p-3">{t.phone}</th>
+                  <th className="p-3">{t.price}</th>
+                  <th className="p-3">{t.status}</th>
+                  <th className="p-3">{t.date}</th>
+                  <th className="p-3 text-center">{t.details}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/60">
@@ -169,7 +272,7 @@ const AdminDashboard = () => {
                       {order.receiptId || order._id?.slice(-6)}
                     </td>
                     <td className="p-3 font-semibold text-slate-200">
-                      {order.name || order.customerName || order.customerInfo?.name || 'እንግዳ'}
+                      {order.name || order.customerName || order.customerInfo?.name || t.guest}
                     </td>
                     <td className="p-3 text-slate-400">
                       {order.phone || order.phoneNumber || order.customerInfo?.phone || '-'}
@@ -195,7 +298,7 @@ const AdminDashboard = () => {
                         className="bg-slate-900 hover:bg-orange-600 text-slate-200 hover:text-white px-3 py-1.5 rounded-xl transition flex items-center justify-center gap-1 mx-auto font-bold border border-slate-700 cursor-pointer"
                       >
                         <Eye size={14} />
-                        <span>እይ</span>
+                        <span>{t.view}</span>
                       </button>
                     </td>
                   </tr>
@@ -207,12 +310,11 @@ const AdminDashboard = () => {
 
       </div>
 
-      {/* 4. የትዕዛዝ ዝርዝር Modal (Order Details Modal) */}
+      {/* 4. Order Details Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-3xl p-6 text-slate-100 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             
-            {/* Close Button */}
             <button 
               onClick={() => setSelectedOrder(null)}
               className="absolute top-4 right-4 p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full transition cursor-pointer"
@@ -222,22 +324,22 @@ const AdminDashboard = () => {
 
             <h3 className="text-xl font-black text-orange-500 mb-4 border-b border-slate-800 pb-3 flex items-center gap-2">
               <FileText size={20} />
-              የእዕዛዝ ሙሉ መርማሪ (#{selectedOrder.receiptId || selectedOrder._id?.slice(-6)})
+              {t.orderDetailsTitle} (#{selectedOrder.receiptId || selectedOrder._id?.slice(-6)})
             </h3>
 
             {/* Customer Details */}
             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-4 space-y-2 text-xs">
               <p className="flex items-center gap-2 text-slate-300">
                 <User size={14} className="text-orange-400" />
-                <span className="font-bold">ስም:</span> {selectedOrder.name || selectedOrder.customerName || selectedOrder.customerInfo?.name || 'እንግዳ'}
+                <span className="font-bold">{t.customerName}:</span> {selectedOrder.name || selectedOrder.customerName || selectedOrder.customerInfo?.name || t.guest}
               </p>
               <p className="flex items-center gap-2 text-slate-300">
                 <Phone size={14} className="text-orange-400" />
-                <span className="font-bold">ስልክ:</span> {selectedOrder.phone || selectedOrder.phoneNumber || selectedOrder.customerInfo?.phone || 'አልተመዘገበም'}
+                <span className="font-bold">{t.phone}:</span> {selectedOrder.phone || selectedOrder.phoneNumber || selectedOrder.customerInfo?.phone || t.notRecorded}
               </p>
               <p className="flex items-center gap-2 text-slate-300">
                 <CreditCard size={14} className="text-orange-400" />
-                <span className="font-bold">የክፍያ መሠገ መንገድ:</span> 
+                <span className="font-bold">{t.paymentMethod}</span> 
                 <span className="font-bold text-orange-400 uppercase ml-1">
                   {selectedOrder.paymentMethod || 'Chapa / Cash'}
                 </span>
@@ -245,7 +347,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Ordered Items List */}
-            <h4 className="font-bold text-xs text-slate-400 mb-2">የታዘዙ ምግቦች ዝርዝር፥</h4>
+            <h4 className="font-bold text-xs text-slate-400 mb-2">{t.orderedItems}</h4>
             <div className="space-y-2 mb-4">
               {(selectedOrder.items || selectedOrder.cartItems || []).map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-xs">
@@ -260,10 +362,10 @@ const AdminDashboard = () => {
               ))}
             </div>
 
-            {/* Screenshot Preview (If available) */}
+            {/* Screenshot Preview */}
             {selectedOrder.screenshotUrl && (
               <div className="mb-4">
-                <h4 className="font-bold text-xs text-slate-400 mb-2">የክፍያ ደርሰኝ (Screenshot):</h4>
+                <h4 className="font-bold text-xs text-slate-400 mb-2">{t.screenshot}</h4>
                 <img 
                   src={selectedOrder.screenshotUrl} 
                   alt="Receipt Screenshot" 
@@ -274,7 +376,7 @@ const AdminDashboard = () => {
 
             {/* Total Amount */}
             <div className="border-t border-slate-800 pt-3 flex justify-between items-center">
-              <span className="font-bold text-slate-400 text-sm">ጠቅላላ ዋጋ:</span>
+              <span className="font-bold text-slate-400 text-sm">{t.totalPrice}</span>
               <span className="text-xl font-black text-emerald-400">
                 {selectedOrder.totalPrice || selectedOrder.totalAmount} ETB
               </span>

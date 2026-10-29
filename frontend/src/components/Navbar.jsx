@@ -79,7 +79,7 @@ export default function Navbar({
 
     const handleOrderAccepted = (data) => {
       const userLang = data?.lang || lang;
-      let msg = 'ትዕዛዞ ተቀባይቷል! በቅርብ ደቂቃዎች ውስጥ ይደርሰንታል።';
+      let msg = 'ትዕዛዝ ተቀባይቷል! በቅርብ ደቂቃዎች ውስጥ ይደርሰሶታል።';
 
       if (userLang === 'om') {
         msg = "Ajajni keessan fudhatameera! Daqiiqawwan muraasa keessatti isin bira gaha.";
@@ -101,11 +101,11 @@ export default function Navbar({
 
       if (status === 'In Progress' || status === 'በመስራት ላይ') {
         if (userLang === 'om') {
-          setOrderNotification(`Nyaatni keessan #${data.receiptId || ''} hojjetamaa jira! 🧑‍🍳`);
+          setOrderNotification(`Nyaatni keessan #${data.receiptId || ''} hojjetamaa jira! 👨‍🍳`);
         } else if (userLang === 'en') {
-          setOrderNotification(`Your food #${data.receiptId || ''} is being prepared! 🧑‍🍳`);
+          setOrderNotification(`Your food #${data.receiptId || ''} is being prepared! 👨‍🍳`);
         } else {
-          setOrderNotification(`ምግብዎ #${data.receiptId || ''} በመስራት ላይ ይገኛል! በቅርብ ደቂቃዎች ውስጥ እንልክልዎታለን! 🧑‍🍳`);
+          setOrderNotification(`ምግብዎ #${data.receiptId || ''} በመስራት ላይ ይገኛል! በቅርብ ደቂቃዎች ውስጥ እናደርስዎታለን! 👨‍🍳`);
         }
       } else if (status === 'Delivered' || status === 'Completed' || status === 'ተጠናቀዋል') {
         if (userLang === 'om') {
@@ -129,10 +129,95 @@ export default function Navbar({
     };
   }, [lang]);
 
+  // Multilingual labels for Navbar & Modals
   const navLabels = {
-    am: { home: "መነሻ", menu: "ሜኑ", about: "ስለ እኛ", title: "ኡርጂ", subTitle: "ምግብ ቤት", ordersBtn: "የእኛ ትዕዛዞች" },
-    om: { home: "Ka'umsa", menu: "Meenuu", about: "Waayee Keenya", title: "Urjii", subTitle: "Mana Nyata", ordersBtn: "Ajajawwan Ko" },
-    en: { home: "Home", menu: "Menu", about: "About Us", title: "Urji", subTitle: "Restaurant", ordersBtn: "My Orders" }
+    am: { 
+      home: "መነሻ", 
+      menu: "ሜኑ", 
+      about: "ስለ እኛ", 
+      title: "ኡርጂ", 
+      subTitle: "ምግብ ቤት", 
+      ordersBtn: "የእኛ ትዕዛዞች",
+      adminLoginTitle: "አድሚን መግቢያ (Admin Login)",
+      adminLoginSub: "እባክዎ የይለፍ ቃል ያስገቡ",
+      passwordPlaceholder: "የይለፍ ቃል (Password)",
+      wrongPassword: "የገቡት የይለፍ ቃል ትክክል አይደለም!",
+      loginBtn: "ግባ",
+      changePasswordLink: "🔑 የይለፍ ቃል መለወጥ (Change Password)",
+      changePasswordTitle: "የይለፍ ቃል መለወጫ",
+      changePasswordSub: "ቀድሞውን እና አዲሱን የይለፍ ቃል ያስገቡ",
+      oldPasswordPlaceholder: "የቀድሞው የይለፍ ቃል (Old Password)",
+      newPasswordPlaceholder: "አዲስ የይለፍ ቃል (New Password)",
+      updateBtn: "ቀይር",
+      backBtn: "ተመለስ",
+      passwordSuccess: "የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል!",
+      passwordErrorDefault: "የይለፍ ቃል መለወጥ አልተሳካም!",
+      adminOptionsTitle: "የአስተዳደር ምርጫዎች",
+      adminOptionsSub: "የሚፈልጉትን ይምረጡ",
+      reportTitle: "ርፖርት (Admin Dashboard)",
+      reportSub: "ትዕዛዞች እና የገቢ ርፖርት መመልከቻ",
+      menuMgmtTitle: "ሜኑ ማስተካከያ (Menu Management)",
+      menuMgmtSub: "ምግቦችን መመዝገብ፣ ማስተካከል እና ማጥፋት",
+      notificationTitle: "የማስታወቂያ ማሳወቂያ!"
+    },
+    om: { 
+      home: "Ka'umsa", 
+      menu: "Meenuu", 
+      about: "Waayee Keenya", 
+      title: "Urjii", 
+      subTitle: "Mana Nyata", 
+      ordersBtn: "Ajajawwan Ko",
+      adminLoginTitle: "Seensa Bulchaa (Admin Login)",
+      adminLoginSub: "Maaloo jecha darbee galchaa",
+      passwordPlaceholder: "Jecha Darbee (Password)",
+      wrongPassword: "Jechi darbee galchitan sirrii miti!",
+      loginBtn: "Galii",
+      changePasswordLink: "🔑 Jecha Darbee Jijjiiri (Change Password)",
+      changePasswordTitle: "Jijjiirraa Jecha Darbee",
+      changePasswordSub: "Jecha darbee moofaa fi haaraa galchaa",
+      oldPasswordPlaceholder: "Jecha Darbee Moofaa (Old Password)",
+      newPasswordPlaceholder: "Jecha Darbee Haaraa (New Password)",
+      updateBtn: "Jijjiiri",
+      backBtn: "Deebi'i",
+      passwordSuccess: "Jechi darbee milkaa'inaan jijjiirameera!",
+      passwordErrorDefault: "Jecha darbee jijjiiruun hin danda'amne!",
+      adminOptionsTitle: "Filannoowwan Bulchaa",
+      adminOptionsSub: "Kan barbaaddan filadhaa",
+      reportTitle: "Gabaasa (Admin Dashboard)",
+      reportSub: "Gabaasa ajajaa fi galii ilaaluuf",
+      menuMgmtTitle: "Bulchiinsa Meenuu (Menu Management)",
+      menuMgmtSub: "Nyaata dabaluu, sirreessuu fi haquuf",
+      notificationTitle: "Beeksischa Beellamaa!"
+    },
+    en: { 
+      home: "Home", 
+      menu: "Menu", 
+      about: "About Us", 
+      title: "Urji", 
+      subTitle: "Restaurant", 
+      ordersBtn: "My Orders",
+      adminLoginTitle: "Admin Login",
+      adminLoginSub: "Please enter your password",
+      passwordPlaceholder: "Password",
+      wrongPassword: "Incorrect password!",
+      loginBtn: "Login",
+      changePasswordLink: "🔑 Change Password",
+      changePasswordTitle: "Change Password",
+      changePasswordSub: "Enter old and new password",
+      oldPasswordPlaceholder: "Old Password",
+      newPasswordPlaceholder: "New Password",
+      updateBtn: "Update",
+      backBtn: "Back",
+      passwordSuccess: "Password successfully changed!",
+      passwordErrorDefault: "Failed to change password!",
+      adminOptionsTitle: "Admin Options",
+      adminOptionsSub: "Choose what you want",
+      reportTitle: "Report (Admin Dashboard)",
+      reportSub: "View orders and revenue reports",
+      menuMgmtTitle: "Menu Management",
+      menuMgmtSub: "Add, edit and manage food items",
+      notificationTitle: "Real-time Notification!"
+    }
   };
 
   const currentNav = navLabels[lang] || navLabels.am;
@@ -196,7 +281,7 @@ export default function Navbar({
       });
 
       if (res.data.success) {
-        setPasswordChangeSuccess('የይለፍ ቃልዎ በተሳካ ሁኔታ ተቀይሯል!');
+        setPasswordChangeSuccess(currentNav.passwordSuccess);
         setOldPasswordInput('');
         setNewPasswordInput('');
         setTimeout(() => {
@@ -205,7 +290,7 @@ export default function Navbar({
         }, 1500);
       }
     } catch (err) {
-      setPasswordChangeError(err.response?.data?.message || 'የይለፍ ቃል መቀየር አልተሳካም!');
+      setPasswordChangeError(err.response?.data?.message || currentNav.passwordErrorDefault);
     }
   };
 
@@ -218,7 +303,7 @@ export default function Navbar({
             <CheckCircle size={22} />
           </div>
           <div className="flex-1 text-xs">
-            <h4 className="font-bold text-green-400 text-sm mb-0.5">የእስደርደር ማስታወቂያ!</h4>
+            <h4 className="font-bold text-green-400 text-sm mb-0.5">{currentNav.notificationTitle}</h4>
             <p className="text-zinc-200 leading-relaxed font-semibold">{orderNotification}</p>
           </div>
           <button onClick={() => setOrderNotification(null)} className="text-zinc-400 hover:text-white p-1">
@@ -284,7 +369,11 @@ export default function Navbar({
             {/* Language Selector */}
             <select 
               value={lang} 
-              onChange={(e) => setLang(e.target.value)}
+              onChange={(e) => {
+                const newLang = e.target.value;
+                setLang(newLang);
+                localStorage.setItem('app_lang', newLang);
+              }}
               className="bg-gray-100 border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-bold text-gray-700 cursor-pointer focus:outline-none focus:border-orange-500"
             >
               <option value="am">🇪🇹 አማርኛ</option>
@@ -388,8 +477,8 @@ export default function Navbar({
                     <Lock size={24} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black">አድሚን መግቢያ (Admin Login)</h3>
-                    <p className="text-xs text-zinc-400">እባክዎ የይለፍ ቃል ያስገቡ</p>
+                    <h3 className="text-lg font-black">{currentNav.adminLoginTitle}</h3>
+                    <p className="text-xs text-zinc-400">{currentNav.adminLoginSub}</p>
                   </div>
                 </div>
 
@@ -397,14 +486,14 @@ export default function Navbar({
                   type="password"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="የይለፍ ቃል (Password)"
+                  placeholder={currentNav.passwordPlaceholder}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 font-bold tracking-widest text-center"
                   autoFocus
                 />
 
                 {passwordError && (
                   <p className="text-red-400 text-xs text-center font-bold animate-shake">
-                    የገባችሁት የይለፍ ቃል ትክክል አይደለም!
+                    {currentNav.wrongPassword}
                   </p>
                 )}
 
@@ -413,7 +502,7 @@ export default function Navbar({
                     type="submit"
                     className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl transition-all shadow-lg shadow-orange-600/30 text-sm cursor-pointer"
                   >
-                    ግባ
+                    {currentNav.loginBtn}
                   </button>
 
                   <button
@@ -425,7 +514,7 @@ export default function Navbar({
                     }}
                     className="text-xs text-zinc-400 hover:text-orange-400 text-center py-2 transition font-bold cursor-pointer"
                   >
-                    🔑 የይለፍ ቃል መቀየር (Change Password)
+                    {currentNav.changePasswordLink}
                   </button>
                 </div>
               </form>
@@ -437,8 +526,8 @@ export default function Navbar({
                     <KeyRound size={24} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black">የይለፍ ቃል መቀየሪያ</h3>
-                    <p className="text-xs text-zinc-400">የቀድሞውን እና አዲሱን የይለፍ ቃል ያስገቡ</p>
+                    <h3 className="text-lg font-black">{currentNav.changePasswordTitle}</h3>
+                    <p className="text-xs text-zinc-400">{currentNav.changePasswordSub}</p>
                   </div>
                 </div>
 
@@ -446,7 +535,7 @@ export default function Navbar({
                   type="password"
                   value={oldPasswordInput}
                   onChange={(e) => setOldPasswordInput(e.target.value)}
-                  placeholder="የቀድሞው የይለፍ ቃል (Old Password)"
+                  placeholder={currentNav.oldPasswordPlaceholder}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 font-bold text-center"
                   autoFocus
                 />
@@ -455,7 +544,7 @@ export default function Navbar({
                   type="password"
                   value={newPasswordInput}
                   onChange={(e) => setNewPasswordInput(e.target.value)}
-                  placeholder="አዲሱ የይለፍ ቃል (New Password)"
+                  placeholder={currentNav.newPasswordPlaceholder}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 font-bold text-center"
                 />
 
@@ -476,14 +565,14 @@ export default function Navbar({
                     type="submit"
                     className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl transition-all shadow-lg text-xs cursor-pointer"
                   >
-                    ቀይር
+                    {currentNav.updateBtn}
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsChangingPassword(false)}
                     className="px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl transition-all text-xs cursor-pointer"
                   >
-                    ተመለስ
+                    {currentNav.backBtn}
                   </button>
                 </div>
               </form>
@@ -491,11 +580,11 @@ export default function Navbar({
               /* Phase 2: Selection Options (Report vs Menu Management) */
               <div className="flex flex-col gap-4">
                 <div className="text-center mb-2">
-                  <h3 className="text-lg font-black text-white">የአስተዳዳሪ ምርጫዎች</h3>
-                  <p className="text-xs text-zinc-400">ማከናወን የሚፈልጉትን ይምረጡ</p>
+                  <h3 className="text-lg font-black text-white">{currentNav.adminOptionsTitle}</h3>
+                  <p className="text-xs text-zinc-400">{currentNav.adminOptionsSub}</p>
                 </div>
 
-                {/* 1. ሪፖርት (Report / Admin Dashboard) */}
+                {/* 1. ርፖርት (Report / Admin Dashboard) */}
                 <Link
                   to="/admin"
                   onClick={() => setIsAdminModalOpen(false)}
@@ -506,13 +595,13 @@ export default function Navbar({
                       <ShoppingBag size={20} />
                     </div>
                     <div>
-                      <h4 className="font-black text-sm text-white">ሪፖርት (Admin Dashboard)</h4>
-                      <p className="text-xs text-zinc-400">የትዕዛዞች እና የገቢ ሪፖርት መመልከቻ</p>
+                      <h4 className="font-black text-sm text-white">{currentNav.reportTitle}</h4>
+                      <p className="text-xs text-zinc-400">{currentNav.reportSub}</p>
                     </div>
                   </div>
                 </Link>
 
-                {/* 2. ምናሌ ማስተካከያ (Menu Management) */}
+                {/* 2. ሜኑ ማስተካከያ (Menu Management) */}
                 <button
                   onClick={() => {
                     setIsAdminModalOpen(false);
@@ -525,8 +614,8 @@ export default function Navbar({
                       <Utensils size={20} />
                     </div>
                     <div>
-                      <h4 className="font-black text-sm text-white">ምናሌ ማስተካከያ (Menu Management)</h4>
-                      <p className="text-xs text-zinc-400">ምግቦችን መጨመር፣ ማስተካከል እና ማጥፋት</p>
+                      <h4 className="font-black text-sm text-white">{currentNav.menuMgmtTitle}</h4>
+                      <p className="text-xs text-zinc-400">{currentNav.menuMgmtSub}</p>
                     </div>
                   </div>
                 </button>
@@ -541,7 +630,7 @@ export default function Navbar({
                   }}
                   className="text-xs text-zinc-400 hover:text-orange-400 text-center py-2 transition font-bold cursor-pointer"
                 >
-                  🔑 የይለፍ ቃል መቀየር
+                  {currentNav.changePasswordLink}
                 </button>
               </div>
             )}
@@ -560,7 +649,7 @@ export default function Navbar({
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-white">
-                    {lang === 'om' ? 'Sirreessaa Meenuu' : lang === 'en' ? 'Menu Management' : 'የምናሌ ማስተካከያ'}
+                    {lang === 'om' ? 'Sirreessaa Meenuu' : lang === 'en' ? 'Menu Management' : 'የሜኑ ማስተካከያ'}
                   </h2>
                 </div>
               </div>

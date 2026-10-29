@@ -112,7 +112,7 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
             </div>
             <div>
               <h3 className="text-lg font-black text-white">{t.title[lang] || t.title.am}</h3>
-              <p className="text-xs text-zinc-400">መለያ (ID): {receiptId}</p>
+              <p className="text-xs text-zinc-400">(ID): {receiptId}</p>
             </div>
           </div>
           <button 

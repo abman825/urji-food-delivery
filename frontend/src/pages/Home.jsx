@@ -17,7 +17,14 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const socket = io(BACKEND_URL);
 
 export default function Home() {
-  const [lang, setLang] = useState('am');
+  const [lang, setLang] = useState(() => {
+    return localStorage.getItem('app_lang') || 'am';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('app_lang', lang);
+  }, [lang]);
+
   const t = translations?.[lang] || translations?.am || {};
 
   const { cartCount, totalPrice, cartItems, clearCart, addToCart } = useCart();
@@ -48,11 +55,12 @@ export default function Home() {
   const containerRef = useRef(null);
   const { scrollProgress, activeCardIndex } = useVideoScroll(containerRef, videoRef);
 
+  // ቋንቋዎችን በሦስቱም ቋንቋ በትክክል እንዲያሳይ የተደረገ
   const categories = lang === 'om' 
     ? ['Hunda', 'Nyaata', 'Fast Food', 'Juice', 'Dhugaatii Qabbanaawaa', "Dhugaatii Ho'aa"]
     : lang === 'en'
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
-    : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
+    : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ሙቅ መጠጥ'];
 
   // 1. Table number handling via QR code URL & cleanup
   useEffect(() => {
@@ -132,7 +140,6 @@ export default function Home() {
       try { 
         const parsed = JSON.parse(savedOrder);
         setMyActiveOrder(parsed);
-        // Socket Room Join ማድረግ
         if (parsed?.receiptId) {
           socket.emit('joinOrderRoom', parsed.receiptId);
         }
@@ -148,7 +155,7 @@ export default function Home() {
       const incomingReceiptId = String(data.receiptId || data.orderId || data.id || '').trim();
 
       if (currentReceiptId && incomingReceiptId && currentReceiptId === incomingReceiptId) {
-        if (['Completed', 'Finished', 'Delivered', 'ተጠናቋል'].includes(data.status)) {
+        if (['Completed', 'Finished', 'Delivered', 'ተጠናቀዋል'].includes(data.status)) {
           setMyActiveOrder(null);
           setIsOrderTrackerOpen(false);
           localStorage.removeItem('myPersonalOrder');
@@ -203,7 +210,6 @@ export default function Home() {
             setMyActiveOrder(newOrderObj);
             localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-            // Socket Room Join ማድረግ
             socket.emit('joinOrderRoom', receiptId);
 
             alert(
@@ -229,7 +235,7 @@ export default function Home() {
       alert(
         lang === 'om' ? "Dhiifama! Nyaatni/Dhugaatiin kun dhumateera." :
         lang === 'en' ? "Sorry, this item is currently out of stock!" :
-        "ይቅርታ! ይህ ምግብ/መጠጥ ለዛሬ አልቋል እባክዎን ሌላ ይምረጡ።"
+        "ይቅርታ! ይህ ምግብ/መጠጥ ለጊዜው አልተገኘም አብሮነቶን ይቅርታ ይልቁልን!"
       );
       return;
     }
@@ -249,7 +255,7 @@ export default function Home() {
           ? "Maaloo ajajuuf koodii QR minjaala irra jiru ammas Scan godhaa." 
           : lang === 'en' 
           ? "Please scan the table QR code again to place a new order!" 
-          : "እባክዎን አዲስ ትዕዛዝ ለማዘዝ የጠረጴዛውን QR Code በድጋሚ Scan ያድርጉ!"
+          : "እባክዎ አዲስ ትዕዛዝ ለማዘዝ የጠረጴዛውን QR Code በደግነት Scan ያድርጉ!"
       );
       return;
     }
@@ -324,12 +330,11 @@ export default function Home() {
         setMyActiveOrder(newOrderObj);
         localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-        // Socket Room Join ማድረግ
         if (socket) {
           socket.emit('joinOrderRoom', finalReceiptId);
         }
 
-        const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተልኳል! ደረስኝ ቁጥር:";
+        const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተሳክቷል! ደረሰኝ ቁጥር:";
         alert(`✅ ${successText} ${finalReceiptId}`);
         
         setIsModalOpen(false); 
@@ -367,7 +372,7 @@ export default function Home() {
     } else if (activeTabIndex === 4) {
       matchesCategory = cat.includes('ቀዝቃዛ') || cat.includes('cold') || cat.includes('qabbanaawaa');
     } else if (activeTabIndex === 5) {
-      matchesCategory = cat.includes('ትኩስ') || cat.includes('hot') || cat.includes("ho'aa");
+      matchesCategory = cat.includes('ሙቅ') || cat.includes('hot') || cat.includes("ho'aa");
     }
 
     return matchesSearch && matchesCategory;
@@ -452,7 +457,7 @@ export default function Home() {
                   ))
                 ) : (
                   <div className="col-span-full text-center py-12 text-zinc-400 font-bold flex flex-col items-center justify-center gap-3">
-                    <p>{lang === 'om' ? "Wanti barbaaddan hin argamne" : lang === 'en' ? "No items found" : "የፈለጉት ምግብ አልተገኘም"}</p>
+                    <p>{lang === 'om' ? "Wanti barbaaddan hin argamne" : lang === 'en' ? "No items found" : "የተፈለገው ምግብ አልተገኘም"}</p>
                     <button onClick={() => setSearchQuery('')} className="bg-zinc-800 text-orange-500 text-xs px-4 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-700 transition-all cursor-pointer">
                       Clear Search
                     </button>

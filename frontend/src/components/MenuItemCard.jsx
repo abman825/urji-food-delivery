@@ -51,6 +51,15 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
     }).length;
   };
 
+  // Localized text labels
+  const cardTexts = {
+    soldOut: { am: "ለጊዜው አልተሸጣም", om: "Har'a Dhumera", en: "Sold Out" },
+    fresh: { am: "ቀንና ማዕድ የተመረጠ", om: "Qulqulluu fi Hawwataa", en: "Fresh & Selected" },
+    add: { am: "ጨምር", om: "Dabali", en: "Add" },
+    viewOptions: { am: "አማራጮችን ይመልከቱ", om: "Filannoowwan ilaali", en: "View Options" },
+    clickToReturn: { am: "ለመመለስ ክፈፍን ንካ", om: "Deebi'uuf tuqi", en: "Click to return" }
+  };
+
   if (!item.hasVariants || !item.variants || item.variants.length === 0) {
     const countInCart = getCount(mainName);
 
@@ -62,7 +71,7 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
       >
         {!isAvailable && (
           <span className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-red-600/90 text-white text-[9px] sm:text-xs font-black px-2.5 py-1 rounded-full shadow-lg z-20 border border-red-500">
-            ለዛሬ አልቋል
+            {cardTexts.soldOut[lang] || cardTexts.soldOut.am}
           </span>
         )}
 
@@ -89,7 +98,7 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
             <div className="flex items-center gap-1 md:gap-2 text-zinc-300 text-[9px] sm:text-xs md:text-sm mb-2 md:mb-8 font-medium">
               <CheckCircle2 size={12} className="text-emerald-400 shrink-0 hidden sm:block" />
               <span className="break-words">
-                {t?.freshAndSelected || 'ትኩስ እና የተመረጠ'}
+                {t?.freshAndSelected || (cardTexts.fresh[lang] || cardTexts.fresh.am)}
               </span>
             </div>
           </div>
@@ -124,10 +133,10 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
               {isAvailable ? (
                 <>
                   <Plus className="w-3 h-3 md:w-6 md:h-6" />
-                  <span>{countInCart > 0 ? `${countInCart}` : t?.addToCart || 'ጨምር'}</span>
+                  <span>{countInCart > 0 ? `${countInCart}` : (t?.addToCart || cardTexts.add[lang] || cardTexts.add.am)}</span>
                 </>
               ) : (
-                <span>ለዛሬ አልቋል</span>
+                <span>{cardTexts.soldOut[lang] || cardTexts.soldOut.am}</span>
               )}
             </button>
           </div>
@@ -155,7 +164,7 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
         >
           {!isAvailable && (
             <span className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-red-600/90 text-white text-[9px] sm:text-xs font-black px-2.5 py-1 rounded-full shadow-lg z-20 border border-red-500">
-              ለዛሬ አልቋል
+              {cardTexts.soldOut[lang] || cardTexts.soldOut.am}
             </span>
           )}
 
@@ -182,8 +191,8 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
             </h3>
             <p className="text-zinc-300 text-[8px] sm:text-[10px] md:text-sm font-semibold">
               {isAvailable
-                ? t?.cardHints?.viewOptions || 'አማራጮችን ይመልከቱ'
-                : 'ለዛሬ አልቋል'}
+                ? (t?.cardHints?.viewOptions || cardTexts.viewOptions[lang] || cardTexts.viewOptions.am)
+                : (cardTexts.soldOut[lang] || cardTexts.soldOut.am)}
             </p>
           </div>
         </div>
@@ -252,7 +261,7 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
           </div>
 
           <p className="text-center text-[7px] sm:text-[9px] md:text-[11px] text-zinc-300 mt-1 hidden sm:block font-medium">
-            {t?.cardHints?.clickAnywhereReturn || 'ለመመለስ ካርዱን ይጫኑ'}
+            {t?.cardHints?.clickAnywhereReturn || (cardTexts.clickToReturn[lang] || cardTexts.clickToReturn.am)}
           </p>
         </div>
       </div>

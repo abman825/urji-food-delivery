@@ -13,10 +13,18 @@ const socket = io(BACKEND_URL, { autoConnect: true });
 export default function App() {
   const [isTrackerOpen, setIsTrackerOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(null);
-  const [lang, setLang] = useState('am');
+  
+  // Afaanichi akka hinbadne localStorage irraa fudhata (Amaarኛ, Oromoo, Ingliffaa)
+  const [lang, setLang] = useState(() => {
+    return localStorage.getItem('app_lang') || 'am';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('app_lang', lang);
+  }, [lang]);
+
   const [menuItems, setMenuItems] = useState([]);
 
-  // 1. ገጹ ሪፍሬሽ ሲደረግ ስክሮል ወደ ላይ እንዲመለስ ማድረግ
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
@@ -24,7 +32,6 @@ export default function App() {
     window.scrollTo(0, 0);
   }, []);
 
-  // 2. ከ Database ሜኑዎችን መጫን እና በ Socket Real-time ማዳመጥ
   useEffect(() => {
     const fetchMenu = async () => {
       try {
@@ -33,7 +40,7 @@ export default function App() {
           setMenuItems(res.data);
         }
       } catch (err) {
-        console.error("ሜኑዎችን መጫን አልተቻለም:", err);
+        console.error("Menu fetch error:", err);
       }
     };
 
@@ -48,7 +55,6 @@ export default function App() {
     };
   }, []);
 
-  // 3. ትዕዛዝ ሲላክ Tracker መክፈት
   const handlePlaceOrder = (newOrderData) => {
     setActiveOrder(newOrderData);
     setIsTrackerOpen(true);
@@ -73,10 +79,10 @@ export default function App() {
               } 
             />
 
-            {/* Admin Dashboard Route */}
+            {/* Admin Dashboard Route with lang prop */}
             <Route 
               path="/admin" 
-              element={<AdminDashboard />} 
+              element={<AdminDashboard lang={lang} />} 
             />
           </Routes>
 
