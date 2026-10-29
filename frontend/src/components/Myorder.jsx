@@ -13,7 +13,16 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
     try {
       const savedOrders = localStorage.getItem('myOrders') || localStorage.getItem('userOrders');
       if (savedOrders) {
-        setOrders(JSON.parse(savedOrders));
+        const parsedOrders = JSON.parse(savedOrders);
+        setOrders(parsedOrders);
+
+        // ✅ እያንዳንዱን ትዕዛዝ በሶኬት ሩም ውስጥ ማስገባት (Join Room)
+        parsedOrders.forEach(order => {
+          const rId = order.receiptId || order.id || order._id;
+          if (rId) {
+            socket.emit('joinRoom', String(rId).trim());
+          }
+        });
       } else {
         setOrders([]);
       }
@@ -38,8 +47,8 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
       const handleStatusUpdate = (updatedData) => {
         setOrders(prevOrders => {
           const updated = prevOrders.map(o => {
-            const currentId = o.receiptId || o.id || o._id;
-            const targetId = updatedData.receiptId || updatedData.id || updatedData._id;
+            const currentId = String(o.receiptId || o.id || o._id || '').trim();
+            const targetId = String(updatedData.receiptId || updatedData.id || updatedData._id || '').trim();
 
             if (currentId === targetId) {
               return { ...o, status: updatedData.status };
