@@ -273,7 +273,7 @@ export default function CheckoutModal({
               <div>
                 <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
                 <p className="text-lg font-black text-orange-400">
-                  {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተነበበም"}
+                  {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code "}
                 </p>
               </div>
             </div>
@@ -292,7 +292,7 @@ export default function CheckoutModal({
                 <div className="flex items-center gap-2 bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800">
                   <Building2 size={16} className="text-purple-400 shrink-0" />
                   <div>
-                    <span className="text-zinc-400 text-[10px] block">CBE (ንግድ ባንክ)</span>
+                    <span className="text-zinc-400 text-[10px] block">bank number</span>
                     <span className="font-mono font-bold text-white tracking-wide">1000123456789</span>
                   </div>
                 </div>
@@ -386,7 +386,7 @@ export default function CheckoutModal({
                   <div>
                     <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
                     <p className="text-lg font-black text-orange-400">
-                      {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተነበበም"}
+                      {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code "}
                     </p>
                   </div>
                 </div>

@@ -38,11 +38,15 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
       const handleStatusUpdate = (updatedData) => {
         setOrders(prevOrders => {
           const updated = prevOrders.map(o => {
-            if (o.receiptId === updatedData.receiptId || o.id === updatedData.receiptId || o._id === updatedData.receiptId) {
+            const currentId = o.receiptId || o.id || o._id;
+            const targetId = updatedData.receiptId || updatedData.id || updatedData._id;
+
+            if (currentId === targetId) {
               return { ...o, status: updatedData.status };
             }
             return o;
           });
+          
           localStorage.setItem('myOrders', JSON.stringify(updated));
           return updated;
         });
@@ -188,7 +192,7 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
                         <p className="text-[11px] text-zinc-400">{order.time || (order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : '')}</p>
                       </div>
                       <span className="px-2.5 py-1 bg-orange-500/10 border border-orange-500/30 text-orange-400 rounded-full text-[11px] font-bold whitespace-nowrap">
-                        {order.status || ''}
+                        {order.status || 'Pending'}
                       </span>
                     </div>
 
