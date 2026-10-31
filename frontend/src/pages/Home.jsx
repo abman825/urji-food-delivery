@@ -17,14 +17,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const socket = io(BACKEND_URL);
 
 export default function Home() {
-  const [lang, setLang] = useState(() => {
-    return localStorage.getItem('app_lang') || 'am';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('app_lang', lang);
-  }, [lang]);
-
+  const [lang, setLang] = useState('am');
   const t = translations?.[lang] || translations?.am || {};
 
   const { cartCount, totalPrice, cartItems, clearCart, addToCart } = useCart();
@@ -33,6 +26,9 @@ export default function Home() {
 
   const [myActiveOrder, setMyActiveOrder] = useState(null);
   const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
+
+  // 1. የካፌ መለያ (Cafe ID) State
+  const [currentCafeId, setCurrentCafeId] = useState(localStorage.getItem('currentCafeId') || '');
 
   const [customerInfo, setCustomerInfo] = useState({ 
     name: '', 
@@ -55,17 +51,22 @@ export default function Home() {
   const containerRef = useRef(null);
   const { scrollProgress, activeCardIndex } = useVideoScroll(containerRef, videoRef);
 
-  // ቋንቋዎችን በሦስቱም ቋንቋ በትክክል እንዲያሳይ የተደረገ
   const categories = lang === 'om' 
     ? ['Hunda', 'Nyaata', 'Fast Food', 'Juice', 'Dhugaatii Qabbanaawaa', "Dhugaatii Ho'aa"]
     : lang === 'en'
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
-    : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ሙቅ መጠጥ'];
+    : ['ሁሉንም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
 
-  // 1. Table number handling via QR code URL & cleanup
+  // 1. Table number እና Cafe ID ከ URL (QR Code) መቀበል
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
     const tableParam = queryParams.get('table') || queryParams.get('tableNo');
+    const cafeParam = queryParams.get('cafe') || queryParams.get('cafeId');
+
+    if (cafeParam) {
+      setCurrentCafeId(cafeParam);
+      localStorage.setItem('currentCafeId', cafeParam);
+    }
 
     if (tableParam) {
       sessionStorage.setItem('tableNo', tableParam);
@@ -87,14 +88,17 @@ export default function Home() {
     }
   }, []);
 
-  // 2. Fetch Menu from Backend
+  // 2. Fetch Menu from Backend (ለተመረጠው ካፌ ብቻ)
   useEffect(() => {
     const loadMenu = async () => {
+      setLoading(true);
       try {
-        const data = await fetchMenuItems();
+        const data = await fetchMenuItems(currentCafeId);
         if (data && Array.isArray(data) && data.length > 0) {
           setMenuItems(data);
           localStorage.setItem('customMenuItems', JSON.stringify(data));
+        } else {
+          setMenuItems([]);
         }
       } catch (err) {
         console.error("Failed to load menu from DB:", err);
@@ -102,11 +106,13 @@ export default function Home() {
         if (saved) {
           try { setMenuItems(JSON.parse(saved)); } catch (e) {}
         }
+      } finally {
+        setLoading(false);
       }
     };
 
     loadMenu();
-  }, []);
+  }, [currentCafeId]);
 
   // 3. Socket.io Real-time Menu Update
   useEffect(() => {
@@ -155,7 +161,7 @@ export default function Home() {
       const incomingReceiptId = String(data.receiptId || data.orderId || data.id || '').trim();
 
       if (currentReceiptId && incomingReceiptId && currentReceiptId === incomingReceiptId) {
-        if (['Completed', 'Finished', 'Delivered', 'ተጠናቀዋል'].includes(data.status)) {
+        if (['Completed', 'Finished', 'Delivered', 'ተጠናቋል'].includes(data.status)) {
           setMyActiveOrder(null);
           setIsOrderTrackerOpen(false);
           localStorage.removeItem('myPersonalOrder');
@@ -235,7 +241,7 @@ export default function Home() {
       alert(
         lang === 'om' ? "Dhiifama! Nyaatni/Dhugaatiin kun dhumateera." :
         lang === 'en' ? "Sorry, this item is currently out of stock!" :
-        "ይቅርታ! ይህ ምግብ/መጠጥ ለጊዜው አልተገኘም አብሮነቶን ይቅርታ ይልቁልን!"
+        "ይቅርታ! ይህ ምግብ/መጠጥ ለዛሬ አልቋል እባክዎን ሌላ ይምረጡ።"
       );
       return;
     }
@@ -255,7 +261,7 @@ export default function Home() {
           ? "Maaloo ajajuuf koodii QR minjaala irra jiru ammas Scan godhaa." 
           : lang === 'en' 
           ? "Please scan the table QR code again to place a new order!" 
-          : "እባክዎ አዲስ ትዕዛዝ ለማዘዝ የጠረጴዛውን QR Code በደግነት Scan ያድርጉ!"
+          : "እባክዎን አዲስ ትዕዛዝ ለማዘዝ የጠረጴዛውን QR Code በድጋሜ Scan ያድርጉ!"
       );
       return;
     }
@@ -263,6 +269,7 @@ export default function Home() {
     if (paymentMethod === 'Chapa') {
       try {
         const orderPayload = {
+          cafeId: currentCafeId, // የካፌ መለያ መጨመር
           receiptId: receiptId || `REC-${Date.now().toString().slice(-6)}`,
           name: customerInfo.name,
           phone: customerInfo.phone,
@@ -295,6 +302,7 @@ export default function Home() {
     } else {
       try {
         const formData = new FormData();
+        formData.append('cafeId', currentCafeId); // የካፌ መለያ መጨመር
         formData.append('receiptId', receiptId);
         formData.append('socketId', socket ? socket.id : '');
         formData.append('lang', lang);
@@ -315,6 +323,7 @@ export default function Home() {
         const finalReceiptId = result?.receiptId || receiptId || `REC-${Date.now().toString().slice(-6)}`;
 
         const newOrderObj = {
+          cafeId: currentCafeId,
           receiptId: finalReceiptId,
           status: 'Pending',
           paymentMethod: paymentMethod,
@@ -334,7 +343,7 @@ export default function Home() {
           socket.emit('joinOrderRoom', finalReceiptId);
         }
 
-        const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተሳክቷል! ደረሰኝ ቁጥር:";
+        const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተልኳል! ደረሰኝ ቁጥር:";
         alert(`✅ ${successText} ${finalReceiptId}`);
         
         setIsModalOpen(false); 
@@ -372,7 +381,7 @@ export default function Home() {
     } else if (activeTabIndex === 4) {
       matchesCategory = cat.includes('ቀዝቃዛ') || cat.includes('cold') || cat.includes('qabbanaawaa');
     } else if (activeTabIndex === 5) {
-      matchesCategory = cat.includes('ሙቅ') || cat.includes('hot') || cat.includes("ho'aa");
+      matchesCategory = cat.includes('ትኩስ') || cat.includes('hot') || cat.includes("ho'aa");
     }
 
     return matchesSearch && matchesCategory;
@@ -457,7 +466,7 @@ export default function Home() {
                   ))
                 ) : (
                   <div className="col-span-full text-center py-12 text-zinc-400 font-bold flex flex-col items-center justify-center gap-3">
-                    <p>{lang === 'om' ? "Wanti barbaaddan hin argamne" : lang === 'en' ? "No items found" : "የተፈለገው ምግብ አልተገኘም"}</p>
+                    <p>{lang === 'om' ? "Wanti barbaaddan hin argamne" : lang === 'en' ? "No items found" : "የፈለጉት ምግብ አልተገኘም"}</p>
                     <button onClick={() => setSearchQuery('')} className="bg-zinc-800 text-orange-500 text-xs px-4 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-700 transition-all cursor-pointer">
                       Clear Search
                     </button>

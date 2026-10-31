@@ -13,16 +13,7 @@ const socket = io(BACKEND_URL, { autoConnect: true });
 export default function App() {
   const [isTrackerOpen, setIsTrackerOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(null);
-  
-  // Afaanichi akka hinbadne localStorage irraa fudhata (Amaarኛ, Oromoo, Ingliffaa)
-  const [lang, setLang] = useState(() => {
-    return localStorage.getItem('app_lang') || 'am';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('app_lang', lang);
-  }, [lang]);
-
+  const [lang, setLang] = useState('am');
   const [menuItems, setMenuItems] = useState([]);
 
   useEffect(() => {

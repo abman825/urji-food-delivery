@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Upload, CreditCard, Utensils, CheckSquare, Square, Smartphone, Building2, Loader2, MessageSquare, QrCode } from 'lucide-react';
 import { io } from 'socket.io-client';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const socket = io(BACKEND_URL);
 
 export default function CheckoutModal({
@@ -30,7 +30,7 @@ export default function CheckoutModal({
       title: "ትዕዛዝዎን ያጠናቅቁ",
       orderByTable: "በወንበር ቁጥር ለማዘዝ",
       orderByPayment: "ክፍያ በመክፈል ለማዘዝ",
-      dineIn: "እዚሁ (Dine-in)",
+      dineIn: "እዚህ (Dine-in)",
       takeaway: "ይዞ ለመሄድ (Takeaway)",
       tableNumber: "የወንበር/ጠረጴዛ ቁጥር",
       tablePlaceholder: "በ QR Code የተያዘ",
@@ -55,7 +55,7 @@ export default function CheckoutModal({
       payWithChapa: "በ Chapa (ኦንላይን)",
       orderNoteLabel: "ተጨማሪ አስተያየት / ማስታወሻ",
       orderNotePlaceholder: "ምሳሌ፤ ሽንኩርት አይግባበት፣ ጨው አይበዛበት፣ በርበሬ ቀንስልኝ...",
-      qrNotice: "ጠረጴዛዎ ላይ ያለውን QR Code ስካን በማድረግ የመረጡት ወንበር ቁጥር፡"
+      qrNotice: "ጠረጴዛዎ ላይ ያለውን QR Code ስካን በማድረግ የመረጡት ወንበር ቁጥር፤"
     },
     om: {
       title: "Ajaja Keessan Xumuraa",
@@ -123,6 +123,25 @@ export default function CheckoutModal({
 
   const t = modalText[lang] || modalText.am;
 
+  // 📸 የፎቶ ፋይሉን ወደ Cloudinary የመላኪያ ተግባር
+  const uploadToCloudinary = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await fetch(`${BACKEND_URL}/api/upload-image`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      return data.imageUrl || "";
+    } catch (err) {
+      console.error("Cloudinary Upload Error:", err);
+      return "";
+    }
+  };
+
   const onCheckoutTypeChange = (type) => {
     setCheckoutType(type);
     if (type === 'table') {
@@ -143,7 +162,7 @@ export default function CheckoutModal({
   const onSubmitClick = async () => {
     if (isSubmitting) return;
 
-    // 🔴 1. Dine-In ከሆነ የጠረጴዛ ቁጥር በ QR Code መገኘቱን ማረጋገጥ
+    // 1. Dine-In ማረጋገጫ
     const isDineIn = checkoutType === 'table' || (checkoutType === 'online' && customerInfo.orderType === 'Dine-in');
     if (isDineIn) {
       if (!customerInfo.tableNo || !String(customerInfo.tableNo).trim()) {
@@ -156,7 +175,7 @@ export default function CheckoutModal({
       }
     }
 
-    // 🔴 2. Takeaway Validation
+    // 2. Takeaway ማረጋገጫ
     if (checkoutType === 'online' && customerInfo.orderType === 'Takeaway') {
       if (!customerInfo.name || !customerInfo.name.trim()) {
         alert(lang === 'am' ? 'እባክዎን ሙሉ ስምዎን ያስገቡ!' : lang === 'om' ? 'Maaloo maqaa guutuu galchaa!' : 'Please enter your name!');
@@ -179,9 +198,13 @@ export default function CheckoutModal({
     setIsSubmitting(true);
 
     try {
+      let uploadedScreenshotUrl = "";
+      if (selectedFile) {
+        uploadedScreenshotUrl = await uploadToCloudinary(selectedFile);
+      }
+
       const generatedReceiptId = `REC-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      // 🔴 የክፍያ መንገዱን በደንብ መወሰን (Chapa ወይም Screenshot/Cash)
       const currentPaymentMethod = selectedFile 
         ? 'Screenshot' 
         : (paymentMethod || (checkoutType === 'online' ? 'Chapa' : 'Cash'));
@@ -191,21 +214,16 @@ export default function CheckoutModal({
         items: cartItems,
         totalPrice: totalPrice,
         status: 'Pending',
-        paymentMethod: currentPaymentMethod, // ✅ ክፍያው Chapa መሆኑን በትክክል እዚህ ይይዛል
+        paymentMethod: currentPaymentMethod,
+        screenshotUrl: uploadedScreenshotUrl,
+        socketId: socket.id || "",
         tableNo: customerInfo.tableNo || null,
         customerInfo: customerInfo,
         lang: lang,
         createdAt: new Date().toISOString()
       };
 
-      // LocalStorage ላይ ማስቀመጥ
-      localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
-
-      const existingOrders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-      localStorage.setItem('myOrders', JSON.stringify([newOrderObj, ...existingOrders]));
-      localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
-
-      await handleOrder(generatedReceiptId);
+      await handleOrder(newOrderObj);
 
     } catch (error) {
       console.error("Order submission error:", error);
@@ -262,10 +280,9 @@ export default function CheckoutModal({
           </button>
         </div>
 
-        {/* ሀ) በወንበር ቁጥር ለማዘዝ (Dine-In) */}
+        {/* Order by Table (Dine-In) */}
         {checkoutType === 'table' && (
           <div className="space-y-4">
-            {/* የ QR Code / Table Badge ማሳያ */}
             <div className="bg-orange-950/40 border border-orange-500/30 rounded-2xl p-4 flex items-center gap-3">
               <div className="p-2.5 bg-orange-600/20 text-orange-500 rounded-xl">
                 <QrCode size={24} />
@@ -273,7 +290,7 @@ export default function CheckoutModal({
               <div>
                 <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
                 <p className="text-lg font-black text-orange-400">
-                  {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code "}
+                  {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተነበበም"}
                 </p>
               </div>
             </div>
@@ -292,7 +309,7 @@ export default function CheckoutModal({
                 <div className="flex items-center gap-2 bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800">
                   <Building2 size={16} className="text-purple-400 shrink-0" />
                   <div>
-                    <span className="text-zinc-400 text-[10px] block">bank number</span>
+                    <span className="text-zinc-400 text-[10px] block">CBE (ንግድ ባንክ)</span>
                     <span className="font-mono font-bold text-white tracking-wide">1000123456789</span>
                   </div>
                 </div>
@@ -335,7 +352,7 @@ export default function CheckoutModal({
           </div>
         )}
 
-        {/* ለ) በክፍያ ለማዘዝ (Dine-in / Takeaway) */}
+        {/* Order by Payment (Dine-in / Takeaway) */}
         {checkoutType === 'online' && (
           <div className="space-y-4">
             <div className="flex gap-2 p-1 bg-zinc-800 rounded-xl">
@@ -386,7 +403,7 @@ export default function CheckoutModal({
                   <div>
                     <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
                     <p className="text-lg font-black text-orange-400">
-                      {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code "}
+                      {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተነበበም"}
                     </p>
                   </div>
                 </div>

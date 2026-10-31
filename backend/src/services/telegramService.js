@@ -2,14 +2,11 @@ import axios from 'axios';
 import FormData from 'form-data';
 import https from 'https';
 import { TELEGRAM_TOKEN, ADMIN_CHAT_ID } from '../config/constants.js';
-import Order from '../models/Order.js'; // የትዕዛዝ ሞዴልህን (Order Model) እዚህ ጋር መጥራትህን እርግጠኛ ሁን
+import Order from '../models/Order.js'; 
 
-// Node.js HTTPS Agent config (IPv4 ለመጠቀም)
+
 const agent = new https.Agent({ family: 4 });
 
-/**
- * 1. በፎቶ/ስክሪንሾት የሚላክ የትዕዛዝ ማስታወቂያ (2 Inline Buttons አብረው ይላካሉ)
- */
 export const sendPhotoToTelegram = async (fileBuffer, caption, receiptId = '') => {
   const form = new FormData();
   form.append('chat_id', ADMIN_CHAT_ID);
@@ -36,9 +33,6 @@ export const sendPhotoToTelegram = async (fileBuffer, caption, receiptId = '') =
   });
 };
 
-/**
- * 2. በጽሑፍ ብቻ የሚላክ የትዕዛዝ ማስታወቂያ (2 Inline Buttons አብረው ይላካሉ)
- */
 export const sendMessageToTelegram = async (message, receiptId = '') => {
   const preparingData = receiptId ? `prep_${receiptId}` : 'prep_order';
   const deliveredData = receiptId ? `deliv_${receiptId}` : 'deliv_order';
@@ -61,9 +55,6 @@ export const sendMessageToTelegram = async (message, receiptId = '') => {
   });
 };
 
-/**
- * 3. Telegram ላይ አዝራሩ (Button) ሲጫን የሚሰራ Callback Handler
- */
 export const handleTelegramCallback = async (callbackQuery, io) => {
   try {
     const message = callbackQuery.message;
@@ -71,7 +62,13 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
     const messageId = message.message_id;
     const data = callbackQuery.data;
 
-    const isPreparing = data.startsWith('prep_') || data.startsWith('confirm');
+    // 1. ቴሌግራም ላይ አዝራሩ (Button) Loading እንዲያቆም ወዲያውኑ ምላሽ መስጠት
+    await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/answerCallbackQuery`, {
+      callback_query_id: callbackQuery.id,
+      text: "እየተሰራ ነው..."
+    }, { httpsAgent: agent });
+
+    const isPreparing = data.startsWith('prep_');
     const isDelivered = data.startsWith('deliv_');
 
     if (isPreparing || isDelivered) {
@@ -84,18 +81,11 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
       }
 
       const newStatus = isPreparing ? 'In Progress' : 'Delivered';
-      const alertMessage = isPreparing ? 'ትዕዛዙ እየተሰራ ነው ተብሏል!' : 'ትዕዛዙ ለደንበኛው ደርሷል!';
       const userMessage = isPreparing 
-        ? 'ትዕዛዝዎ ደርሶናል! በዝግጅት ላይ ነን፤ ቶሎ እናመጣለን።' 
-        : 'ምግብዎ ደርሷል! መልካም ምግብ፤ እናመሰግናለን።';
+        ? 'ትዕዛዝዎ እየተዘጋጀ ነው!' 
+        : 'ትዕዛዝዎ ደርሷል!';
 
-      // 1. የቴሌግራም አዝራር ነካኪ Spinner ማቆሚያ (Popup Alert)
-      await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/answerCallbackQuery`, {
-        callback_query_id: callbackQuery.id,
-        text: alertMessage
-      }, { httpsAgent: agent });
-
-      // 2. Database (MongoDB) ላይ የትዕዛዙን Status Update ማድረግ
+      // 2. በ MongoDB ውስጥ የትዕዛዙን Status ማስተካከል
       if (receiptId) {
         await Order.findOneAndUpdate(
           { receiptId: receiptId },
@@ -103,7 +93,7 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
         );
       }
 
-      // 3. Socket.io በመጠቀም ወደ ድህረ-ገጽ እና ለደንበኛው ማሳወቅ
+      // 3. በ Socket.io አማካኝነት ሪል-ታይም አፕዴት መላክ
       if (receiptId && io) {
         const payload = { 
           receiptId, 
@@ -111,23 +101,18 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
           message: userMessage 
         };
 
-        // ለደንበኛው ቻናል ይላካል
         io.to(`order_${receiptId}`).emit('orderStatusUpdated', payload);
-        
-        // ለአጠቃላይ Socket አዳማጮች
         io.emit('orderStatusUpdated', payload);
-        
-        // ለአድሚን ዳሽቦርድ
         io.to('adminRoom').emit('adminOrderStatusChanged', payload);
       }
 
-      // 4. በቴሌግራም መልእክቱ ስር የደረሰኝ ሁኔታ ማረጋገጫ መላክ
+      // 4. በቴሌግራም የሚመጣውን መልእክት ማስተካከል
       const statusText = isPreparing ? '👨‍🍳 <b>በዝግጅት ላይ ነው</b>' : '✅ <b>ለደንበኛው ደርሷል</b>';
       
       return await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
         chat_id: chatId,
         reply_to_message_id: messageId,
-        text: `<b>የደረሰኝ ቁጥር <code>${receiptId || ''}</code> ሁኔታ ወደ ${statusText} ተቀይሯል።</b>`,
+        text: `<b>የተዕዛዝ ቁጥር <code>${receiptId || ''}</code> ሁኔታ ወደ ${statusText} ተቀይሯል!</b>`,
         parse_mode: 'HTML'
       }, {
         httpsAgent: agent,
@@ -139,9 +124,7 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
   }
 };
 
-/**
- * 4. የዕለት ሽያጭ ማጠቃለያ ሪፖርት ለቴሌግራም አድሚን መላኪያ (/today Command)
- */
+
 export const sendDailyReportToTelegram = async (totalOrdersCount, totalRevenue) => {
   const summaryMessage = `
 📊 <b>የዛሬው የሽያጭ ማጠቃለያ (Daily Sales Report)</b>

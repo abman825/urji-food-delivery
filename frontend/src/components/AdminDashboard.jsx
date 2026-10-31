@@ -30,18 +30,19 @@ const AdminDashboard = ({ lang: propLang }) => {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
+  // 💡 ሎካል ሆስት ላይ ስትሰራ ከሎካል ሰርቨርህ (5000) ጋር እንዲገናኝ ማረጋገጥ
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
   // Multilingual labels for Admin Dashboard
   const adminLabels = {
     am: {
       title: "የአድሚን ዳሽቦርድ (Admin Dashboard)",
-      back: "ተመለስ",
+      back: "ተመልስ",
       refresh: "እድስ (Refresh)",
       daily: "የዛሬ ቀን ሽያጭ",
       weekly: "የሳምንት ሽያጭ",
       monthly: "የወር ሽያጭ",
-      yearly: "የአመት ሽያጭ",
+      yearly: "የዓመት ሽያጭ",
       topItemsTitle: "በከፍተኛ ሁኔታ የተሸጡ ምግቦች (Top Items)",
       sold: "ተሸጧል",
       noTopItems: "ምንም የተሸጠ ምግብ የለም",
@@ -55,7 +56,7 @@ const AdminDashboard = ({ lang: propLang }) => {
       details: "ዝርዝር",
       view: "እይ",
       guest: "እንግዳ",
-      notRecorded: "አልተመዘገበም",
+      notRecorded: "ልተመዘገበም",
       orderDetailsTitle: "የትዕዛዝ ሙሉ መረጃ",
       paymentMethod: "የክፍያ መንገድ:",
       orderedItems: "የታዘዙ ምግቦች ዝርዝር:",
@@ -146,7 +147,7 @@ const AdminDashboard = ({ lang: propLang }) => {
       setTopItems(response.data.topItems || []);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
-    } finally {
+    } font-bold ;{
       setLoading(false);
     }
   };
@@ -282,7 +283,7 @@ const AdminDashboard = ({ lang: propLang }) => {
                     </td>
                     <td className="p-3">
                       <span className={`px-2.5 py-1 text-[11px] rounded-lg font-bold border ${
-                        order.status === 'Completed' || order.status === 'ተጠናቀዋል'
+                        order.status === 'Completed' || order.status === 'ተጠናቋል' || order.status === 'Delivered'
                           ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
                           : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
                       }`}>
@@ -352,22 +353,24 @@ const AdminDashboard = ({ lang: propLang }) => {
               {(selectedOrder.items || selectedOrder.cartItems || []).map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-xs">
                   <div>
-                    <p className="font-bold text-slate-200">{item.name || item.title}</p>
-                    <p className="text-slate-400">{item.price} ETB x {item.quantity || 1}</p>
+                    <p className="font-bold text-slate-200">
+                      {typeof item.name === 'object' ? (item.name[lang] || item.name.am || item.name.en) : (item.name || item.title)}
+                    </p>
+                    <p className="text-slate-400">{item.price} ETB x {item.quantity || item.qty || 1}</p>
                   </div>
                   <p className="font-black text-emerald-400">
-                    {(Number(item.price) || 0) * (Number(item.quantity) || 1)} ETB
+                    {(Number(item.price) || 0) * (Number(item.quantity || item.qty) || 1)} ETB
                   </p>
                 </div>
               ))}
             </div>
 
             {/* Screenshot Preview */}
-            {selectedOrder.screenshotUrl && (
+            {(selectedOrder.screenshotUrl || selectedOrder.screenshot) && (
               <div className="mb-4">
                 <h4 className="font-bold text-xs text-slate-400 mb-2">{t.screenshot}</h4>
                 <img 
-                  src={selectedOrder.screenshotUrl} 
+                  src={selectedOrder.screenshotUrl || selectedOrder.screenshot} 
                   alt="Receipt Screenshot" 
                   className="w-full max-h-48 object-cover rounded-xl border border-slate-800"
                 />

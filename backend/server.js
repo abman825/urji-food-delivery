@@ -13,25 +13,35 @@ connectDB();
 const app = express();
 const httpServer = createServer(app);
 
-app.use(cors());
+// ✅ CORS ቅንብርን ማስተካከል (ሁሉም ፕላትፎርሞች እና ሎካል ሆስት በትክክል እንዲገናኙ)
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  credentials: true
+}));
 
 // Socket.io Config
 const io = new Server(httpServer, {
-  cors: { origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] }
+  cors: { 
+    origin: "*", 
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'] // ለሶኬት ግንኙነት መረጋጋት በጣም ጠቃሚ ነው
 });
 
 // Payload Limit
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Express Request ላይ Socket.io ማያያዝ
+// Express Request ላይ Socket.io ማﻘቋሚያ
 app.set('socketio', io);
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
-// API Routes (Webhook እና ሌሎች የኤፒአይ መንገዶች እዚህ ይስተናገዳሉ)
+// API Routes
 app.use('/api', apiRoutes);
 
 // Socket.io Real-time Connection Logic
@@ -84,7 +94,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Order Status Update Real-time Event
   socket.on('updateOrderStatus', async (data) => {
     const { receiptId, status } = data;
     console.log(`🔄 Updating Order ${receiptId} to: ${status}`);
