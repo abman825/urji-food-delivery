@@ -6,8 +6,8 @@ import {
   initiateChapaPayment, 
   handleChapaSuccess,
   toggleAvailability,
-  getAdminDashboardStats,
-  getAllOrders
+  getAdminDashboardStats, // <-- ለአድሚን ዳሽቦርድ
+  getAllOrders            // <-- ሁሉንም ትዕዛዞች ለማምጣት
 } from '../controllers/orderController.js';
 import MenuItem from '../models/MenuItem.js';
 import Order from '../models/Order.js';
@@ -15,7 +15,6 @@ import {
   handleTelegramCallback, 
   sendDailyReportToTelegram 
 } from '../services/telegramService.js';
-import Admin from '../models/Admin.js';
 
 const router = express.Router();
 
@@ -33,56 +32,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-// --- ADMIN PASSWORD ROUTES ---
-// 1. ጽሑፍ/የይለፍ ቃል ማረጋገጥ (Verify Password)
-router.post('/admin/verify-password', async (req, res) => {
-  try {
-    const { password } = req.body;
-    let admin = await Admin.findOne({ username: 'admin' });
-    
-    // አድሚን ከሌለ በነባሪ '123' ብሎ ይፍጠረው
-    if (!admin) {
-      admin = await Admin.create({ username: 'admin', password: '123' });
-    }
-
-    if (admin.password === password) {
-      return res.json({ success: true, message: "የይለፍ ቃል ትክክል ነው" });
-    } else {
-      return res.status(400).json({ success: false, message: "የገባው የይለፍ ቃል ስህተት ነው" });
-    }
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 2. የይለፍ ቃል መቀየር (Change Password)
-router.post('/admin/change-password', async (req, res) => {
-  try {
-    const { oldPassword, newPassword } = req.body;
-    let admin = await Admin.findOne({ username: 'admin' });
-
-    if (!admin) {
-      admin = await Admin.create({ username: 'admin', password: '123' });
-    }
-
-    if (admin.password !== oldPassword) {
-      return res.status(400).json({ success: false, message: "የቀድሞው የይለፍ ቃል ስህተት ነው!" });
-    }
-
-    if (!newPassword || newPassword.length < 3) {
-      return res.status(400).json({ success: false, message: "አዲሱ የይለፍ ቃል ቢያንስ 3 ፊደላት መሆን አለበት!" });
-    }
-
-    admin.password = newPassword;
-    await admin.save();
-
-    res.json({ success: true, message: "የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል!" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// --- CLOUDINARY FILE UPLOAD ROUTE ---
+// --- 📸 CLOUDINARY FILE UPLOAD ROUTE ---
 router.post('/upload-image', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -100,7 +50,9 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
   }
 });
 
-// --- MENU ROUTES ---
+// --- 🍔 MENU ROUTES ---
+
+// 1. ሁሉንም ሜኑ ከ Database ለማንበብ
 router.get('/menu', async (req, res) => {
   try {
     const items = await MenuItem.find();
@@ -110,6 +62,7 @@ router.get('/menu', async (req, res) => {
   }
 });
 
+// 2. ሜኑ ሲቀየር/ሲጨመር Database እና Socket ማደሻ (Real-time Broadcast)
 router.post('/menu/update', async (req, res) => {
   try {
     const { items } = req.body;
@@ -128,29 +81,29 @@ router.post('/menu/update', async (req, res) => {
   }
 });
 
-// --- ORDER ROUTES ---
+// --- 📦 ORDER ROUTES ---
 router.post('/orders', upload.single('screenshot'), createScreenshotOrder);
 router.post('/chapa-pay', initiateChapaPayment);
 router.post('/chapa-success-notify', handleChapaSuccess);
 router.patch('/menu/:id/toggle', toggleAvailability);
 
-// --- ADMIN DASHBOARD ROUTES ---
+// --- 📊 ADMIN DASHBOARD ROUTES ---
 router.get('/admin/dashboard-stats', getAdminDashboardStats);
 router.get('/admin/orders', getAllOrders);
 
-// --- TELEGRAM BOT WEBHOOK ROUTE (/api/telegram-webhook) ---
+// --- 🤖 TELEGRAM BOT WEBHOOK ROUTE ---
 router.post('/telegram-webhook', async (req, res) => {
   try {
     const { callback_query, message } = req.body;
-    const io = req.app.get('socketio');
+    const io = req.app.get('socketio') || req.app.get('io');
 
-    // 1. ከቴሌግራም ቁልፍ (Button) ሲጫን
+    // 1. አድሚኑ በቴሌግራም አዝራር (Button) ሲጫን
     if (callback_query) {
       await handleTelegramCallback(callback_query, io);
       return res.status(200).send('OK');
     }
 
-    // 2. /today ወይም /stats ትዕዛዝ ሲሰጥ
+    // 2. አድሚኑ /today ወይም /stats ብሎ ሲጽፍ
     if (message && message.text) {
       const command = message.text.trim().toLowerCase();
 

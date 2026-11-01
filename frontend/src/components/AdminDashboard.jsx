@@ -30,14 +30,12 @@ const AdminDashboard = ({ lang: propLang }) => {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // 💡 ሎካል ሆስት ላይ ስትሰራ ከሎካል ሰርቨርህ (5000) ጋር እንዲገናኝ ማረጋገጥ
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-  // Multilingual labels for Admin Dashboard
   const adminLabels = {
     am: {
       title: "የአድሚን ዳሽቦርድ (Admin Dashboard)",
-      back: "ተመልስ",
+      back: "ተመለስ",
       refresh: "እድስ (Refresh)",
       daily: "የዛሬ ቀን ሽያጭ",
       weekly: "የሳምንት ሽያጭ",
@@ -46,9 +44,9 @@ const AdminDashboard = ({ lang: propLang }) => {
       topItemsTitle: "በከፍተኛ ሁኔታ የተሸጡ ምግቦች (Top Items)",
       sold: "ተሸጧል",
       noTopItems: "ምንም የተሸጠ ምግብ የለም",
-      allOrdersTitle: "የሁሉም ትዕዛዞች ዝርዝር",
+      allOrdersTitle: "የሁሉንም ትዕዛዞች ዝርዝር",
       orderId: "የትዕዛዝ ID",
-      customerName: "የደንበኛ ስም",
+      customerName: "የደበኛ ስም",
       phone: "ስልክ",
       price: "ዋጋ",
       status: "ሁኔታ",
@@ -147,7 +145,7 @@ const AdminDashboard = ({ lang: propLang }) => {
       setTopItems(response.data.topItems || []);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
-    } font-bold ;{
+    } finally {
       setLoading(false);
     }
   };

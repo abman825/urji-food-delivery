@@ -7,7 +7,8 @@ import AdminDashboard from './components/AdminDashboard';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
+// 💡 ሎካል ሆስት ላይ ስትሰራ ከሎካል ሰርቨርህ (5000) ጋር እንዲገናኝ ማድረግ
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const socket = io(BACKEND_URL, { autoConnect: true });
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
   const [lang, setLang] = useState('am');
   const [menuItems, setMenuItems] = useState([]);
 
+  // 1. ገፅ ሲከፈት ስክሮል ወደ ላይ እንዲመለስ ማድረግ
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
@@ -23,6 +25,7 @@ export default function App() {
     window.scrollTo(0, 0);
   }, []);
 
+  // 2. ከ Database ምግቦችን መሳብ እና በ Socket Real-time ማሻሻል
   useEffect(() => {
     const fetchMenu = async () => {
       try {
@@ -31,7 +34,7 @@ export default function App() {
           setMenuItems(res.data);
         }
       } catch (err) {
-        console.error("Menu fetch error:", err);
+        console.error("ምግቦችን መሳብ አልተቻለም:", err);
       }
     };
 
@@ -46,6 +49,7 @@ export default function App() {
     };
   }, []);
 
+  // 3. ትዕዛዝ ሲላክ Tracker መክፈት
   const handlePlaceOrder = (newOrderData) => {
     setActiveOrder(newOrderData);
     setIsTrackerOpen(true);
@@ -70,10 +74,10 @@ export default function App() {
               } 
             />
 
-            {/* Admin Dashboard Route with lang prop */}
+            {/* Admin Dashboard Route */}
             <Route 
               path="/admin" 
-              element={<AdminDashboard lang={lang} />} 
+              element={<AdminDashboard />} 
             />
           </Routes>
 

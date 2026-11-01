@@ -13,7 +13,7 @@ connectDB();
 const app = express();
 const httpServer = createServer(app);
 
-// ✅ CORS ቅንብርን ማስተካከል (ሁሉም ፕላትፎርሞች እና ሎካል ሆስት በትክክል እንዲገናኙ)
+// ✅ CORS ቅንብሩን ማስተካከል (ሁሉም ፖርቶች እና ሞባይል በፕላትፎርም እንዲገናኙ)
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -27,14 +27,14 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true
   },
-  transports: ['websocket', 'polling'] // ለሶኬት ግንኙነት መረጋጋት በጣም ጠቃሚ ነው
+  transports: ['websocket', 'polling'] // ለሞባይል ግንኙነት መረጋጋት በጣም ጠቃሚ ነው
 });
 
 // Payload Limit
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Express Request ላይ Socket.io ማﻘቋሚያ
+// Express Request ላይ Socket.io ማስተዋወቅ
 app.set('socketio', io);
 app.use((req, res, next) => {
   req.io = io;
@@ -56,12 +56,18 @@ io.on('connection', (socket) => {
   // Admin Room Join
   socket.on('joinAdmin', () => socket.join('adminRoom'));
 
-  // Specific Order Room Join (ደንበኛው ትዕዛዙን ለመከታተል)
-  socket.on('joinOrderRoom', (receiptId) => {
+  // Specific Order Room Join (ደንበኛው ትዕዛዙን ለመከታተል) - 💡 እዚህ ጋር ተስተካክሏል
+  socket.on('joinOrderRoom', (data) => {
+    const receiptId = typeof data === 'object' && data !== null 
+      ? (data.receiptId || data.id || data._id) 
+      : data;
+
     if (receiptId) {
       const roomName = `order_${String(receiptId).trim()}`;
       socket.join(roomName);
       console.log(`📌 Socket ${socket.id} joined room: ${roomName}`);
+    } else {
+      console.log(`⚠️ Invalid receiptId received for joinOrderRoom from socket ${socket.id}`, data);
     }
   });
 

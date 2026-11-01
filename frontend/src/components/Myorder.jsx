@@ -9,6 +9,24 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
   const [orders, setOrders] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
 
+  const t = {
+    title: { am: "የእኔ ትዕዛዞች", om: "Ajajawwan Koo", en: "My Orders" },
+    subtitle: { am: "ያስቀመጧቸውን ምግብ ፈለግ እዚህ ጋር መከታተል ይችላሉ", om: "Haala ajajawwan keessanii asitti hordofuu dandeessu", en: "Track the status of your orders here" },
+    historyCount: { am: "የእኔ የትዕዛዝ ታሪክ", om: "Seenaa Ajajawwan Koo", en: "Order History" },
+    refresh: { am: "ዕድሱ", om: "Haromsi", en: "Refresh" },
+    clearHistory: { am: "ታሪክ አጽዳ", om: "Seenaa Haquuf", en: "Clear History" },
+    noOrders: { am: "ምንም የተቀምጠ ትዕዛዝ የለም", om: "Ajajni taa'e hin jiru", en: "No saved orders" },
+    table: { am: "ሰንጠረዥ/ቁጥር:", om: "Minjaala:", en: "Table No:" },
+    phone: { am: "ስልክ:", om: "Bilbila:", en: "Phone:" },
+    orderType: { am: "አይነት:", om: "Gosa:", en: "Type:" },
+    paymentMethod: { am: "የክፍያ መንገድ:", om: "Madda Kaffaltii:", en: "Payment Method:" },
+    screenshotTitle: { am: "📄 የክፍያ ደረሰኝ:", om: "📄 Ragaan Kaffaltii:", en: "📄 Payment Proof:" },
+    total: { am: "ጠቅላላ:", om: "Waliigala:", en: "Total:" },
+    confirmClear: { am: "እርግጠኛ ነዎት የትዕዛዝ ታሪክ ማጥፋት ይፈልጋሉ?", om: "Seenaa ajajaa haquuf mirkanaa'aadhaa?", en: "Are you sure you want to clear order history?" },
+    cash: { am: "በካሽ (Cash)", om: "Maallaqa Qabatamaa (Cash)", en: "Cash" },
+    bankProof: { am: "በደረሰኝ / ባንክ", om: "Ragaan / Baankii", en: "Receipt / Bank" }
+  };
+
   const loadMyOrders = () => {
     try {
       const savedOrders = localStorage.getItem('myOrders') || localStorage.getItem('userOrders');
@@ -16,7 +34,6 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
         const parsedOrders = JSON.parse(savedOrders);
         setOrders(parsedOrders);
 
-        // ✅ እያንዳንዱን ትዕዛዝ በሰርቨሩ ላይ ወደሚገኘው ሩም (order_REC-XXXXXX) መቀላቀል
         parsedOrders.forEach(order => {
           const rId = order.receiptId || order.id || order._id;
           if (rId) {
@@ -61,7 +78,6 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
         });
       };
 
-      // ሰርቨሩ ከሚልካቸው የሶኬት ኢቨንቶች ጋር ማያያዝ
       socket.on('orderStatusUpdated', handleStatusUpdate);
 
       return () => {
@@ -71,24 +87,6 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const t = {
-    title: { am: "የእኛ ትዕዛዞች", om: "Ajajawwan Koo", en: "My Orders" },
-    subtitle: { am: "ያዘዟቸውን ምግቦች ሁኔታ እዚህ መከታተል ይችላሉ", om: "Haala ajajawwan keessanii asitti hordofuu dandeessu", en: "Track the status of your orders here" },
-    historyCount: { am: "የእኛ የትዕዛዝ ታሪክ", om: "Seenaa Ajajawwan Koo", en: "Order History" },
-    refresh: { am: "እድስ", om: "Haromsi", en: "Refresh" },
-    clearHistory: { am: "ታሪክ አጽዳ", om: "Seenaa Haquuf", en: "Clear History" },
-    noOrders: { am: "ምንም የተቀመጠ ትዕዛዝ የለም", om: "Ajajni taa'e hin jiru", en: "No saved orders" },
-    table: { am: "ጠረጴዛ/ቁጥር:", om: "Minjaala:", en: "Table No:" },
-    phone: { am: "ስልክ:", om: "Bilbila:", en: "Phone:" },
-    orderType: { am: "አይነት:", om: "Gosa:", en: "Type:" },
-    paymentMethod: { am: "የክፍያ መንገድ:", om: "Madda Kaffaltii:", en: "Payment Method:" },
-    screenshotTitle: { am: "📄 የክፍያ ደረሰኝ:", om: "📄 Ragaan Kaffaltii:", en: "📄 Payment Proof:" },
-    total: { am: "ጠቅላላ:", om: "Waliigala:", en: "Total:" },
-    confirmClear: { am: "እርግጠኛ ነዎት የትዕዛዝ ታሪክ ማጥፋት ይፈልጋሉ?", om: "Seenaa ajajaa haquuf mirkanaa'aadhaa?", en: "Are you sure you want to clear order history?" },
-    cash: { am: "በካሽ (Cash)", om: "Maallaqa Qabatamaa (Cash)", en: "Cash" },
-    bankProof: { am: "በደረሰኝ / ባንክ", om: "Ragaan / Baankii", en: "Receipt / Bank" }
-  };
 
   const getScreenshotImg = (order) => {
     return order.screenshot || order.screenshotUrl || order.paymentProof || order.proofImg || order.receiptImage || null;
@@ -202,7 +200,7 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
                         <p className="text-[11px] text-zinc-400">{order.time || (order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : '')}</p>
                       </div>
                       <span className="px-2.5 py-1 bg-orange-500/10 border border-orange-500/30 text-orange-400 rounded-full text-[11px] font-bold whitespace-nowrap">
-                        {order.status || 'Pending'}
+                        {typeof order.status === 'object' ? (order.status[lang] || order.status.am || 'Pending') : (order.status || 'Pending')}
                       </span>
                     </div>
 
@@ -230,16 +228,22 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
                     </div>
 
                     <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
-                      {order.items?.map((item, itemIdx) => (
-                        <div key={itemIdx} className="flex justify-between items-center text-xs bg-zinc-900/30 p-2 rounded-lg">
-                          <span>
-                            {typeof item.name === 'object' ? (item.name[lang] || item.name.am || item.name.en) : item.name} x{item.quantity || item.qty || 1}
-                          </span>
-                          <span className="font-bold text-zinc-400">
-                            {((item.price || 0) * (item.quantity || item.qty || 1))} ETB
-                          </span>
-                        </div>
-                      ))}
+                      {order.items?.map((item, itemIdx) => {
+                        const itemName = typeof item.name === 'object' 
+                          ? (item.name[lang] || item.name.am || item.name.en || 'Item') 
+                          : (item.name || 'Item');
+
+                        return (
+                          <div key={itemIdx} className="flex justify-between items-center text-xs bg-zinc-900/30 p-2 rounded-lg">
+                            <span>
+                              {itemName} x{item.quantity || item.qty || 1}
+                            </span>
+                            <span className="font-bold text-zinc-400">
+                              {((item.price || 0) * (item.quantity || item.qty || 1))} ETB
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
 
                     {screenshotImg && (

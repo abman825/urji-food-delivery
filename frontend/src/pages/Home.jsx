@@ -7,9 +7,9 @@ import CheckoutModal from '../components/CheckoutModal';
 import MenuItemCard from '../components/MenuItemCard';
 import HeroSection from '../components/HeroSection';
 import OrderTrackerModal from '../components/OrderTrackerModal';
+import { menuItems as localMenuItems } from '../data/menuData';
 import { fetchMenuItems, initiateChapaPay, submitOrderFormData, verifyChapaPayment } from '../services/api';
 import { translations } from '../data/translations';
-import { menuItems as initialMenuItems } from '../data/menuData';
 import { useVideoScroll } from '../hooks/useVideoScroll';
 import { useCart } from '../context/CartContext';
 
@@ -27,22 +27,18 @@ export default function Home() {
   const [myActiveOrder, setMyActiveOrder] = useState(null);
   const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
 
-  // 1. የካፌ መለያ (Cafe ID) State
-  const [currentCafeId, setCurrentCafeId] = useState(localStorage.getItem('currentCafeId') || '');
-
   const [customerInfo, setCustomerInfo] = useState({ 
     name: '', 
     phone: '', 
     address: '', 
     time: '', 
     tableNo: '', 
-    orderType: 'Dine-in',
-    note: ''
+    orderType: 'Dine-in' 
   });
 
   const [selectedFile, setSelectedFile] = useState(null); 
-  const [menuItems, setMenuItems] = useState(initialMenuItems);
-  const [loading, setLoading] = useState(false);
+  const [menuItems, setMenuItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTabIndex, setActiveTabIndex] = useState(0);
 
@@ -55,66 +51,11 @@ export default function Home() {
     ? ['Hunda', 'Nyaata', 'Fast Food', 'Juice', 'Dhugaatii Qabbanaawaa', "Dhugaatii Ho'aa"]
     : lang === 'en'
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
-    : ['ሁሉንም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ትኩስ መጠጥ'];
+    : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ሙቅ መጠጥ'];
 
-  // 1. Table number እና Cafe ID ከ URL (QR Code) መቀበል
-  useEffect(() => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const tableParam = queryParams.get('table') || queryParams.get('tableNo');
-    const cafeParam = queryParams.get('cafe') || queryParams.get('cafeId');
-
-    if (cafeParam) {
-      setCurrentCafeId(cafeParam);
-      localStorage.setItem('currentCafeId', cafeParam);
-    }
-
-    if (tableParam) {
-      sessionStorage.setItem('tableNo', tableParam);
-      setCustomerInfo((prev) => ({
-        ...prev,
-        tableNo: tableParam,
-        orderType: 'Dine-in'
-      }));
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else {
-      const savedTable = sessionStorage.getItem('tableNo');
-      if (savedTable) {
-        setCustomerInfo((prev) => ({
-          ...prev,
-          tableNo: savedTable,
-          orderType: 'Dine-in'
-        }));
-      }
-    }
-  }, []);
-
-  // 2. Fetch Menu from Backend (ለተመረጠው ካፌ ብቻ)
-  useEffect(() => {
-    const loadMenu = async () => {
-      setLoading(true);
-      try {
-        const data = await fetchMenuItems(currentCafeId);
-        if (data && Array.isArray(data) && data.length > 0) {
-          setMenuItems(data);
-          localStorage.setItem('customMenuItems', JSON.stringify(data));
-        } else {
-          setMenuItems([]);
-        }
-      } catch (err) {
-        console.error("Failed to load menu from DB:", err);
-        const saved = localStorage.getItem('customMenuItems');
-        if (saved) {
-          try { setMenuItems(JSON.parse(saved)); } catch (e) {}
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadMenu();
-  }, [currentCafeId]);
-
-  // 3. Socket.io Real-time Menu Update
+  // -------------------------------------------------------------
+  // REAL-TIME MENU SYNC
+  // -------------------------------------------------------------
   useEffect(() => {
     socket.on('updateMenu', (updatedMenu) => {
       if (Array.isArray(updatedMenu)) {
@@ -133,23 +74,36 @@ export default function Home() {
       });
     });
 
+    const handleSync = () => {
+      const saved = localStorage.getItem('customMenuItems');
+      if (saved) {
+        try {
+          setMenuItems(JSON.parse(saved));
+        } catch (e) {
+          console.error("Failed to parse synced menu:", e);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('menuUpdated', handleSync);
+
     return () => {
       socket.off('updateMenu');
       socket.off('menuItemUpdated');
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('menuUpdated', handleSync);
     };
   }, []);
 
-  // 4. Active Order Tracking
   useEffect(() => {
     const savedOrder = localStorage.getItem('myPersonalOrder');
     if (savedOrder) {
-      try { 
-        const parsed = JSON.parse(savedOrder);
-        setMyActiveOrder(parsed);
-        if (parsed?.receiptId) {
-          socket.emit('joinOrderRoom', parsed.receiptId);
-        }
-      } catch (e) {}
+      try {
+        setMyActiveOrder(JSON.parse(savedOrder));
+      } catch (e) {
+        console.error("Failed to parse personal order:", e);
+      }
     }
   }, []);
 
@@ -158,10 +112,10 @@ export default function Home() {
       if (!myActiveOrder) return;
 
       const currentReceiptId = String(myActiveOrder.receiptId || myActiveOrder.id || '').trim();
-      const incomingReceiptId = String(data.receiptId || data.orderId || data.id || '').trim();
+      const incomingReceiptId = String(data.receiptId || data.id || '').trim();
 
       if (currentReceiptId && incomingReceiptId && currentReceiptId === incomingReceiptId) {
-        if (['Completed', 'Finished', 'Delivered', 'ተጠናቋል'].includes(data.status)) {
+        if (data.status === 'Completed' || data.status === 'ተጠናቋል') {
           setMyActiveOrder(null);
           setIsOrderTrackerOpen(false);
           localStorage.removeItem('myPersonalOrder');
@@ -180,7 +134,38 @@ export default function Home() {
     };
   }, [myActiveOrder]);
 
-  // 5. Verify Chapa Payment Callback
+  useEffect(() => {
+    const savedItems = localStorage.getItem('customMenuItems');
+
+    if (savedItems) {
+      try {
+        const parsed = JSON.parse(savedItems);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMenuItems(parsed);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to parse local menu items:", e);
+      }
+    }
+
+    setMenuItems(localMenuItems || []);
+    setLoading(false);
+
+    fetchMenuItems()
+      .then(data => {
+        if (data?.length) {
+          setMenuItems(prev => {
+            const merged = [...localMenuItems, ...data];
+            localStorage.setItem('customMenuItems', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
     const trx_id = queryParams.get('trx_id') || queryParams.get('tx_ref') || queryParams.get('reference');
@@ -192,7 +177,11 @@ export default function Home() {
       let pendingOrder = null;
 
       if (savedData) {
-        try { pendingOrder = JSON.parse(savedData); } catch (e) {}
+        try {
+          pendingOrder = JSON.parse(savedData);
+        } catch (e) {
+          console.error("JSON Parse Error:", e);
+        }
       }
 
       verifyChapaPayment(pendingOrder, trx_id)
@@ -209,23 +198,22 @@ export default function Home() {
               orderType: pendingOrder?.orderType || 'Dine-in',
               tableNo: pendingOrder?.tableNo || '-',
               phone: pendingOrder?.phone || '-',
-              note: pendingOrder?.note || '',
               time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             };
 
             setMyActiveOrder(newOrderObj);
             localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-            socket.emit('joinOrderRoom', receiptId);
+            const existingOrders = JSON.parse(localStorage.getItem('adminOrders') || '[]');
+            localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
 
-            alert(
-              lang === 'om' ? "Kaffaltiin Chapa'n Milkaa'era!" :
-              lang === 'en' ? "Chapa Payment Successful!" : "ክፍያው በ Chapa ተሳክቷል!"
-            );
+            const alertMsg = lang === 'om' 
+              ? `📄 Nagahee Kaffaltii\n------------------------------\n📌 Lakkoofsa Nagahee: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Kaffaltiin Chapa'n Milkaa'era!`
+              : lang === 'en'
+              ? `📄 Payment Receipt\n------------------------------\n📌 Receipt ID: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Chapa Payment Successful!`
+              : `📄 የክፍያ ደረሰኝ\n------------------------------\n📌 የደረሰኝ ቁጥር: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ ክፍያው በ Chapa ተሳክቷል!`;
 
-            sessionStorage.removeItem('tableNo');
-            setCustomerInfo((prev) => ({ ...prev, tableNo: '' }));
-
+            alert(alertMsg);
             clearCart();
             localStorage.removeItem('pendingChapaOrder');
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -241,7 +229,7 @@ export default function Home() {
       alert(
         lang === 'om' ? "Dhiifama! Nyaatni/Dhugaatiin kun dhumateera." :
         lang === 'en' ? "Sorry, this item is currently out of stock!" :
-        "ይቅርታ! ይህ ምግብ/መጠጥ ለዛሬ አልቋል እባክዎን ሌላ ይምረጡ።"
+        "ይቅርታ! ይህ ምግብ/መጠጥ ለአሁን አልተገኙም እባክዎ ሌላ ይምረጡ።"
       );
       return;
     }
@@ -252,31 +240,15 @@ export default function Home() {
   };
 
   const handleOrder = async (receiptId) => {
-    const isDineIn = customerInfo.orderType === 'Dine-in';
-    const currentTable = customerInfo.tableNo || sessionStorage.getItem('tableNo');
-
-    if (isDineIn && !currentTable) {
-      alert(
-        lang === 'om' 
-          ? "Maaloo ajajuuf koodii QR minjaala irra jiru ammas Scan godhaa." 
-          : lang === 'en' 
-          ? "Please scan the table QR code again to place a new order!" 
-          : "እባክዎን አዲስ ትዕዛዝ ለማዘዝ የጠረጴዛውን QR Code በድጋሜ Scan ያድርጉ!"
-      );
-      return;
-    }
-
     if (paymentMethod === 'Chapa') {
       try {
         const orderPayload = {
-          cafeId: currentCafeId, // የካፌ መለያ መጨመር
           receiptId: receiptId || `REC-${Date.now().toString().slice(-6)}`,
           name: customerInfo.name,
           phone: customerInfo.phone,
           address: customerInfo.address,
           time: customerInfo.time,
           tableNo: customerInfo.tableNo,
-          note: customerInfo.note || '',
           paymentMethod: 'Chapa',
           totalPrice: totalPrice,
           items: cartItems,
@@ -302,28 +274,24 @@ export default function Home() {
     } else {
       try {
         const formData = new FormData();
-        formData.append('cafeId', currentCafeId); // የካፌ መለያ መጨመር
         formData.append('receiptId', receiptId);
-        formData.append('socketId', socket ? socket.id : '');
         formData.append('lang', lang);
         formData.append('tableNo', customerInfo.tableNo || '');
         formData.append('phone', customerInfo.phone || '');
         formData.append('orderType', customerInfo.orderType || 'Dine-in');
-        formData.append('note', customerInfo.note || '');
         formData.append('paymentMethod', paymentMethod);
         formData.append('totalPrice', totalPrice);
         formData.append('items', JSON.stringify(cartItems));
         formData.append('customerInfo', JSON.stringify(customerInfo));
 
         if (selectedFile) {
-          formData.append('screenshot', selectedFile);
+          formData.append('photo', selectedFile);
         }
 
         const result = await submitOrderFormData(formData);
         const finalReceiptId = result?.receiptId || receiptId || `REC-${Date.now().toString().slice(-6)}`;
 
         const newOrderObj = {
-          cafeId: currentCafeId,
           receiptId: finalReceiptId,
           status: 'Pending',
           paymentMethod: paymentMethod,
@@ -332,27 +300,18 @@ export default function Home() {
           orderType: customerInfo.orderType,
           tableNo: customerInfo.tableNo || '-',
           phone: customerInfo.phone || '-',
-          note: customerInfo.note || '',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
         setMyActiveOrder(newOrderObj);
         localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-        if (socket) {
-          socket.emit('joinOrderRoom', finalReceiptId);
-        }
-
-        const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተልኳል! ደረሰኝ ቁጥር:";
+        const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተሳክቷል! ደረሰኝ ቁጥር:";
         alert(`✅ ${successText} ${finalReceiptId}`);
         
         setIsModalOpen(false); 
         clearCart();
         setSelectedFile(null);
-
-        sessionStorage.removeItem('tableNo');
-        setCustomerInfo((prev) => ({ ...prev, tableNo: '' }));
-
       } catch (err) { 
         console.error("Order submit error:", err);
         alert(lang === 'om' ? "Ajaja ergachuun al-danda'ame!" : lang === 'en' ? "Failed to send order!" : "ትዕዛዙን መላክ አልተቻለም!"); 
@@ -379,13 +338,32 @@ export default function Home() {
     } else if (activeTabIndex === 3) {
       matchesCategory = cat === 'juice' || cat === 'ጁስ';
     } else if (activeTabIndex === 4) {
-      matchesCategory = cat.includes('ቀዝቃዛ') || cat.includes('cold') || cat.includes('qabbanaawaa');
+      matchesCategory = 
+        cat.includes('ቀዝቃዛ') || 
+        cat.includes('cold') || 
+        cat.includes('qabbanaawaa') ||
+        cat === 'ቀዝቃዛ መጠጥ' || 
+        cat === 'cold drinks';
     } else if (activeTabIndex === 5) {
-      matchesCategory = cat.includes('ትኩስ') || cat.includes('hot') || cat.includes("ho'aa");
+      matchesCategory = 
+        cat.includes('ሙቅ') || 
+        cat.includes('hot') || 
+        cat.includes("ho'aa") ||
+        cat === 'ሙቅ መጠጥ' || 
+        cat === 'hot drinks';
     }
 
     return matchesSearch && matchesCategory;
   });
+
+  // Safe helper to render status string safely without Object crash
+  const getSafeStatusText = (status) => {
+    if (!status) return 'Pending';
+    if (typeof status === 'object') {
+      return status.status || status.am || status.en || 'Pending';
+    }
+    return String(status);
+  };
 
   return (
     <>
@@ -396,7 +374,12 @@ export default function Home() {
           lang={lang} 
           setLang={setLang} 
           menuItems={menuItems}
-          setMenuItems={setMenuItems}
+          setMenuItems={(newItems) => {
+            const updated = typeof newItems === 'function' ? newItems(menuItems) : newItems;
+            setMenuItems(updated);
+            localStorage.setItem('customMenuItems', JSON.stringify(updated));
+            window.dispatchEvent(new Event('menuUpdated'));
+          }}
         />
 
         <HeroSection containerRef={containerRef} videoRef={videoRef} scrollProgress={scrollProgress} activeCardIndex={activeCardIndex} t={t} />
@@ -412,7 +395,7 @@ export default function Home() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
               <div>
                 <h3 className="text-3xl md:text-5xl font-black text-white mb-3 tracking-tight">
-                  {t?.popularTitle || (lang === 'om' ? "Nyaataa fi Dhugaatii Beekamoo" : lang === 'en' ? "Popular Foods & Drinks" : "ታዋቂ የምግብ እና የመጠጥ")}
+                  {t?.popularTitle || (lang === 'om' ? "Nyaataa fi Dhugaatii Beekamoo" : lang === 'en' ? "Popular Foods & Drinks" : "ታዋቂ የምግቦች እና መጠጦች")}
                 </h3>
                 <div className="h-1.5 w-24 bg-orange-600 rounded-full shadow-lg shadow-orange-600/50"></div>
               </div>
@@ -466,7 +449,7 @@ export default function Home() {
                   ))
                 ) : (
                   <div className="col-span-full text-center py-12 text-zinc-400 font-bold flex flex-col items-center justify-center gap-3">
-                    <p>{lang === 'om' ? "Wanti barbaaddan hin argamne" : lang === 'en' ? "No items found" : "የፈለጉት ምግብ አልተገኘም"}</p>
+                    <p>{lang === 'om' ? "Wanti barbaaddan hin argamne" : lang === 'en' ? "No items found" : "የተገኘ ምግብ አልተገኘም"}</p>
                     <button onClick={() => setSearchQuery('')} className="bg-zinc-800 text-orange-500 text-xs px-4 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-700 transition-all cursor-pointer">
                       Clear Search
                     </button>
@@ -497,6 +480,7 @@ export default function Home() {
         />
       )}
 
+      {/* Order Tracker Modal */}
       <OrderTrackerModal
         isOpen={isOrderTrackerOpen}
         onClose={() => setIsOrderTrackerOpen(false)}
@@ -505,6 +489,7 @@ export default function Home() {
         lang={lang}
       />
 
+      {/* Floating Status Button - 💡 Safe Status Rendering */}
       {myActiveOrder && (
         <div className="fixed bottom-6 left-6 z-[9998]">
           <button 
@@ -516,10 +501,10 @@ export default function Home() {
             </div>
             <div className="text-left">
               <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
-                {lang === 'om' ? "Haala Ajaja" : lang === 'en' ? "Order Status" : "የትዕዛዝዎ ሁኔታ"}
+                {lang === 'om' ? "Haala Ajaja" : lang === 'en' ? "Order Status" : "የዝግጅቱ ሁኔታ"}
               </p>
               <p className="text-xs font-black text-orange-400">
-                #{myActiveOrder.receiptId} ({myActiveOrder.status || 'Pending'})
+                #{myActiveOrder.receiptId || myActiveOrder.id} ({getSafeStatusText(myActiveOrder.status)})
               </p>
             </div>
           </button>
