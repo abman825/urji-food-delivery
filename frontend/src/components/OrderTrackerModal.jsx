@@ -8,17 +8,22 @@ const socket = io(BACKEND_URL);
 export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCurrentOrder, lang = 'am' }) {
   if (!isOpen || !currentOrder) return null;
 
-  const receiptId = currentOrder.receiptId || currentOrder.id || currentOrder._id;
-  const status = currentOrder.status || 'Pending';
+  // 1. receiptId እና orderType ወደ String መቀየራቸውን ማረጋገጥ (Object እንዳይሆኑ)
+  const rawId = currentOrder.receiptId || currentOrder.id || currentOrder._id || '';
+  const receiptId = typeof rawId === 'string' ? JSON.stringify(rawId) : String(rawId);
+  
+  const rawOrderType = currentOrder.orderType || '';
+  const orderTypeStr = typeof rawOrderType === 'string' ? JSON.stringify(rawOrderType) : String(rawOrderType);
 
-  // የትርጉም መዝገበ-ቃላት (በአማርኛ፣ ኦሮምኛ እና እንግሊዝኛ)
+  const status = typeof currentOrder.status === 'string' ? currentOrder.status : 'Pending';
+
   const t = {
-    title: { am: "የትዕዛዝዎ መቆጣጠሪያ", om: "To'annoo Ajaja Keessanii", en: "Order Tracker" },
+    title: { am: "የዝግጅቱ መቆጣጠሪያ", om: "To'annoo Ajaja Keessanii", en: "Order Tracker" },
     statusLabel: { am: "ሁኔታው", om: "Haala Ajajaa", en: "Status" },
-    pending: { am: "በትዕዛዝ ላይ...", om: "Eegaa Jira", en: "Pending" },
-    inProgress: { am: "በመስራት ላይ", om: "Qophaa'aa Jira", en: "In Progress" },
-    completed: { am: "ተጠናቋል (ምግቡ ደርሷል)", om: "Xumurameera", en: "Completed" },
-    orderType: { am: "የትዕዛዝ ዓይነት", om: "Gosa Ajajaa", en: "Order Type" },
+    pending: { am: "በዝግጅት ላይ...", om: "Eegaa Jira", en: "Pending" },
+    inProgress: { am: "በሥራ ላይ", om: "Qophaa'aa Jira", en: "In Progress" },
+    completed: { am: "ተጠናቋል (ምግብ ተደርሷል)", om: "Xumurameera", en: "Completed" },
+    orderType: { am: "የዝግጅት ዓይነት", om: "Gosa Ajajaa", en: "Order Type" },
     tableNo: { am: "የወንበር ቁጥር", om: "Lakk. Teessoo", en: "Table No." },
     orderedItems: { am: "የታዘዙ ምግቦች", om: "Nyaatawwan Ajajaman", en: "Ordered Items" },
     totalPrice: { am: "ጠቅላላ ዋጋ", om: "Gatiiyyaa Walii Galaa", en: "Total Price" },
@@ -29,7 +34,8 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
     if (!nameObj) return '';
 
     if (typeof nameObj === 'object') {
-      return nameObj[lang] || nameObj.am || nameObj.en || '';
+      const val = nameObj[lang] || nameObj.am || nameObj.en || '';
+      return typeof val === 'object' ? JSON.stringify(val) : String(val);
     }
 
     if (typeof nameObj === 'string') {
@@ -46,7 +52,6 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
     return String(nameObj);
   };
 
-  // የሪል-ታይም Socket አዳማጭ እና የ Room Join ማድረጊያ
   useEffect(() => {
     if (receiptId) {
       socket.emit('joinOrderRoom', receiptId);
@@ -59,13 +64,11 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
       if (data && currentId && incomingId && currentId === incomingId) {
         const updatedStatus = data.status || 'In Progress';
 
-        // 1. የሁኔታውን ለውጥ በ React State ላይ ማዘመን
         setCurrentOrder(prevOrder => ({
           ...prevOrder,
           status: updatedStatus
         }));
 
-        // 2. LocalStorage (myPersonalOrder) ላይ ማዘመን
         try {
           const savedOrder = localStorage.getItem('myPersonalOrder');
           if (savedOrder) {
@@ -77,7 +80,6 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
           console.error("LocalStorage Update Error:", e);
         }
 
-        // 3. ትዕዛዙ ተጠናቋል (Delivered/Completed/Finished) ሲሆን ከ 3 ሰከንድ በኋላ ሞዳሉ ይዘጋል
         if (
           updatedStatus === 'Delivered' || 
           updatedStatus === 'Completed' || 
@@ -104,7 +106,6 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl">
         
-        {/* Header - ርዕስ */}
         <div className="flex justify-between items-center pb-4 border-b border-zinc-800 mb-5">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-orange-600/20 border border-orange-500/30 rounded-2xl text-orange-500">
@@ -112,7 +113,7 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
             </div>
             <div>
               <h3 className="text-lg font-black text-white">{t.title[lang] || t.title.am}</h3>
-              <p className="text-xs text-zinc-400">(ID): {receiptId}</p>
+              <p className="text-xs text-zinc-400">መለያ (ID): {receiptId}</p>
             </div>
           </div>
           <button 
@@ -123,26 +124,22 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
           </button>
         </div>
 
-        {/* Status Display Badge - የትዕዛዙ ሁኔታ ማሳያ */}
         <div className="bg-zinc-800/50 border border-zinc-800 rounded-2xl p-4 mb-5 space-y-3">
           <div className="flex justify-between items-center gap-2">
             <span className="text-xs text-zinc-400 shrink-0">{t.statusLabel[lang] || t.statusLabel.am}</span>
             
-            {/* በትዕዛዝ ላይ (Pending) */}
             {status === 'Pending' && (
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">
                 <Clock size={14} /> {t.pending[lang] || t.pending.am}
               </span>
             )}
 
-            {/* በመስራት ላይ (In Progress / Accepted) */}
             {(status === 'In Progress' || status === 'In-Progress' || status === 'Accepted') && (
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse">
                 <ChefHat size={14} className="animate-bounce" /> {t.inProgress[lang] || t.inProgress.am}
               </span>
             )}
 
-            {/* ተጠናቋል (Completed / Delivered) */}
             {(status === 'Completed' || status === 'Delivered' || status === 'Finished' || status === 'ተጠናቋል') && (
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30">
                 <CheckCircle size={14} /> {t.completed[lang] || t.completed.am}
@@ -154,23 +151,24 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
             <div className="flex justify-between">
               <span className="text-zinc-400">{t.orderType[lang] || t.orderType.am}</span>
               <span className="font-bold text-zinc-200">
-                {currentOrder.orderType || t.dineIn[lang] || t.dineIn.am}
+                {orderTypeStr || t.dineIn[lang] || t.dineIn.am}
               </span>
             </div>
             {currentOrder.tableNo && (
               <div className="flex justify-between">
                 <span className="text-zinc-400">{t.tableNo[lang] || t.tableNo.am}</span>
-                <span className="font-bold text-orange-400">{currentOrder.tableNo}</span>
+                <span className="font-bold text-orange-400">
+                  {typeof currentOrder.tableNo === 'object' ? JSON.stringify(currentOrder.tableNo) : String(currentOrder.tableNo)}
+                </span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Ordered Items List - የታዘዙ ምግቦች ዝርዝር */}
         <div className="space-y-2 mb-5">
           <h4 className="text-xs font-bold text-zinc-400">{t.orderedItems[lang] || t.orderedItems.am}</h4>
           <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
-            {currentOrder.items?.map((item, idx) => (
+            {Array.isArray(currentOrder.items) && currentOrder.items.map((item, idx) => (
               <div key={idx} className="flex justify-between items-center text-xs bg-zinc-800/30 p-2.5 rounded-xl border border-zinc-800">
                 <span className="text-zinc-300">
                   {getTranslatedItemName(item.name)} x{item.quantity || item.qty || 1}
@@ -183,11 +181,12 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
           </div>
         </div>
 
-        {/* Total Price - ጠቅላላ ዋጋ */}
         <div className="flex justify-between items-center border-t border-zinc-800 pt-3">
           <span className="text-sm font-bold text-zinc-400">{t.totalPrice[lang] || t.totalPrice.am}</span>
           <span className="text-lg font-black text-orange-500">
-            {currentOrder.totalPrice || currentOrder.total || 0} ETB
+            {typeof currentOrder.totalPrice === 'number' || typeof currentOrder.totalPrice === 'string' 
+              ? currentOrder.totalPrice 
+              : 0} ETB
           </span>
         </div>
 
