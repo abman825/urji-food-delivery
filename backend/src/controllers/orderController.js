@@ -109,12 +109,17 @@ export const handleChapaSuccess = async (req, res) => {
     const { pendingOrder, trx_id } = req.body;
 
     const formattedItems = formatOrderItems(pendingOrder?.items);
-    const receiptId = pendingOrder?.receiptId || `REC-${Date.now().toString().slice(-6)}`;
+    
+    // receiptId ኦብጀክት ወይም ሌላ ነገር ሆኖ እንዳይመጣ ማረጋገጥ
+    const rawReceiptId = pendingOrder?.receiptId;
+    const receiptId = (typeof rawReceiptId === 'object' && rawReceiptId !== null)
+      ? (rawReceiptId.receiptId || rawReceiptId.id || `REC-${Date.now().toString().slice(-6)}`)
+      : (rawReceiptId || `REC-${Date.now().toString().slice(-6)}`);
 
     const currentOrderType = pendingOrder?.orderType || 'Takeaway';
     const displayTableNo = currentOrderType === 'Takeaway' ? 'Takeaway' : (pendingOrder?.tableNo || '-');
 
-    const userNote = pendingOrder?.note || 'የለም';
+    const userNote = pendingOrder?.note || 'ለማድ';
 
     let details = '';
     if (pendingOrder?.name) details += `<b>👤 ስም:</b> ${pendingOrder.name}\n`;
@@ -124,15 +129,15 @@ export const handleChapaSuccess = async (req, res) => {
     if (pendingOrder?.time) details += `<b>⏰ ሰዓት:</b> ${pendingOrder.time}\n`;
 
     const message = `
-<b>✅ የ Chapa ክፍያ ተፈጽሟል!</b>
+<b>✅ የ Chapa ክፍያ ተጠናቋል!</b>
 
-<b>🆔 የደረሰኝ ቁጥር:</b> <code>${receiptId}</code>
-<b>💳 Tx Ref:</b> <code>${trx_id || 'ልዩነቱ አልታወቀም'}</code>
+<b>🆔 የድረሰድ ቁጥር:</b> <code>${receiptId}</code>
+<b>💳 Tx Ref:</b> <code>${trx_id || 'ሐላፊነት አልታወቀም'}</code>
 ${details}<b>📝 አስተያየት (Note):</b>
 <code>${userNote}</code>
 
 <b>📦 ዓይነት:</b> ${currentOrderType}
-<b>💳 የመክፈያ መንገድ:</b> <b>Chapa Online Payment</b>
+<b>💳 የማስረከቢያ መንገድ:</b> <b>Chapa Online Payment</b>
 
 <b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
 ${formattedItems}
@@ -141,16 +146,16 @@ ${formattedItems}
 `;
 
     try {
-      await sendMessageToTelegram(message, receiptId);
+      await sendMessageToTelegram(message, String(receiptId));
     } catch (telegramErr) {
       console.error('⚠️ Chapa Telegram Notification Failed:', telegramErr.message);
     }
 
-    // Database ውስጥ ማስቀመጥ (socketId ጨምሮ)
+    // Database ውስጥ ማስተካከል (receiptId String መሆኑን በማረጋገጥ)
     try {
       const parsedItems = typeof pendingOrder?.items === 'string' ? JSON.parse(pendingOrder.items) : pendingOrder?.items;
       const newOrder = new Order({
-        receiptId,
+        receiptId: String(receiptId).trim(),
         name: pendingOrder?.name || 'እንግዳ',
         phone: pendingOrder?.phone || '-',
         tableNo: displayTableNo,
@@ -177,15 +182,15 @@ ${formattedItems}
 
     return res.status(200).json({ 
       success: true, 
-      receiptId,
+      receiptId: String(receiptId).trim(),
       paymentMethod: 'Chapa',
-      message: 'ትዕዛዙ ወደ Telegram ተልኳል' 
+      message: 'ትዕዛዙ ወደ Telegram ተልጓል' 
     });
 
   } catch (error) {
     console.error('Chapa Handler Error:', error);
     if (!res.headersSent) {
-      return res.status(500).json({ success: false, message: 'የ Chapa ትዕዛዝ አስተናጋጅ አልተቻለም' });
+      return res.status(500).json({ success: false, message: 'የ Chapa ትዕዛዝ ማስተናገድ አልተቻለም' });
     }
   }
 };

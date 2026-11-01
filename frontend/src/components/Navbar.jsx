@@ -9,7 +9,7 @@ import axios from 'axios';
 import MyOrder from "./Myorder";
 import MenuManagementTab from './MenuManagementTab';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://urji-food-delivery-1.onrender.com';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const socket = io(BACKEND_URL);
 
 export default function Navbar({ 

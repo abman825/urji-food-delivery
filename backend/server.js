@@ -71,11 +71,17 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Real-time Order Placement via Socket
+ // Real-time Order Placement via Socket
   socket.on('placeOrder', async (orderData) => {
     try {
+      // 1. receiptId ኦብጀክት ወይም ሌላ ነገር ሆኖ እንዳይመጣ ጥንቃቄ ማድረግ
+      const rawReceiptId = orderData.receiptId || orderData.customerInfo?.receiptId;
+      const cleanReceiptId = (typeof rawReceiptId === 'object' && rawReceiptId !== null)
+        ? (rawReceiptId.receiptId || rawReceiptId.id || `REC-${Math.floor(100000 + Math.random() * 900000)}`)
+        : (rawReceiptId || `REC-${Math.floor(100000 + Math.random() * 900000)}`);
+
       const formattedOrder = {
-        receiptId: orderData.receiptId || `REC-${Math.floor(100000 + Math.random() * 900000)}`,
+        receiptId: String(cleanReceiptId).trim(),
         customerName: orderData.customerInfo?.name || orderData.customerName || '',
         phone: orderData.customerInfo?.phone || orderData.phone || '-',
         tableNo: orderData.customerInfo?.tableNo || orderData.tableNo || '-',
@@ -99,6 +105,7 @@ io.on('connection', (socket) => {
       console.error("Error saving order via Socket to MongoDB:", err);
     }
   });
+
 
   socket.on('updateOrderStatus', async (data) => {
     const { receiptId, status } = data;

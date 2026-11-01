@@ -27,35 +27,35 @@ export default function CheckoutModal({
 
   const modalText = {
     am: {
-      title: "ትዕዛዝዎን ማጠቃለል",
-      orderByTable: "በሠንጠረዥ ቁጥር ለማዘዝ",
-      orderByPayment: "ክፍያ በመፈጸም ለማዘዝ",
-      dineIn: "እሱማ (Dine-in)",
-      takeaway: "ይዘው ለመሄድ (Takeaway)",
-      tableNumber: "የሠንጠረዥ/ሰንጠረዥ ቁጥር",
+      title: "ትዕዛዝዎን ያጠናቅቁ",
+      orderByTable: "በወንበር ቁጥር ለማዘዝ",
+      orderByPayment: "ክፍያ በመክፈል ለማዘዝ",
+      dineIn: "እዚህ (Dine-in)",
+      takeaway: "ይዞ ለመሄድ (Takeaway)",
+      tableNumber: "የወንበር/ጠረጴዛ ቁጥር",
       tablePlaceholder: "በ QR Code የተያዘ",
       phone: "ስልክ ቁጥር",
       optionalTag: "(ግዴታ አይደለም)",
       requiredTag: "(ግዴታ ነው)",
       phonePlaceholder: "09...",
       uploadReceipt: "የክፍያ ስክሪንሾት",
-      uploadNote: "💡 በቀላሉ ወይም በባንክ የከፈሉበትን ደረሰኝ/ስክሪንሾት እዚህ ጋር ማካፈል ይችላሉ።",
-      uploadBtn: "ስክሪንሾት አሳይ",
+      uploadNote: "💡 በቴሌብር ወይም በባንክ የከፈሉበትን ደረሰኝ/ስክሪንሾት እዚህ ማያያዝ ይችላሉ።",
+      uploadBtn: "ስክሪንሾት አያይዝ",
       fullName: "ሙሉ ስም",
       namePlaceholder: "ስምዎን ያስገቡ",
       pickupTime: "የመቀበያ ሰዓት",
-      selfPickup: "ራሴው መጥቼ እወስዳለሁ (Self Pick-up)",
+      selfPickup: "መጥቼ እወስዳለሁ (Self Pick-up)",
       address: "አድራሻ",
-      addressPlaceholder: "ቤት/አድራሻ ያስገቡ",
+      addressPlaceholder: "ቦታ/አድራሻ ያስገቡ",
       totalPrice: "ጠቅላላ ዋጋ",
       submitOrder: "ትዕዛዝ ላክ",
-      payChapa: "በ Chapa ክፍያ",
-      paymentAccounts: "የክፍያ አካውንት ቁጥሮች",
+      payChapa: "በ Chapa ክፈል",
+      paymentAccounts: "የክፍያ ሂሳብ ቁጥሮች",
       selectPaymentMethod: "የክፍያ መንገድ",
       payWithChapa: "በ Chapa (ኦንላይን)",
       orderNoteLabel: "ተጨማሪ አስተያየት / ማስታወሻ",
-      orderNotePlaceholder: "ምሳሌ፡ ቁርጥ ዲማ አትሁኑበት፣ ሶስት አትበዙበት በረዶ ቀንሱልኝ...",
-      qrNotice: "ሠንጠረዡ ላይ ያለውን QR Code ስካን በማድረግ የተመረጠው ሠንጠረዥ ቁጥር፡"
+      orderNotePlaceholder: "ምሳሌ፤ ሽንኩርት አይግባበት፣ ጨው አይበዛበት፣ በርበሬ ቀንስልኝ...",
+      qrNotice: "ጠረጴዛዎ ላይ ያለውን QR Code ስካን በማድረግ የመረጡት ወንበር ቁጥር፤"
     },
     om: {
       title: "Ajaja Keessan Xumuraa",
@@ -123,6 +123,7 @@ export default function CheckoutModal({
 
   const t = modalText[lang] || modalText.am;
 
+  // 📸 የፎቶ ፋይሉን ወደ Cloudinary የመላኪያ ተግባር
   const uploadToCloudinary = async (file) => {
     try {
       const formData = new FormData();
@@ -161,33 +162,35 @@ export default function CheckoutModal({
   const onSubmitClick = async () => {
     if (isSubmitting) return;
 
+    // 1. Dine-In ማረጋገጫ
     const isDineIn = checkoutType === 'table' || (checkoutType === 'online' && customerInfo.orderType === 'Dine-in');
     if (isDineIn) {
       if (!customerInfo.tableNo || !String(customerInfo.tableNo).trim()) {
         alert(
           lang === 'om' ? "Maaloo nagahee/tarree teessoo (Table No) QR code irraa scan godhaa!" :
           lang === 'en' ? "Please scan the QR code on your table to set the Table Number before ordering!" :
-          "እባክዎ ትዕዛዝ ከማስተላለፍዎ በፊት ሠንጠረዡ ላይ ያለውን QR Code ይቃኙ!"
+          "እባክዎን ማዘዝ እንዲችሉ አስቀድመው ጠረጴዛዎ ላይ ያለውን QR Code ያንብቡ!"
         );
         return;
       }
     }
 
+    // 2. Takeaway ማረጋገጫ
     if (checkoutType === 'online' && customerInfo.orderType === 'Takeaway') {
       if (!customerInfo.name || !customerInfo.name.trim()) {
-        alert(lang === 'am' ? 'እባክዎ ሙሉ ስምዎን ያስገቡ!' : lang === 'om' ? 'Maaloo maqaa guutuu galchaa!' : 'Please enter your name!');
+        alert(lang === 'am' ? 'እባክዎን ሙሉ ስምዎን ያስገቡ!' : lang === 'om' ? 'Maaloo maqaa guutuu galchaa!' : 'Please enter your name!');
         return;
       }
       if (!customerInfo.phone || !customerInfo.phone.trim()) {
-        alert(lang === 'am' ? 'እባክዎ ስልክ ቁጥርዎን ያስገቡ!' : lang === 'om' ? 'Maaloo lakkoofsa bilbilaa galchaa!' : 'Please enter your phone number!');
+        alert(lang === 'am' ? 'እባክዎን ስልክ ቁጥርዎን ያስገቡ!' : lang === 'om' ? 'Maaloo lakkoofsa bilbilaa galchaa!' : 'Please enter your phone number!');
         return;
       }
       if (!customerInfo.time) {
-        alert(lang === 'am' ? 'እባክዎ የመቀበያ ሰዓት ይምረጡ!' : lang === 'om' ? "Maaloo sa'aatii fudhannaa filadhaa!" : 'Please select pickup time!');
+        alert(lang === 'am' ? 'እባክዎን የመቀበያ ሰዓት ይምረጡ!' : lang === 'om' ? "Maaloo sa'aatii fudhannaa filadhaa!" : 'Please select pickup time!');
         return;
       }
       if (!isSelfPickUp && (!customerInfo.address || !customerInfo.address.trim())) {
-        alert(lang === 'am' ? 'እባክዎ አድራሻ ያስገቡ ወይም "ራሴው መጥቼ እወስዳለሁ" የሚለውን ይምረጡ!' : 'Please enter address or check self pick-up!');
+        alert(lang === 'am' ? 'እባክዎን አድራሻ ያስገቡ ወይም "መጥቼ እወስዳለሁ" የሚለውን ይምረጡ!' : 'Please enter address or check self pick-up!');
         return;
       }
     }
@@ -233,6 +236,7 @@ export default function CheckoutModal({
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div className="relative w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
         
+        {/* Close Button */}
         <button
           onClick={onClose}
           disabled={isSubmitting}
@@ -245,6 +249,7 @@ export default function CheckoutModal({
           {t.title}
         </h2>
 
+        {/* Main Order Type Selection */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           <button
             type="button"
@@ -275,6 +280,7 @@ export default function CheckoutModal({
           </button>
         </div>
 
+        {/* Order by Table (Dine-In) */}
         {checkoutType === 'table' && (
           <div className="space-y-4">
             <div className="bg-orange-950/40 border border-orange-500/30 rounded-2xl p-4 flex items-center gap-3">
@@ -284,7 +290,7 @@ export default function CheckoutModal({
               <div>
                 <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
                 <p className="text-lg font-black text-orange-400">
-                  {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተቃኘም"}
+                  {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተነበበም"}
                 </p>
               </div>
             </div>
@@ -346,6 +352,7 @@ export default function CheckoutModal({
           </div>
         )}
 
+        {/* Order by Payment (Dine-in / Takeaway) */}
         {checkoutType === 'online' && (
           <div className="space-y-4">
             <div className="flex gap-2 p-1 bg-zinc-800 rounded-xl">
@@ -396,7 +403,7 @@ export default function CheckoutModal({
                   <div>
                     <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
                     <p className="text-lg font-black text-orange-400">
-                      {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተቃኘም"}
+                      {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተነበበም"}
                     </p>
                   </div>
                 </div>
@@ -468,7 +475,7 @@ export default function CheckoutModal({
                     const nextVal = !isSelfPickUp;
                     setIsSelfPickUp(nextVal);
                     if (nextVal) {
-                      setCustomerInfo(prev => ({ ...prev, address: 'ራሴው መጥቼ እወስዳለሁ' }));
+                      setCustomerInfo(prev => ({ ...prev, address: 'መጥቼ እወስዳለሁ' }));
                     } else {
                       setCustomerInfo(prev => ({ ...prev, address: '' }));
                     }
@@ -499,6 +506,7 @@ export default function CheckoutModal({
           </div>
         )}
 
+        {/* Special Instructions Input */}
         <div className="mt-4 pt-3 border-t border-zinc-800">
           <label className="flex items-center gap-1.5 text-xs font-bold mb-1.5 text-zinc-300">
             <MessageSquare size={14} className="text-orange-500" />
@@ -515,6 +523,7 @@ export default function CheckoutModal({
           ></textarea>
         </div>
 
+        {/* Total Price & Submit Button */}
         <div className="mt-6 pt-4 border-t border-zinc-800 flex items-center justify-between">
           <div>
             <p className="text-xs text-zinc-400">{t.totalPrice}</p>
