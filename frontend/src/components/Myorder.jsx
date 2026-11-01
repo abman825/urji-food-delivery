@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Receipt, RefreshCw, ShoppingBag, Trash2 } from 'lucide-react';
 import { io } from 'socket.io-client';
 
@@ -11,27 +11,37 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
 
   const t = {
     title: { am: "የእኔ ትዕዛዞች", om: "Ajajawwan Koo", en: "My Orders" },
-    subtitle: { am: "ያስቀመጧቸውን ምግብ ፈለግ እዚህ ጋር መከታተል ይችላሉ", om: "Haala ajajawwan keessanii asitti hordofuu dandeessu", en: "Track the status of your orders here" },
-    historyCount: { am: "የእኔ የትዕዛዝ ታሪክ", om: "Seenaa Ajajawwan Koo", en: "Order History" },
-    refresh: { am: "ዕድሱ", om: "Haromsi", en: "Refresh" },
+    subtitle: { am: "ያስቀመጡትን ምግብ እዚህ ጋር መከታተል ይችላሉ", om: "Haala ajajawwan keessanii asitti hordofuu dandeessu", en: "Track the status of your orders here" },
+    historyCount: { am: "የእኔ ትዕዛዝ ታሪክ", om: "Seenaa Ajajawwan Koo", en: "Order History" },
+    refresh: { am: "ዕድሳት", om: "Haromsi", en: "Refresh" },
     clearHistory: { am: "ታሪክ አጽዳ", om: "Seenaa Haquuf", en: "Clear History" },
     noOrders: { am: "ምንም የተቀምጠ ትዕዛዝ የለም", om: "Ajajni taa'e hin jiru", en: "No saved orders" },
-    table: { am: "ሰንጠረዥ/ቁጥር:", om: "Minjaala:", en: "Table No:" },
+    table: { am: "ሠንጠረዥ/ቁጥር:", om: "Minjaala:", en: "Table No:" },
     phone: { am: "ስልክ:", om: "Bilbila:", en: "Phone:" },
     orderType: { am: "አይነት:", om: "Gosa:", en: "Type:" },
     paymentMethod: { am: "የክፍያ መንገድ:", om: "Madda Kaffaltii:", en: "Payment Method:" },
-    screenshotTitle: { am: "📄 የክፍያ ደረሰኝ:", om: "📄 Ragaan Kaffaltii:", en: "📄 Payment Proof:" },
+    screenshotTitle: { am: "📄 የክፍያ ድረሰድ:", om: "📄 Ragaan Kaffaltii:", en: "📄 Payment Proof:" },
     total: { am: "ጠቅላላ:", om: "Waliigala:", en: "Total:" },
     confirmClear: { am: "እርግጠኛ ነዎት የትዕዛዝ ታሪክ ማጥፋት ይፈልጋሉ?", om: "Seenaa ajajaa haquuf mirkanaa'aadhaa?", en: "Are you sure you want to clear order history?" },
     cash: { am: "በካሽ (Cash)", om: "Maallaqa Qabatamaa (Cash)", en: "Cash" },
-    bankProof: { am: "በደረሰኝ / ባንክ", om: "Ragaan / Baankii", en: "Receipt / Bank" }
+    bankProof: { am: "በድረሰድ / ባንክ", om: "Ragaan / Baankii", en: "Receipt / Bank" }
   };
 
   const loadMyOrders = () => {
     try {
       const savedOrders = localStorage.getItem('myOrders') || localStorage.getItem('userOrders');
-      if (savedOrders) {
-        const parsedOrders = JSON.parse(savedOrders);
+      let parsedOrders = savedOrders ? JSON.parse(savedOrders) : [];
+
+      const singleOrder = localStorage.getItem('myPersonalOrder');
+      if (singleOrder) {
+        const parsedSingle = JSON.parse(singleOrder);
+        const exists = parsedOrders.some(o => (o.receiptId || o.id) === (parsedSingle.receiptId || parsedSingle.id));
+        if (!exists) {
+          parsedOrders = [parsedSingle, ...parsedOrders];
+        }
+      }
+
+      if (parsedOrders.length > 0) {
         setOrders(parsedOrders);
 
         parsedOrders.forEach(order => {
@@ -57,7 +67,7 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
     }
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen) {
       loadMyOrders();
 
@@ -122,7 +132,7 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
       rawMethod.includes('transfer') || 
       rawMethod.includes('cbe') || 
       rawMethod.includes('telebirr') ||
-      rawMethod.includes('ደረሰኝ')
+      rawMethod.includes('ድረሰድ')
     ) {
       return t.bankProof[lang] || t.bankProof.am;
     }
@@ -191,16 +201,23 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
                 const screenshotImg = getScreenshotImg(order);
                 const paymentMethodStr = getPaymentText(order);
 
+                // receiptId ንጹህ String መሆኑን ማረጋገጫ
+                const rawReceipt = order.receiptId || order.id || order._id;
+                const cleanReceiptId = typeof rawReceipt === 'object' && rawReceipt !== null
+                  ? (rawReceipt.receiptId || rawReceipt.id || JSON.stringify(rawReceipt))
+                  : (rawReceipt || 'N/A');
+
+                const orderStatus = typeof order.status === 'string' ? order.status : 'Pending';
+
                 return (
                   <div key={idx} className="bg-zinc-800/40 border border-zinc-800 rounded-2xl p-4 space-y-3">
                     
                     <div className="flex justify-between items-center border-b border-zinc-700/50 pb-2">
-                      <div>
-                        <span className="text-xs font-bold text-orange-400">#{order.receiptId || order.id || order._id}</span>
-                        <p className="text-[11px] text-zinc-400">{order.time || (order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : '')}</p>
-                      </div>
+                      <p className="text-xs font-black text-orange-400">
+                        #{cleanReceiptId} ({orderStatus})
+                      </p>
                       <span className="px-2.5 py-1 bg-orange-500/10 border border-orange-500/30 text-orange-400 rounded-full text-[11px] font-bold whitespace-nowrap">
-                        {typeof order.status === 'object' ? (order.status[lang] || order.status.am || 'Pending') : (order.status || 'Pending')}
+                        {orderStatus}
                       </span>
                     </div>
 

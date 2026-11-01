@@ -27,11 +27,11 @@ export default function CheckoutModal({
 
   const modalText = {
     am: {
-      title: "ትዕዛዝዎን ያጠናቅቁ",
+      title: "ትዕዛዝዎን ማረጋገጥ",
       orderByTable: "በወንበር ቁጥር ለማዘዝ",
-      orderByPayment: "ክፍያ በመክፈል ለማዘዝ",
+      orderByPayment: "ክፍያ በመፈጸም ለማዘዝ",
       dineIn: "እዚህ (Dine-in)",
-      takeaway: "ይዞ ለመሄድ (Takeaway)",
+      takeaway: "ይዘው ለመሄድ (Takeaway)",
       tableNumber: "የወንበር/ጠረጴዛ ቁጥር",
       tablePlaceholder: "በ QR Code የተያዘ",
       phone: "ስልክ ቁጥር",
@@ -39,23 +39,23 @@ export default function CheckoutModal({
       requiredTag: "(ግዴታ ነው)",
       phonePlaceholder: "09...",
       uploadReceipt: "የክፍያ ስክሪንሾት",
-      uploadNote: "💡 በቴሌብር ወይም በባንክ የከፈሉበትን ደረሰኝ/ስክሪንሾት እዚህ ማያያዝ ይችላሉ።",
-      uploadBtn: "ስክሪንሾት አያይዝ",
+      uploadNote: "💡 በቴሌግራም ወይም ባንክ የክፍያሉበትን ድረሰድ/ስክሪንሾት እዚህ ማካፈል ይችላሉ።",
+      uploadBtn: "ስክሪንሾት አሳይድ",
       fullName: "ሙሉ ስም",
-      namePlaceholder: "ስምዎን ያስገቡ",
+      namePlaceholder: "ስምዎን አስገባ",
       pickupTime: "የመቀበያ ሰዓት",
       selfPickup: "መጥቼ እወስዳለሁ (Self Pick-up)",
       address: "አድራሻ",
-      addressPlaceholder: "ቦታ/አድራሻ ያስገቡ",
+      addressPlaceholder: "ቦታ/አድራሻ አስገባ",
       totalPrice: "ጠቅላላ ዋጋ",
-      submitOrder: "ትዕዛዝ ላክ",
-      payChapa: "በ Chapa ክፈል",
-      paymentAccounts: "የክፍያ ሂሳብ ቁጥሮች",
+      submitOrder: "ትዕዛዝ ልክ",
+      payChapa: "በ Chapa ክፍያ",
+      paymentAccounts: "የክፍያ አካውንት ቁጥሮች",
       selectPaymentMethod: "የክፍያ መንገድ",
       payWithChapa: "በ Chapa (ኦንላይን)",
       orderNoteLabel: "ተጨማሪ አስተያየት / ማስታወሻ",
-      orderNotePlaceholder: "ምሳሌ፤ ሽንኩርት አይግባበት፣ ጨው አይበዛበት፣ በርበሬ ቀንስልኝ...",
-      qrNotice: "ጠረጴዛዎ ላይ ያለውን QR Code ስካን በማድረግ የመረጡት ወንበር ቁጥር፤"
+      orderNotePlaceholder: "ምሳሌ፦ ሽንኩርት አያካቱበት፥ ጨው አያብዙበት፥ በረዶ ቀንሱበት...",
+      qrNotice: "ጠረጴዛዎ ላይ ያለውን QR Code ስካን በማድረግ የተመረጠው ወንበር ቁጥር፦"
     },
     om: {
       title: "Ajaja Keessan Xumuraa",
@@ -123,7 +123,7 @@ export default function CheckoutModal({
 
   const t = modalText[lang] || modalText.am;
 
-  // 📸 የፎቶ ፋይሉን ወደ Cloudinary የመላኪያ ተግባር
+  // 📸 ፋይሉን ወደ Cloudinary የመላክ ተግባር
   const uploadToCloudinary = async (file) => {
     try {
       const formData = new FormData();
@@ -169,7 +169,7 @@ export default function CheckoutModal({
         alert(
           lang === 'om' ? "Maaloo nagahee/tarree teessoo (Table No) QR code irraa scan godhaa!" :
           lang === 'en' ? "Please scan the QR code on your table to set the Table Number before ordering!" :
-          "እባክዎን ማዘዝ እንዲችሉ አስቀድመው ጠረጴዛዎ ላይ ያለውን QR Code ያንብቡ!"
+          "እባክዎ ማዘዝ ከመጀመርዎ በፊት ጠረጴዛዎ ላይ ያለውን QR Code ስካን ያድርጉ!"
         );
         return;
       }
@@ -178,19 +178,19 @@ export default function CheckoutModal({
     // 2. Takeaway ማረጋገጫ
     if (checkoutType === 'online' && customerInfo.orderType === 'Takeaway') {
       if (!customerInfo.name || !customerInfo.name.trim()) {
-        alert(lang === 'am' ? 'እባክዎን ሙሉ ስምዎን ያስገቡ!' : lang === 'om' ? 'Maaloo maqaa guutuu galchaa!' : 'Please enter your name!');
+        alert(lang === 'am' ? 'እባክዎ ሙሉ ስምዎን ያስገቡ!' : lang === 'om' ? 'Maaloo maqaa guutuu galchaa!' : 'Please enter your name!');
         return;
       }
       if (!customerInfo.phone || !customerInfo.phone.trim()) {
-        alert(lang === 'am' ? 'እባክዎን ስልክ ቁጥርዎን ያስገቡ!' : lang === 'om' ? 'Maaloo lakkoofsa bilbilaa galchaa!' : 'Please enter your phone number!');
+        alert(lang === 'am' ? 'እባክዎ ስልክ ቁጥርዎን ያስገቡ!' : lang === 'om' ? 'Maaloo lakkoofsa bilbilaa galchaa!' : 'Please enter your phone number!');
         return;
       }
       if (!customerInfo.time) {
-        alert(lang === 'am' ? 'እባክዎን የመቀበያ ሰዓት ይምረጡ!' : lang === 'om' ? "Maaloo sa'aatii fudhannaa filadhaa!" : 'Please select pickup time!');
+        alert(lang === 'am' ? 'እባክዎ የመቀበያ ሰዓት ይምረጡ!' : lang === 'om' ? "Maaloo sa'aatii fudhannaa filadhaa!" : 'Please select pickup time!');
         return;
       }
       if (!isSelfPickUp && (!customerInfo.address || !customerInfo.address.trim())) {
-        alert(lang === 'am' ? 'እባክዎን አድራሻ ያስገቡ ወይም "መጥቼ እወስዳለሁ" የሚለውን ይምረጡ!' : 'Please enter address or check self pick-up!');
+        alert(lang === 'am' ? 'እባክዎ አድራሻ ያስገቡ ወይም "መጥቼ እወስዳለሁ" የሚውን ይምረጡ!' : 'Please enter address or check self pick-up!');
         return;
       }
     }
@@ -222,6 +222,11 @@ export default function CheckoutModal({
         lang: lang,
         createdAt: new Date().toISOString()
       };
+
+      // ✅ ትዕዛዙ ሲሰጥ በቀጥታ ወደ LocalStorage (myOrders እና myPersonalOrder) እንመዘግባለን
+      const existingOrders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+      localStorage.setItem('myOrders', JSON.stringify([newOrderObj, ...existingOrders]));
+      localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
       await handleOrder(newOrderObj);
 
@@ -290,7 +295,7 @@ export default function CheckoutModal({
               <div>
                 <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
                 <p className="text-lg font-black text-orange-400">
-                  {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተነበበም"}
+                  {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተገኘም"}
                 </p>
               </div>
             </div>
@@ -403,7 +408,7 @@ export default function CheckoutModal({
                   <div>
                     <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
                     <p className="text-lg font-black text-orange-400">
-                      {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተነበበም"}
+                      {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተገኘም"}
                     </p>
                   </div>
                 </div>

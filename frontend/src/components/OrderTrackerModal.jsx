@@ -8,12 +8,21 @@ const socket = io(BACKEND_URL);
 export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCurrentOrder, lang = 'am' }) {
   if (!isOpen || !currentOrder) return null;
 
-  // 1. receiptId እና orderType ወደ String መቀየራቸውን ማረጋገጥ (Object እንዳይሆኑ)
-  const rawId = currentOrder.receiptId || currentOrder.id || currentOrder._id || '';
-  const receiptId = typeof rawId === 'string' ? JSON.stringify(rawId) : String(rawId);
+  // 1. receiptId በትክክል String ሆኖ እንዲወጣ አውጥቶ ማፅዳት
+  const rawId = currentOrder.receiptId || currentOrder.id || currentOrder._id || currentOrder?.order?.receiptId || '';
   
+  let receiptId = 'N/A';
+  if (typeof rawId === 'object' && rawId !== null) {
+    receiptId = rawId.receiptId || rawId.id || rawId._id || JSON.stringify(rawId);
+  } else if (rawId) {
+    receiptId = String(rawId);
+  }
+
+  // 2. orderType String መሆኑን ማረጋገጥ
   const rawOrderType = currentOrder.orderType || '';
-  const orderTypeStr = typeof rawOrderType === 'string' ? JSON.stringify(rawOrderType) : String(rawOrderType);
+  const orderTypeStr = typeof rawOrderType === 'object' && rawOrderType !== null
+    ? (rawOrderType[lang] || rawOrderType.am || rawOrderType.en || JSON.stringify(rawOrderType))
+    : String(rawOrderType);
 
   const status = typeof currentOrder.status === 'string' ? currentOrder.status : 'Pending';
 
@@ -53,7 +62,7 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
   };
 
   useEffect(() => {
-    if (receiptId) {
+    if (receiptId && receiptId !== 'N/A') {
       socket.emit('joinOrderRoom', receiptId);
     }
 
@@ -113,7 +122,9 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
             </div>
             <div>
               <h3 className="text-lg font-black text-white">{t.title[lang] || t.title.am}</h3>
-              <p className="text-xs text-zinc-400">መለያ (ID): {receiptId}</p>
+              <p className="text-xs font-black text-orange-400">
+                #{receiptId} ({status})
+              </p>
             </div>
           </div>
           <button 

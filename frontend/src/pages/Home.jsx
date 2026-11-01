@@ -503,7 +503,12 @@ export default function Home() {
               <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
                 {lang === 'om' ? "Haala Ajaja" : lang === 'en' ? "Order Status" : "የዝግጅቱ ሁኔታ"}
               </p>
-              
+               <p className="text-xs font-black text-orange-400">
+              #{typeof myActiveOrder?.receiptId === 'object' && myActiveOrder?.receiptId !== null
+    ? (myActiveOrder.receiptId.receiptId || myActiveOrder.receiptId.id || JSON.stringify(myActiveOrder.receiptId))
+    : (myActiveOrder?.receiptId || 'N/A')} 
+  {" "}({typeof myActiveOrder?.status === 'string' ? myActiveOrder.status : 'Pending'})
+</p>
             </div>
           </button>
         </div>
@@ -522,12 +527,8 @@ export default function Home() {
             <div>
               <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">{t?.totalPrice || "Total"}</p>
               <p className="text-white text-xl sm:text-2xl font-black">{totalPrice} <span className="text-sm text-orange-500">ETB</span></p>
-            <p className="text-xs font-black text-orange-400">
-  #{typeof myActiveOrder?.receiptId === 'object' && myActiveOrder?.receiptId !== null
-    ? (myActiveOrder.receiptId.receiptId || myActiveOrder.receiptId.id || JSON.stringify(myActiveOrder.receiptId))
-    : (myActiveOrder?.receiptId || 'N/A')} 
-  {" "}({typeof myActiveOrder?.status === 'string' ? myActiveOrder.status : 'Pending'})
-</p>
+           
+  
             </div>
 
           </div>
