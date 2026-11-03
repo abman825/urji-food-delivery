@@ -59,7 +59,7 @@ export default function Footer({ lang }) {
   return (
     <footer className="relative text-white pt-16 pb-12 border-t border-white/10 overflow-hidden">
       
-      {/* 1. የጀርባ ቪዲዮ (Background Video) */}
+      
       <video
         autoPlay
         loop
@@ -70,13 +70,13 @@ export default function Footer({ lang }) {
         <source src="/ab.mp4" type="video/mp4" />
       </video>
 
-      {/* 2. ጽሁፎቹ በደንብ እንዲታዩ ማጨለሚያ (Overlay) */}
+    
       <div className="absolute inset-0 bg-black/75 backdrop-blur-xs z-10" />
 
-      {/* 3. ዋናው Footer Content */}
+      
       <div className="relative z-20 max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10">
         
-        {/* ብራንድ እና ሶሻል ሚዲያ */}
+        
         <div>
           <h2 className="text-2xl font-black mb-4">
             {f.title} <span className="text-orange-600">{f.subTitle}</span>
@@ -97,7 +97,7 @@ export default function Footer({ lang }) {
           </div>
         </div>
 
-        {/* አድራሻ */}
+        
         <div>
           <h3 className="font-bold text-lg mb-4 text-gray-100">{f.addressTitle}</h3>
           <div className="space-y-3 text-sm text-gray-300">
@@ -106,7 +106,7 @@ export default function Footer({ lang }) {
           </div>
         </div>
 
-        {/* መረጃ */}
+       
         <div>
           <h3 className="font-bold text-lg mb-4 text-gray-100">{f.infoTitle}</h3>
           <ul className="space-y-2 text-sm text-gray-300">
@@ -128,7 +128,7 @@ export default function Footer({ lang }) {
           </ul>
         </div>
 
-        {/* NEWSLETTER */}
+       
         <div>
           <h3 className="font-bold text-lg mb-4 text-gray-100">{f.newsletterTitle}</h3>
           <p className="text-gray-300 text-xs mb-4">{f.newsletterDesc}</p>

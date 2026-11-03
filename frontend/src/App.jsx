@@ -7,7 +7,7 @@ import AdminDashboard from './components/AdminDashboard';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
-// 💡 ሎካል ሆስት ላይ ስትሰራ ከሎካል ሰርቨርህ (5000) ጋር እንዲገናኝ ማድረግ
+
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const socket = io(BACKEND_URL, { autoConnect: true });
 
@@ -17,7 +17,7 @@ export default function App() {
   const [lang, setLang] = useState('am');
   const [menuItems, setMenuItems] = useState([]);
 
-  // 1. ገፅ ሲከፈት ስክሮል ወደ ላይ እንዲመለስ ማድረግ
+  
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
@@ -25,7 +25,7 @@ export default function App() {
     window.scrollTo(0, 0);
   }, []);
 
-  // 2. ከ Database ምግቦችን መሳብ እና በ Socket Real-time ማሻሻል
+  
   useEffect(() => {
     const fetchMenu = async () => {
       try {
@@ -49,7 +49,7 @@ export default function App() {
     };
   }, []);
 
-  // 3. ትዕዛዝ ሲላክ Tracker መክፈት
+  
   const handlePlaceOrder = (newOrderData) => {
     setActiveOrder(newOrderData);
     setIsTrackerOpen(true);
@@ -60,7 +60,7 @@ export default function App() {
       <Router>
         <div className="relative min-h-screen bg-black text-white">
           <Routes>
-            {/* Home Route */}
+            
             <Route 
               path="/" 
               element={
@@ -74,14 +74,14 @@ export default function App() {
               } 
             />
 
-            {/* Admin Dashboard Route */}
+          
             <Route 
               path="/admin" 
               element={<AdminDashboard />} 
             />
           </Routes>
 
-          {/* Order Tracker Modal */}
+          
           <OrderTrackerModal
             isOpen={isTrackerOpen}
             onClose={() => setIsTrackerOpen(false)}

@@ -51,9 +51,9 @@ export default function MenuItemCard({ item: initialItem, lang = 'am', t }) {
     }).length;
   };
 
-  // Localized text labels
+  
   const cardTexts = {
-    soldOut: { am: "ለጊዜው አልተሸጣም", om: "Har'a Dhumera", en: "Sold Out" },
+    soldOut: { am: "ለጊዜው አልቋል", om: "Har'a Dhumera", en: "Sold Out" },
     fresh: { am: "ቀንና ማዕድ የተመረጠ", om: "Qulqulluu fi Hawwataa", en: "Fresh & Selected" },
     add: { am: "ጨምር", om: "Dabali", en: "Add" },
     viewOptions: { am: "አማራጮችን ይመልከቱ", om: "Filannoowwan ilaali", en: "View Options" },

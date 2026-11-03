@@ -62,7 +62,7 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
     const messageId = message.message_id;
     const data = callbackQuery.data;
 
-    // 1. ቴሌግራም ላይ አዝራሩ (Button) Loading እንዲያቆም ወዲያውኑ ምላሽ መስጠት
+   
     await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/answerCallbackQuery`, {
       callback_query_id: callbackQuery.id,
       text: "እየተሰራ ነው..."
@@ -85,7 +85,7 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
         ? 'ትዕዛዝዎ እየተዘጋጀ ነው!' 
         : 'ትዕዛዝዎ ደርሷል!';
 
-      // 2. በ MongoDB ውስጥ የትዕዛዙን Status ማስተካከል
+      
       if (receiptId) {
         await Order.findOneAndUpdate(
           { receiptId: receiptId },
@@ -93,7 +93,7 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
         );
       }
 
-      // 3. በ Socket.io አማካኝነት ሪል-ታይም አፕዴት መላክ
+      
       if (receiptId && io) {
         const payload = { 
           receiptId, 
@@ -106,7 +106,7 @@ export const handleTelegramCallback = async (callbackQuery, io) => {
         io.to('adminRoom').emit('adminOrderStatusChanged', payload);
       }
 
-      // 4. በቴሌግራም የሚመጣውን መልእክት ማስተካከል
+      
       const statusText = isPreparing ? '👨‍🍳 <b>በዝግጅት ላይ ነው</b>' : '✅ <b>ለደንበኛው ደርሷል</b>';
       
       return await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {

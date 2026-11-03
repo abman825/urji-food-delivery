@@ -17,12 +17,10 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const socket = io(BACKEND_URL);
 
 export default function Home() {
-  // ቋንቋውን ከ localStorage በማንበብ መጀመር (አድሚን ገብቶ ሲመለስ እንዳይቀየር)
   const [lang, setLang] = useState(() => {
     return localStorage.getItem('appLang') || 'am';
   });
 
-  // ቋንቋው ሲቀየር በ localStorage ውስጥ ማስቀመጥ
   useEffect(() => {
     localStorage.setItem('appLang', lang);
   }, [lang]);
@@ -44,6 +42,20 @@ export default function Home() {
     tableNo: '', 
     orderType: 'Dine-in' 
   });
+
+  // 📌 1. የ QR Code ዩአርኤል (URL) መለኪያን (ምሳሌ ?table=5) አንብቦ በራስ-ሰር ወደ customerInfo ማቀናበሪያ
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const tableParam = queryParams.get('table') || queryParams.get('tableNo');
+
+    if (tableParam) {
+      setCustomerInfo(prev => ({
+        ...prev,
+        tableNo: tableParam,
+        orderType: 'Dine-in'
+      }));
+    }
+  }, []);
 
   const [selectedFile, setSelectedFile] = useState(null); 
   const [menuItems, setMenuItems] = useState([]);
@@ -196,7 +208,6 @@ export default function Home() {
       verifyChapaPayment(pendingOrder, trx_id)
         .then(res => {
           if (res && res.success) {
-            // receiptId ኦብጀክት ወይም ሌላ ነገር ሆኖ እንዳይመጣ ንጹህ String እንዲሆን ማድረግ
             const rawReceipt = pendingOrder?.receiptId || res.receiptId || `REC-${Date.now().toString().slice(-6)}`;
             const cleanReceiptId = (typeof rawReceipt === 'object' && rawReceipt !== null)
               ? (rawReceipt.receiptId || rawReceipt.id || 'REC-000000')
@@ -220,7 +231,6 @@ export default function Home() {
             const existingOrders = JSON.parse(localStorage.getItem('adminOrders') || '[]');
             localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
 
-            // [object Object] ፈጽሞ እንዳይመጣ cleanReceiptId መጠቀም
             const alertMsg = lang === 'om' 
               ? `📄 Nagahee Kaffaltii\n------------------------------\n📍 Lakkoofsa Nagahee: ${cleanReceiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Kaffaltiin Chapa'n Milkaa'era!`
               : lang === 'en'
@@ -280,7 +290,7 @@ export default function Home() {
         if (data && data.checkout_url) {
           window.location.href = data.checkout_url;
         } else {
-          alert(lang === 'om' ? "Liinkii kaffaltii argachuun al-danda'ame!" : lang === 'en' ? "Unable to get payment URL!" : "የ ክፍያ ሊንክ ማግኘት አልተቻለም!");
+          alert(lang === 'om' ? "Liinkii kaffaltii argachuun al-danda'ame!" : lang === 'en' ? "Unable to get payment URL!" : "የክፍያ ሊንክ ማግኘት አልተቻለም!");
         }
       } catch (err) {
         alert(lang === 'om' ? "Chapa waliin wal-qunnamuun al-danda'ame!" : lang === 'en' ? "Failed to connect to Chapa!" : "ከ Chapa ጋር መገናኘት አልተቻለም!");
@@ -488,7 +498,6 @@ export default function Home() {
         />
       )}
 
-      {/* Order Tracker Modal */}
       <OrderTrackerModal
         isOpen={isOrderTrackerOpen}
         onClose={() => setIsOrderTrackerOpen(false)}
@@ -497,7 +506,6 @@ export default function Home() {
         lang={lang}
       />
 
-      {/* Floating Status Button */}
       {myActiveOrder && (
         <div className="fixed bottom-6 left-6 z-[9998]">
           <button 

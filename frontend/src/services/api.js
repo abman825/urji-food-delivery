@@ -23,7 +23,6 @@ export const loginCafe = async (credentials) => {
   }
 };
 
-// 1. ምግቦችን ከካፌ መለያ (cafeId) ጋር ማមកጫ (Updated)
 export const fetchMenuItems = async (cafeId = '') => {
   try {
     const url = cafeId ? `${API_BASE}/menu?cafeId=${cafeId}` : `${API_BASE}/menu`;
@@ -35,7 +34,6 @@ export const fetchMenuItems = async (cafeId = '') => {
   }
 };
 
-// 2. በ Chapa ለመክፈል ማዘጋጃ
 export const initiateChapaPay = async (paymentData) => {
   try {
     const res = await axios.post(`${API_BASE}/chapa-pay`, paymentData);
@@ -46,7 +44,6 @@ export const initiateChapaPay = async (paymentData) => {
   }
 };
 
-// 3. የ Chapa ክፍያ ከተፈጸመ በኋላ ማረጋገጫ
 export const verifyChapaPayment = async (pendingOrder, trx_id) => {
   try {
     const res = await axios.post(`${API_BASE}/chapa-success-notify`, {
@@ -60,7 +57,7 @@ export const verifyChapaPayment = async (pendingOrder, trx_id) => {
   }
 };
 
-// 4. መደበኛ ትዕዛዝ በፎቶ/ስክሪንሾት ወይም በካፌ ፋይል መላኪያ (FormData)
+
 export const submitOrderFormData = async (formData) => {
   try {
     const res = await axios.post(`${API_BASE}/orders`, formData);

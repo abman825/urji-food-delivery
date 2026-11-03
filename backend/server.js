@@ -7,56 +7,56 @@ import Order from './src/models/Order.js';
 import { PORT as CONSTANT_PORT } from './src/config/constants.js';
 import apiRoutes from './src/routes/apiRoutes.js';
 
-// 1. Connect to MongoDB
+
 connectDB();
 
 const app = express();
 const httpServer = createServer(app);
 
-// ✅ CORS ቅንብሩን ማስተካከል (ሁሉም ፖርቶች እና ሞባይል በፕላትፎርም እንዲገናኙ)
+
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true
 }));
 
-// Socket.io Config
+
 const io = new Server(httpServer, {
   cors: { 
     origin: "*", 
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true
   },
-  transports: ['websocket', 'polling'] // ለሞባይል ግንኙነት መረጋጋት በጣም ጠቃሚ ነው
+  transports: ['websocket', 'polling'] 
 });
 
-// Payload Limit
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Express Request ላይ Socket.io ማስተዋወቅ
+
 app.set('socketio', io);
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
-// API Routes
+
 app.use('/api', apiRoutes);
 
-// Socket.io Real-time Connection Logic
+
 io.on('connection', (socket) => {
   console.log('⚡ አዲስ ደንበኛ ተገናኝቷል:', socket.id);
 
-  // Menu Update Sync
+  
   socket.on('updateMenu', (updatedMenu) => {
     io.emit('updateMenu', updatedMenu);
   });
 
-  // Admin Room Join
+  
   socket.on('joinAdmin', () => socket.join('adminRoom'));
 
-  // Specific Order Room Join (ደንበኛው ትዕዛዙን ለመከታተል) - 💡 እዚህ ጋር ተስተካክሏል
+  
   socket.on('joinOrderRoom', (data) => {
     const receiptId = typeof data === 'object' && data !== null 
       ? (data.receiptId || data.id || data._id) 
@@ -71,10 +71,10 @@ io.on('connection', (socket) => {
     }
   });
 
- // Real-time Order Placement via Socket
+ 
   socket.on('placeOrder', async (orderData) => {
     try {
-      // 1. receiptId ኦብጀክት ወይም ሌላ ነገር ሆኖ እንዳይመጣ ጥንቃቄ ማድረግ
+      
       const rawReceiptId = orderData.receiptId || orderData.customerInfo?.receiptId;
       const cleanReceiptId = (typeof rawReceiptId === 'object' && rawReceiptId !== null)
         ? (rawReceiptId.receiptId || rawReceiptId.id || `REC-${Math.floor(100000 + Math.random() * 900000)}`)

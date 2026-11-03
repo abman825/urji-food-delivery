@@ -123,7 +123,7 @@ export default function CheckoutModal({
 
   const t = modalText[lang] || modalText.am;
 
-  // 📸 ፋይሉን ወደ Cloudinary የመላክ ተግባር
+  
   const uploadToCloudinary = async (file) => {
     try {
       const formData = new FormData();
@@ -162,7 +162,7 @@ export default function CheckoutModal({
   const onSubmitClick = async () => {
     if (isSubmitting) return;
 
-    // 1. Dine-In ማረጋገጫ
+    
     const isDineIn = checkoutType === 'table' || (checkoutType === 'online' && customerInfo.orderType === 'Dine-in');
     if (isDineIn) {
       if (!customerInfo.tableNo || !String(customerInfo.tableNo).trim()) {
@@ -175,7 +175,7 @@ export default function CheckoutModal({
       }
     }
 
-    // 2. Takeaway ማረጋገጫ
+   
     if (checkoutType === 'online' && customerInfo.orderType === 'Takeaway') {
       if (!customerInfo.name || !customerInfo.name.trim()) {
         alert(lang === 'am' ? 'እባክዎ ሙሉ ስምዎን ያስገቡ!' : lang === 'om' ? 'Maaloo maqaa guutuu galchaa!' : 'Please enter your name!');
@@ -223,7 +223,7 @@ export default function CheckoutModal({
         createdAt: new Date().toISOString()
       };
 
-      // ✅ ትዕዛዙ ሲሰጥ በቀጥታ ወደ LocalStorage (myOrders እና myPersonalOrder) እንመዘግባለን
+     
       const existingOrders = JSON.parse(localStorage.getItem('myOrders') || '[]');
       localStorage.setItem('myOrders', JSON.stringify([newOrderObj, ...existingOrders]));
       localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
@@ -241,7 +241,7 @@ export default function CheckoutModal({
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div className="relative w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
         
-        {/* Close Button */}
+        
         <button
           onClick={onClose}
           disabled={isSubmitting}
@@ -254,7 +254,7 @@ export default function CheckoutModal({
           {t.title}
         </h2>
 
-        {/* Main Order Type Selection */}
+       
         <div className="grid grid-cols-2 gap-3 mb-6">
           <button
             type="button"
@@ -285,7 +285,7 @@ export default function CheckoutModal({
           </button>
         </div>
 
-        {/* Order by Table (Dine-In) */}
+        
         {checkoutType === 'table' && (
           <div className="space-y-4">
             <div className="bg-orange-950/40 border border-orange-500/30 rounded-2xl p-4 flex items-center gap-3">
@@ -357,7 +357,7 @@ export default function CheckoutModal({
           </div>
         )}
 
-        {/* Order by Payment (Dine-in / Takeaway) */}
+        
         {checkoutType === 'online' && (
           <div className="space-y-4">
             <div className="flex gap-2 p-1 bg-zinc-800 rounded-xl">
@@ -511,7 +511,7 @@ export default function CheckoutModal({
           </div>
         )}
 
-        {/* Special Instructions Input */}
+        
         <div className="mt-4 pt-3 border-t border-zinc-800">
           <label className="flex items-center gap-1.5 text-xs font-bold mb-1.5 text-zinc-300">
             <MessageSquare size={14} className="text-orange-500" />
@@ -528,7 +528,7 @@ export default function CheckoutModal({
           ></textarea>
         </div>
 
-        {/* Total Price & Submit Button */}
+        
         <div className="mt-6 pt-4 border-t border-zinc-800 flex items-center justify-between">
           <div>
             <p className="text-xs text-zinc-400">{t.totalPrice}</p>

@@ -43,7 +43,7 @@ export default function Navbar({
   const [orderNotification, setOrderNotification] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
 
-  // 1. Pending ትዕዛዞችን ብዛት ከ Backend ወይም LocalStorage ማወቅ
+  
   const fetchPendingOrders = async () => {
     try {
       const response = await axios.get(`${BACKEND_URL}/api/admin/dashboard-stats`);
@@ -129,7 +129,7 @@ export default function Navbar({
     };
   }, [lang]);
 
-  // Multilingual labels for Navbar & Modals
+  
   const navLabels = {
     am: { 
       home: "መነሻ", 
@@ -252,7 +252,7 @@ export default function Navbar({
     }
   };
 
-  // Admin Password Verification Handler (Backend MongoDB)
+  
   const handleAdminPasswordSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -268,7 +268,7 @@ export default function Navbar({
     }
   };
 
-  // Change Password Handler (Backend MongoDB)
+  
   const handleChangePasswordSubmit = async (e) => {
     e.preventDefault();
     setPasswordChangeError('');
@@ -296,7 +296,7 @@ export default function Navbar({
 
   return (
     <>
-      {/* REAL-TIME NOTIFICATION TOAST */}
+      
       {orderNotification && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100000] w-[90%] max-w-md bg-zinc-900 border border-green-500/50 text-white p-4 rounded-2xl shadow-2xl backdrop-blur-lg flex items-start gap-3 animate-bounce">
           <div className="p-2 bg-green-500/20 text-green-400 rounded-xl shrink-0">
@@ -325,18 +325,18 @@ export default function Navbar({
             </h1>
           </div>
           
-          {/* Navigation Links */}
+         
           <div className="hidden md:flex gap-8 text-sm font-bold text-gray-600">
             <a href="#home" onClick={handleHomeClick} className="hover:text-orange-600 transition-colors">{currentNav.home}</a>
             <a href="#menu" onClick={handleMenuClick} className="hover:text-orange-600 transition-colors">{currentNav.menu}</a>
             <a href="#footer" onClick={handleAboutClick} className="hover:text-orange-600 transition-colors">{currentNav.about}</a>
           </div>
 
-          {/* Action Buttons */}
+          
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2">
               
-              {/* Admin Button */}
+             
               <button 
                 onClick={() => {
                   setIsAdminModalOpen(true);
@@ -356,7 +356,7 @@ export default function Navbar({
                 )}
               </button>
 
-              {/* Customer Orders Modal Button */}
+             
               <button
                 onClick={() => setIsMyOrderOpen(true)}
                 className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-2xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-zinc-700/60 active:scale-95 shadow-sm"
@@ -366,7 +366,7 @@ export default function Navbar({
               </button>
             </div>
 
-            {/* Language Selector */}
+            
             <select 
               value={lang} 
               onChange={(e) => {
@@ -381,7 +381,7 @@ export default function Navbar({
               <option value="en">🇬🇧 English</option>
             </select>
 
-            {/* Shopping Cart Icon */}
+           
             <div 
               className="relative cursor-pointer hover:scale-105 active:scale-95 transition-all" 
               onClick={() => cartCount > 0 && onOpenCart()}
@@ -396,7 +396,7 @@ export default function Navbar({
               )}
             </div>
 
-            {/* Mobile Menu Toggle Button */}
+            
             <button 
               className="md:hidden p-2 bg-gray-100 rounded-2xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-all border border-gray-200/50"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -407,7 +407,7 @@ export default function Navbar({
 
         </div>
 
-        {/* Mobile Dropdown Menu */}
+       
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-4 right-4 bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl p-4 mt-2 shadow-xl flex flex-col gap-3 font-bold text-gray-700 text-sm">
             <a href="#home" onClick={handleHomeClick} className="p-2 hover:bg-orange-50 rounded-xl hover:text-orange-600 transition-colors">{currentNav.home}</a>
@@ -449,12 +449,12 @@ export default function Navbar({
         )}
       </nav>
 
-      {/* Customer Order Modal */}
+     
       {isMyOrderOpen && (
         <MyOrder isOpen={isMyOrderOpen} onClose={() => setIsMyOrderOpen(false)} lang={lang} />
       )}
 
-      {/* Admin Auth & Options Modal */}
+     
       {isAdminModalOpen && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
           <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl">
@@ -470,7 +470,7 @@ export default function Navbar({
             </button>
 
             {!showAdminOptions && !isChangingPassword ? (
-              /* Phase 1: Password Input Form */
+              
               <form onSubmit={handleAdminPasswordSubmit} className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-3 bg-orange-600/20 text-orange-500 rounded-2xl">
@@ -577,14 +577,14 @@ export default function Navbar({
                 </div>
               </form>
             ) : (
-              /* Phase 2: Selection Options (Report vs Menu Management) */
+              
               <div className="flex flex-col gap-4">
                 <div className="text-center mb-2">
                   <h3 className="text-lg font-black text-white">{currentNav.adminOptionsTitle}</h3>
                   <p className="text-xs text-zinc-400">{currentNav.adminOptionsSub}</p>
                 </div>
 
-                {/* 1. ርፖርት (Report / Admin Dashboard) */}
+                
                 <Link
                   to="/admin"
                   onClick={() => setIsAdminModalOpen(false)}
@@ -601,7 +601,7 @@ export default function Navbar({
                   </div>
                 </Link>
 
-                {/* 2. ሜኑ ማስተካከያ (Menu Management) */}
+               
                 <button
                   onClick={() => {
                     setIsAdminModalOpen(false);
@@ -620,7 +620,7 @@ export default function Navbar({
                   </div>
                 </button>
 
-                {/* Change Password Option inside Menu */}
+               
                 <button
                   onClick={() => {
                     setIsChangingPassword(true);
@@ -638,7 +638,7 @@ export default function Navbar({
         </div>
       )}
 
-      {/* Menu Management Modal */}
+     
       {isMenuEditorOpen && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
           <div className="relative w-full max-w-5xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl max-h-[90vh] overflow-y-auto">

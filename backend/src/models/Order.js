@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const orderSchema = new mongoose.Schema({
   receiptId: { type: String, required: true, unique: true },
   
-  // የደስታኛ መረጃዎች (Customer Info Fields)
+  
   customerName: { type: String, default: '' },
   phone: { type: String, default: '-' },
   tableNo: { type: String, default: '-' },

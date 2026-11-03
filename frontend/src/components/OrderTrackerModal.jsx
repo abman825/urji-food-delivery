@@ -8,7 +8,7 @@ const socket = io(BACKEND_URL);
 export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCurrentOrder, lang = 'am' }) {
   if (!isOpen || !currentOrder) return null;
 
-  // 1. receiptId በትክክል String ሆኖ እንዲወጣ አውጥቶ ማፅዳት
+  
   const rawId = currentOrder.receiptId || currentOrder.id || currentOrder._id || currentOrder?.order?.receiptId || '';
   
   let receiptId = 'N/A';
@@ -18,7 +18,7 @@ export default function OrderStatusModal({ isOpen, onClose, currentOrder, setCur
     receiptId = String(rawId);
   }
 
-  // 2. orderType String መሆኑን ማረጋገጥ
+  
   const rawOrderType = currentOrder.orderType || '';
   const orderTypeStr = typeof rawOrderType === 'object' && rawOrderType !== null
     ? (rawOrderType[lang] || rawOrderType.am || rawOrderType.en || JSON.stringify(rawOrderType))

@@ -2,25 +2,25 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Star, ArrowRight } from 'lucide-react';
 
 export default function HeroSection({ t }) {
-  const [step, setStep] = useState(0); // 0: Welcome, 1: 3D Text Rotation, 2: Final Button
+  const [step, setStep] = useState(0); 
   const [activeCard, setActiveCard] = useState(0);
   const videoRef = useRef(null);
 
   const cardData = [
     { title: t?.features?.[0]?.title || "ትኩስ እና ጥራት ያለው", desc: t?.features?.[0]?.desc || "በየቀኑ በተመረጡ እና ትኩስ ግብአቶች የተዘጋጁ ጣፋጭ የምግብ ዓይነቶችን እናቀርባለን።", position: "left" },
-   { title: t?.features?.[1]?.title || "ፈጣን ማድረስ", desc: t?.features?.[1]?.desc || "ያዘዙትን ምግብ ባሉበት ቦታ በጥራት እና በሙቀቱ በቅጽበት እናደርሳለን።", position: "right" },
-    { title: t?.features?.[2]?.title || "ንፅህናው የተጠበቀ", desc: t?.features?.[2]?.desc || "በከፍተኛ ንፅህና እና ደረጃውን በጠበቀ ኩሽና ውስጥ በሙያተኞች የሚዘጋጅ።", position: "right" },
-    { title: t?.features?.[3]?.title || "ተመጣጣኝ ዋጋ", desc: t?.features?.[3]?.desc || "ምርጥ እና አሪፍ አገልግሎት ከተመጣጣኝ ዋጋ ጋር ያገኛሉ።", position: "left" },
+    { title: t?.features?.[1]?.title || "ፈጣን ማድረስ", desc: t?.features?.[1]?.desc || "ያዘዙትን ምግብ ባሉበት ቦታ በጥራት እና በሙቀቱ በቅጽበት እናደርሳለን።", position: "right" },
+   { title: t?.features?.[2]?.title || "ተመጣጣኝ ዋጋ", desc: t?.features?.[2]?.desc || "ምርጥ እና አሪፍ አገልግሎት ከተመጣጣኝ ዋጋ ጋር ያገኛሉ።", position: "left" },
+    { title: t?.features?.[3]?.title || "ንፅህናው የተጠበቀ", desc: t?.features?.[3]?.desc || "በከፍተኛ ንፅህና እና ደረጃውን በጠበቀ ኩሽና ውስጥ በሙያተኞች የሚዘጋጅ።", position: "right" },
    { title: t?.features?.[4]?.title || "ቀላል ክፍያ", desc: t?.features?.[4]?.desc || "በ Chapa እና በባንክ ማስተላለፊያ በቀላሉ ክፍያዎን መፈጸም ይችላሉ።", position: "left" },
     { title: t?.features?.[5]?.title || "ሁልጊዜ ዝግጁ", desc: t?.features?.[5]?.desc || "በማንኛውም ሰዓት ትዕዛዝዎን ለመቀበል እና ለማስተናገድ ዝግጁ ነን።", position: "right" }
   ];
 
   useEffect(() => {
-    // 1. "እንኳን ደህና መጡ" ጽሁፍ በትክክል ለ 4 ሰከንድ ታይቶ ይቆያል
+   
     const welcomeTimer = setTimeout(() => {
       setStep(1);
 
-      // 2. ጽሁፎቹ ብቻቸውን በ 3D እየተሽከረከሩ በየ 4 ሰከንዱ ይቀያየራሉ
+     
       let cardIndex = 0;
       const interval = setInterval(() => {
         cardIndex++;
@@ -28,12 +28,12 @@ export default function HeroSection({ t }) {
           setActiveCard(cardIndex);
         } else {
           clearInterval(interval);
-          // 3. ጽሁፎቹ ሲያልቁ ወደ Order Button ያልፋል
+          
           setStep(2);
         }
-      }, 3000); // ልክ እንደጠየቅከው 4 ሰከንድ (4000ms)
+      }, 3000); 
 
-    }, 3000); // የመጀመሪያው ጽሁፍ 4 ሰከንድ
+    }, 3000);
 
     return () => clearTimeout(welcomeTimer);
   }, []);
@@ -41,7 +41,7 @@ export default function HeroSection({ t }) {
   return (
     <div id="home" className="relative h-screen w-full bg-black overflow-hidden sticky top-0 perspective-1000">
       
-      {/* የጀርባ ቪዲዮ */}
+     
       <video
         ref={videoRef}
         src="/asss.mp4"
@@ -54,7 +54,7 @@ export default function HeroSection({ t }) {
 
       <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" />
 
-      {/* Step 0: "እንኳን ደህና መጡ" (ለ 4 ሰከንድ የሚቆይ) */}
+     
       <div 
         className={`absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 transition-all duration-1000 z-10 ${
           step === 0 
@@ -73,7 +73,7 @@ export default function HeroSection({ t }) {
         </p>
       </div>
 
-      {/* Step 1: ያለ Card/Box ጽሁፎች ብቻ ተንሳፈፈው በ 3D የሚሽከረከሩበት (4 Seconds Interval) */}
+      
       <div 
         className={`absolute inset-0 flex items-center justify-center px-6 md:px-20 text-white transition-all duration-1000 pointer-events-none z-10 ${
           step === 1 ? 'opacity-100' : 'opacity-0'
@@ -115,7 +115,7 @@ export default function HeroSection({ t }) {
         </div>
       </div>
 
-      {/* Step 2: Order Button (ከጽሁፎቹ በኋላ) */}
+      
       <div 
         className={`absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 transition-all duration-1000 z-10 ${
           step === 2 ? 'opacity-100 scale-100 rotate-x-0' : 'opacity-0 scale-110 rotate-x-45 pointer-events-none'

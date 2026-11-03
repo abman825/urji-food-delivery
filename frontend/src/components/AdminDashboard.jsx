@@ -192,7 +192,7 @@ const AdminDashboard = ({ lang: propLang }) => {
           </button>
         </div>
 
-        {/* 1. Sales Stats Cards */}
+      
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700/80 shadow-lg">
             <div className="flex items-center gap-2 text-emerald-400 mb-2">
@@ -227,7 +227,7 @@ const AdminDashboard = ({ lang: propLang }) => {
           </div>
         </div>
 
-        {/* 2. Top Items */}
+        
         <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700/80 shadow-xl">
           <h2 className="text-lg font-bold text-orange-400 mb-4">
             {t.topItemsTitle}
@@ -248,7 +248,7 @@ const AdminDashboard = ({ lang: propLang }) => {
           </div>
         </div>
 
-        {/* 3. All Orders List Table */}
+        
         <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700/80 shadow-xl overflow-hidden">
           <h2 className="text-lg font-bold text-orange-400 mb-4">{t.allOrdersTitle}</h2>
           <div className="overflow-x-auto">
@@ -309,7 +309,7 @@ const AdminDashboard = ({ lang: propLang }) => {
 
       </div>
 
-      {/* 4. Order Details Modal */}
+      
       {selectedOrder && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-3xl p-6 text-slate-100 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -326,7 +326,7 @@ const AdminDashboard = ({ lang: propLang }) => {
               {t.orderDetailsTitle} (#{selectedOrder.receiptId || selectedOrder._id?.slice(-6)})
             </h3>
 
-            {/* Customer Details */}
+            
             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-4 space-y-2 text-xs">
               <p className="flex items-center gap-2 text-slate-300">
                 <User size={14} className="text-orange-400" />
@@ -345,7 +345,7 @@ const AdminDashboard = ({ lang: propLang }) => {
               </p>
             </div>
 
-            {/* Ordered Items List */}
+            
             <h4 className="font-bold text-xs text-slate-400 mb-2">{t.orderedItems}</h4>
             <div className="space-y-2 mb-4">
               {(selectedOrder.items || selectedOrder.cartItems || []).map((item, idx) => (
@@ -363,7 +363,7 @@ const AdminDashboard = ({ lang: propLang }) => {
               ))}
             </div>
 
-            {/* Screenshot Preview */}
+            
             {(selectedOrder.screenshotUrl || selectedOrder.screenshot) && (
               <div className="mb-4">
                 <h4 className="font-bold text-xs text-slate-400 mb-2">{t.screenshot}</h4>
@@ -375,7 +375,7 @@ const AdminDashboard = ({ lang: propLang }) => {
               </div>
             )}
 
-            {/* Total Amount */}
+            
             <div className="border-t border-slate-800 pt-3 flex justify-between items-center">
               <span className="font-bold text-slate-400 text-sm">{t.totalPrice}</span>
               <span className="text-xl font-black text-emerald-400">

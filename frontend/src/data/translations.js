@@ -3,7 +3,7 @@ export const translations = {
   am: {
     // Hero & General
     heroBadge: "አዲስ ተጨምሯል",
-    heroTitle1: "ምን ዛሬ መመገብ",
+    heroTitle1: "ዛሬ ምን መመገብ",
     heroTitle2: "ይፈልጋሉ?",
     heroDesc: "ትኩስ እና ጣፋጭ የሀገራችንን ምግብ በደቂቃዎች ውስጥ ከኡርጂ ቤት!",
     orderNow: "አሁን እዘዝ",

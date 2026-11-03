@@ -144,7 +144,7 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
       <div className="relative w-full max-w-4xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
         
-        {/* Header */}
+        
         <div className="flex justify-between items-center pb-4 border-b border-zinc-800 mb-6 sticky top-0 bg-zinc-900 z-10 pt-2">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-orange-600/20 border border-orange-500/30 rounded-2xl text-orange-500">
@@ -164,7 +164,7 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
           </button>
         </div>
 
-        {/* Content */}
+        
         <div className="space-y-4">
           <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
             <h3 className="text-sm font-bold text-zinc-300">
@@ -201,7 +201,7 @@ export default function MyOrder({ isOpen, onClose, lang = 'am' }) {
                 const screenshotImg = getScreenshotImg(order);
                 const paymentMethodStr = getPaymentText(order);
 
-                // receiptId ንጹህ String መሆኑን ማረጋገጫ
+               
                 const rawReceipt = order.receiptId || order.id || order._id;
                 const cleanReceiptId = typeof rawReceipt === 'object' && rawReceipt !== null
                   ? (rawReceipt.receiptId || rawReceipt.id || JSON.stringify(rawReceipt))

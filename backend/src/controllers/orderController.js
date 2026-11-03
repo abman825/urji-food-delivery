@@ -153,7 +153,7 @@ ${formattedItems}
       console.error('⚠️ Chapa Telegram Notification Failed:', telegramErr.message);
     }
 
-    // Database ውስጥ ማስቀመጥ (receiptId String መሆኑን በማረጋገጥ)
+    
     try {
       const parsedItems = typeof pendingOrder?.items === 'string' ? JSON.parse(pendingOrder.items) : pendingOrder?.items;
       const newOrder = new Order({
@@ -197,7 +197,7 @@ ${formattedItems}
   }
 };
 
-// 4. Chapa Payment Initialization
+
 export const initiateChapaPayment = async (req, res) => {
   try {
     const { amount, name, phone, returnUrl } = req.body;
@@ -252,7 +252,7 @@ export const initiateChapaPayment = async (req, res) => {
   }
 };
 
-// 5. Main Order / Screenshot Submission Handler
+
 export const submitOrderFormData = async (req, res) => {
   try {
     const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod, note, customerInfo, socketId } = req.body;
@@ -328,7 +328,7 @@ ${formattedItems}
 
     let screenshotCloudinaryUrl = "";
 
-    // 📸 1. ፎቶ ካለ ወደ Cloudinary Upload ማድረግ
+    
     if (file) {
       const filePath = file.path;
       const fileBuffer = file.buffer || (filePath ? fs.readFileSync(filePath) : null);
@@ -365,7 +365,7 @@ ${formattedItems}
 
     const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
 
-    // 💾 2. Database ላይ አዲስ Order ከ socketId ጋር ዱኝ ማድረግ
+    
     let savedOrder = null;
     try {
       const finalSocketId = socketId || parsedCustomerInfo?.socketId || req.body.socketId || '';
@@ -431,7 +431,7 @@ ${formattedItems}
   }
 };
 
-// 6. Toggle Availability Handler
+
 export const toggleAvailability = async (req, res) => {
   try {
     const { id } = req.params;

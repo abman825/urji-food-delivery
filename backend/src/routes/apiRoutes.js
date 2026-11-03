@@ -19,7 +19,7 @@ import Admin from '../models/Admin.js';
 
 const router = express.Router();
 
-// 1. Cloudinary Configuration
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -30,17 +30,16 @@ cloudinary.config({
 const storage = multer.diskStorage({});
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 } 
 });
 
-// --- ADMIN PASSWORD ROUTES ---
-// 1. ጽሑፍ/የይለፍ ቃል ማረጋገጥ (Verify Password)
+
 router.post('/admin/verify-password', async (req, res) => {
   try {
     const { password } = req.body;
     let admin = await Admin.findOne({ username: 'admin' });
     
-    // አድሚን ከሌለ በነባሪ '123' ብሎ ይፍጠረው
+    
     if (!admin) {
       admin = await Admin.create({ username: 'admin', password: '4321' });
     }
@@ -55,7 +54,7 @@ router.post('/admin/verify-password', async (req, res) => {
   }
 });
 
-// 2. የይለፍ ቃል መቀየር (Change Password)
+
 router.post('/admin/change-password', async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
@@ -82,7 +81,7 @@ router.post('/admin/change-password', async (req, res) => {
   }
 });
 
-// --- CLOUDINARY FILE UPLOAD ROUTE ---
+
 router.post('/upload-image', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -100,7 +99,7 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
   }
 });
 
-// --- MENU ROUTES ---
+
 router.get('/menu', async (req, res) => {
   try {
     const items = await MenuItem.find();
@@ -128,7 +127,7 @@ router.post('/menu/update', async (req, res) => {
   }
 });
 
-// --- ORDER ROUTES ---
+
 router.post('/orders', upload.single('screenshot'), createScreenshotOrder);
 router.post('/chapa-pay', initiateChapaPayment);
 router.post('/chapa-success-notify', handleChapaSuccess);
@@ -138,19 +137,19 @@ router.patch('/menu/:id/toggle', toggleAvailability);
 router.get('/admin/dashboard-stats', getAdminDashboardStats);
 router.get('/admin/orders', getAllOrders);
 
-// --- TELEGRAM BOT WEBHOOK ROUTE (/api/telegram-webhook) ---
+
 router.post('/telegram-webhook', async (req, res) => {
   try {
     const { callback_query, message } = req.body;
     const io = req.app.get('socketio');
 
-    // 1. ከቴሌግራም ቁልፍ (Button) ሲጫን
+    
     if (callback_query) {
       await handleTelegramCallback(callback_query, io);
       return res.status(200).send('OK');
     }
 
-    // 2. /today ወይም /stats ትዕዛዝ ሲሰጥ
+    
     if (message && message.text) {
       const command = message.text.trim().toLowerCase();
 

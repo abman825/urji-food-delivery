@@ -45,8 +45,8 @@ export default function MenuManagementTab({
     fillRequired: { am: "እባክዎ ስም እና ዋጋ (ወይም አማራጮችን) ያስገቡ!", om: "Maaloo maqaa fi gatii (ykn filannoowwan) galchaa!", en: "Please enter name and price (or variants)!" },
     priceNotSet: { am: "ዋጋ አልተወሰነም", om: "Gatiin Hin Murtaa'ine", en: "Price not set" },
     from: { am: "ከ", om: "Kaa'immaa", en: "From" },
-    availableToday: { am: "ለጊዜው አለ", om: "Har'a Jira", en: "Available Today" },
-    soldOutToday: { am: "ለጊዜው አልተሸጣም", om: "Har'a Dhumera", en: "Sold Out Today" },
+    availableToday: { am: "አለ", om: "Har'a Jira", en: "Available Today" },
+    soldOutToday: { am: "ለጊዜው አልቋል", om: "Har'a Dhumera", en: "Sold Out Today" },
     uploadBtn: { am: "ከፋይል/ኮምፒውተር ምረጥ", om: "Fakkii Fe'i", en: "Upload Image" },
     uploading: { am: "በመጫን ላይ...", om: "Fe'amaa jira...", en: "Uploading..." },
     editBtn: { am: "ቀይር", om: "Jijjiiri", en: "Edit" },
@@ -276,7 +276,7 @@ export default function MenuManagementTab({
 
   return (
     <div className="space-y-6">
-      {/* አዲስ ምግብ መመዝገቢያ Form */}
+      
       <form onSubmit={handleAddItem} className="bg-zinc-800/40 border border-zinc-800 rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <Utensils size={16} className="text-orange-500" />
@@ -307,7 +307,7 @@ export default function MenuManagementTab({
           </select>
         </div>
 
-        {/* ፎቶ Upload ማድረጊያ እና URL ማሰቀመጫ */}
+        
         <div className="flex flex-col md:flex-row gap-2">
           <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl p-2 focus-within:border-orange-500">
             <ImageIcon size={16} className="text-zinc-400" />
@@ -380,14 +380,14 @@ export default function MenuManagementTab({
         </div>
       </form>
 
-      {/* የምግብ ዝርዝር Cards */}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {menuItems.map(item => {
           const id = item.id || item._id;
           const isEditing = editingId === id;
           const isAvailable = item.isAvailable !== false;
 
-          // ቋንቋው ሲቀየር የምግብ ምድብ ስም (Category) እንዲተረጎም ማድረግ
+         
           const displayCategory = item.category === 'ምግብ' || item.category === 'Food' || item.category === 'Nyaata'
             ? (lang === 'en' ? 'Food' : lang === 'om' ? 'Nyaata' : 'ምግብ')
             : item.category;
