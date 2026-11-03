@@ -17,7 +17,16 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const socket = io(BACKEND_URL);
 
 export default function Home() {
-  const [lang, setLang] = useState('am');
+  // ቋንቋውን ከ localStorage በማንበብ መጀመር (አድሚን ገብቶ ሲመለስ እንዳይቀየር)
+  const [lang, setLang] = useState(() => {
+    return localStorage.getItem('appLang') || 'am';
+  });
+
+  // ቋንቋው ሲቀየር በ localStorage ውስጥ ማስቀመጥ
+  useEffect(() => {
+    localStorage.setItem('appLang', lang);
+  }, [lang]);
+
   const t = translations?.[lang] || translations?.am || {};
 
   const { cartCount, totalPrice, cartItems, clearCart, addToCart } = useCart();
@@ -51,7 +60,7 @@ export default function Home() {
     ? ['Hunda', 'Nyaata', 'Fast Food', 'Juice', 'Dhugaatii Qabbanaawaa', "Dhugaatii Ho'aa"]
     : lang === 'en'
     ? ['All', 'Food', 'Fast Food', 'Juice', 'Cold Drinks', 'Hot Drinks']
-    : ['ሁሉም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ሙቅ መጠጥ'];
+    : ['ሁሉንም', 'ምግብ', 'Fast Food', 'Juice', 'ቀዝቃዛ መጠጥ', 'ሞቅ መጠጥ'];
 
   // -------------------------------------------------------------
   // REAL-TIME MENU SYNC
@@ -187,10 +196,14 @@ export default function Home() {
       verifyChapaPayment(pendingOrder, trx_id)
         .then(res => {
           if (res && res.success) {
-            const receiptId = pendingOrder?.receiptId || `REC-${Date.now().toString().slice(-6)}`;
+            // receiptId ኦብጀክት ወይም ሌላ ነገር ሆኖ እንዳይመጣ ንጹህ String እንዲሆን ማድረግ
+            const rawReceipt = pendingOrder?.receiptId || res.receiptId || `REC-${Date.now().toString().slice(-6)}`;
+            const cleanReceiptId = (typeof rawReceipt === 'object' && rawReceipt !== null)
+              ? (rawReceipt.receiptId || rawReceipt.id || 'REC-000000')
+              : String(rawReceipt);
             
             const newOrderObj = {
-              receiptId,
+              receiptId: cleanReceiptId,
               status: 'Pending',
               paymentMethod: 'Chapa',
               totalPrice: pendingOrder?.totalPrice || 0,
@@ -207,11 +220,12 @@ export default function Home() {
             const existingOrders = JSON.parse(localStorage.getItem('adminOrders') || '[]');
             localStorage.setItem('adminOrders', JSON.stringify([newOrderObj, ...existingOrders]));
 
+            // [object Object] ፈጽሞ እንዳይመጣ cleanReceiptId መጠቀም
             const alertMsg = lang === 'om' 
-              ? `📄 Nagahee Kaffaltii\n------------------------------\n📌 Lakkoofsa Nagahee: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Kaffaltiin Chapa'n Milkaa'era!`
+              ? `📄 Nagahee Kaffaltii\n------------------------------\n📍 Lakkoofsa Nagahee: ${cleanReceiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Kaffaltiin Chapa'n Milkaa'era!`
               : lang === 'en'
-              ? `📄 Payment Receipt\n------------------------------\n📌 Receipt ID: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Chapa Payment Successful!`
-              : `📄 የክፍያ ደረሰኝ\n------------------------------\n📌 የደረሰኝ ቁጥር: ${receiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ ክፍያው በ Chapa ተሳክቷል!`;
+              ? `📄 Payment Receipt\n------------------------------\n📍 Receipt ID: ${cleanReceiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ Chapa Payment Successful!`
+              : `📄 የክፍያ ድረሰድ\n------------------------------\n📍 የድረሰድ ቁጥር: ${cleanReceiptId}\n💳 Tx Ref: ${trx_id}\n------------------------------\n✅ ክፍያው በ Chapa ተሳክቷል!`;
 
             alert(alertMsg);
             clearCart();
@@ -229,7 +243,7 @@ export default function Home() {
       alert(
         lang === 'om' ? "Dhiifama! Nyaatni/Dhugaatiin kun dhumateera." :
         lang === 'en' ? "Sorry, this item is currently out of stock!" :
-        "ይቅርታ! ይህ ምግብ/መጠጥ ለአሁን አልተገኙም እባክዎ ሌላ ይምረጡ።"
+        "ይቅርታ! ይህ ምግብ/መጠጥ ለአሁን አልተገኘም እባክዎ ሌላ ይምረጡ!"
       );
       return;
     }
@@ -266,7 +280,7 @@ export default function Home() {
         if (data && data.checkout_url) {
           window.location.href = data.checkout_url;
         } else {
-          alert(lang === 'om' ? "Liinkii kaffaltii argachuun al-danda'ame!" : lang === 'en' ? "Unable to get payment URL!" : "የክፍያ ሊንክ ማግኘት አልተቻለም!");
+          alert(lang === 'om' ? "Liinkii kaffaltii argachuun al-danda'ame!" : lang === 'en' ? "Unable to get payment URL!" : "የ ክፍያ ሊንክ ማግኘት አልተቻለም!");
         }
       } catch (err) {
         alert(lang === 'om' ? "Chapa waliin wal-qunnamuun al-danda'ame!" : lang === 'en' ? "Failed to connect to Chapa!" : "ከ Chapa ጋር መገናኘት አልተቻለም!");
@@ -306,7 +320,7 @@ export default function Home() {
         setMyActiveOrder(newOrderObj);
         localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
 
-        const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተሳክቷል! ደረሰኝ ቁጥር:";
+        const successText = lang === 'om' ? "Ajajni keessan ergameera! Lakkoofsa nagahee:" : lang === 'en' ? "Order submitted! Receipt ID:" : "ትዕዛዝዎ ተልጓል! ድረሰድ ቁጥር:";
         alert(`✅ ${successText} ${finalReceiptId}`);
         
         setIsModalOpen(false); 
@@ -314,7 +328,7 @@ export default function Home() {
         setSelectedFile(null);
       } catch (err) { 
         console.error("Order submit error:", err);
-        alert(lang === 'om' ? "Ajaja ergachuun al-danda'ame!" : lang === 'en' ? "Failed to send order!" : "ትዕዛዙን መላክ አልተቻለም!"); 
+        alert(lang === 'om' ? "Ajaja ergachuun al-danda'ame!" : lang === 'en' ? "Failed to send order!" : "ትዕዛዙን መልክ አልተቻለም!"); 
       }
     }
   };
@@ -346,24 +360,15 @@ export default function Home() {
         cat === 'cold drinks';
     } else if (activeTabIndex === 5) {
       matchesCategory = 
-        cat.includes('ሙቅ') || 
+        cat.includes('ሞቅ') || 
         cat.includes('hot') || 
         cat.includes("ho'aa") ||
-        cat === 'ሙቅ መጠጥ' || 
+        cat === 'ሞቅ መጠጥ' || 
         cat === 'hot drinks';
     }
 
     return matchesSearch && matchesCategory;
   });
-
-  // Safe helper to render status string safely without Object crash
-  const getSafeStatusText = (status) => {
-    if (!status) return 'Pending';
-    if (typeof status === 'object') {
-      return status.status || status.am || status.en || 'Pending';
-    }
-    return String(status);
-  };
 
   return (
     <>
@@ -372,7 +377,10 @@ export default function Home() {
           cartCount={cartCount} 
           onOpenCart={() => setIsModalOpen(true)} 
           lang={lang} 
-          setLang={setLang} 
+          setLang={(newLang) => {
+            setLang(newLang);
+            localStorage.setItem('appLang', newLang);
+          }} 
           menuItems={menuItems}
           setMenuItems={(newItems) => {
             const updated = typeof newItems === 'function' ? newItems(menuItems) : newItems;
@@ -489,7 +497,7 @@ export default function Home() {
         lang={lang}
       />
 
-      {/* Floating Status Button - 💡 Safe Status Rendering */}
+      {/* Floating Status Button */}
       {myActiveOrder && (
         <div className="fixed bottom-6 left-6 z-[9998]">
           <button 
@@ -501,14 +509,14 @@ export default function Home() {
             </div>
             <div className="text-left">
               <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
-                {lang === 'om' ? "Haala Ajaja" : lang === 'en' ? "Order Status" : "የዝግጅቱ ሁኔታ"}
+                {lang === 'om' ? "Haala Ajaja" : lang === 'en' ? "Order Status" : "የእዘዝ ሁኔታ"}
               </p>
-               <p className="text-xs font-black text-orange-400">
-              #{typeof myActiveOrder?.receiptId === 'object' && myActiveOrder?.receiptId !== null
-    ? (myActiveOrder.receiptId.receiptId || myActiveOrder.receiptId.id || JSON.stringify(myActiveOrder.receiptId))
-    : (myActiveOrder?.receiptId || 'N/A')} 
-  {" "}({typeof myActiveOrder?.status === 'string' ? myActiveOrder.status : 'Pending'})
-</p>
+              <p className="text-xs font-black text-orange-400">
+                #{typeof myActiveOrder?.receiptId === 'object' && myActiveOrder?.receiptId !== null
+                  ? (myActiveOrder.receiptId.receiptId || myActiveOrder.receiptId.id || JSON.stringify(myActiveOrder.receiptId))
+                  : (myActiveOrder?.receiptId || 'N/A')} 
+                {" "}({typeof myActiveOrder?.status === 'string' ? myActiveOrder.status : 'Pending'})
+              </p>
             </div>
           </button>
         </div>
@@ -527,10 +535,7 @@ export default function Home() {
             <div>
               <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">{t?.totalPrice || "Total"}</p>
               <p className="text-white text-xl sm:text-2xl font-black">{totalPrice} <span className="text-sm text-orange-500">ETB</span></p>
-           
-  
             </div>
-
           </div>
           
           <button onClick={() => setIsModalOpen(true)} className="bg-orange-600 px-6 sm:px-8 py-3.5 sm:py-4 rounded-3xl font-black text-white hover:bg-orange-700 active:scale-95 transition-all text-sm sm:text-base shadow-lg shadow-orange-600/30 cursor-pointer">

@@ -5,7 +5,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { CHAPA_SECRET_KEY } from '../config/constants.js';
 import Order from '../models/Order.js';
 
-// የምግብ ዝርዝር ማስተካከያ እና ፎርማተር
+// የምግብ ዝርዝር ማስተካከያ እና ማጽዳት
 const formatOrderItems = (items) => {
   if (!items) return '• ምንም የተመረጠ ምግብ የለም';
   
@@ -33,23 +33,23 @@ const formatOrderItems = (items) => {
   return String(items);
 };
 
-// 1. Admin Dashboard Stats Handler (የሳምንቱ ስሌት የተስተካከለበት)
+// 1. Admin Dashboard Stats Handler (የአስተዳዳሪ ሰንጠረዥ የተשሰካከለበት)
 export const getAdminDashboardStats = async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
 
     const now = new Date();
 
-    // 1. የዛሬ ጅምር (Start of Today - 00:00:00)
+    // 1. የዛሬ ጀምር (Start of Today - 00:00:00)
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // 2. የሳምንቱ ጅምር (Start of Week - እሁድ 00:00:00)
+    // 2. የሳምንቱ ጀምር (Start of Week - እሁድ 00:00:00)
     const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
 
-    // 3. የወሩ ጅምር (Start of Month)
+    // 3. የወሩ ጀምር (Start of Month)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // 4. የዓመቱ ጅምር (Start of Year)
+    // 4. የአመቱ ጀምር (Start of Year)
     const startOfYear = new Date(now.getFullYear(), 0, 1);
 
     let dailySales = 0;
@@ -119,7 +119,7 @@ export const handleChapaSuccess = async (req, res) => {
     const currentOrderType = pendingOrder?.orderType || 'Takeaway';
     const displayTableNo = currentOrderType === 'Takeaway' ? 'Takeaway' : (pendingOrder?.tableNo || '-');
 
-    const userNote = pendingOrder?.note || 'ለማድ';
+    const userNote = pendingOrder?.note || 'ለማስተካከል';
 
     let details = '';
     if (pendingOrder?.name) details += `<b>👤 ስም:</b> ${pendingOrder.name}\n`;
@@ -128,10 +128,12 @@ export const handleChapaSuccess = async (req, res) => {
     if (pendingOrder?.address) details += `<b>📍 አድራሻ:</b> ${pendingOrder.address}\n`;
     if (pendingOrder?.time) details += `<b>⏰ ሰዓት:</b> ${pendingOrder.time}\n`;
 
+    const cleanReceiptIdStr = String(receiptId).trim();
+
     const message = `
 <b>✅ የ Chapa ክፍያ ተጠናቋል!</b>
 
-<b>🆔 የድረሰድ ቁጥር:</b> <code>${receiptId}</code>
+<b>🆔 የድረሰድ ቁጥር:</b> <code>${cleanReceiptIdStr}</code>
 <b>💳 Tx Ref:</b> <code>${trx_id || 'ሐላፊነት አልታወቀም'}</code>
 ${details}<b>📝 አስተያየት (Note):</b>
 <code>${userNote}</code>
@@ -146,16 +148,16 @@ ${formattedItems}
 `;
 
     try {
-      await sendMessageToTelegram(message, String(receiptId));
+      await sendMessageToTelegram(message, cleanReceiptIdStr);
     } catch (telegramErr) {
       console.error('⚠️ Chapa Telegram Notification Failed:', telegramErr.message);
     }
 
-    // Database ውስጥ ማስተካከል (receiptId String መሆኑን በማረጋገጥ)
+    // Database ውስጥ ማስቀመጥ (receiptId String መሆኑን በማረጋገጥ)
     try {
       const parsedItems = typeof pendingOrder?.items === 'string' ? JSON.parse(pendingOrder.items) : pendingOrder?.items;
       const newOrder = new Order({
-        receiptId: String(receiptId).trim(),
+        receiptId: cleanReceiptIdStr,
         name: pendingOrder?.name || 'እንግዳ',
         phone: pendingOrder?.phone || '-',
         tableNo: displayTableNo,
@@ -182,7 +184,7 @@ ${formattedItems}
 
     return res.status(200).json({ 
       success: true, 
-      receiptId: String(receiptId).trim(),
+      receiptId: cleanReceiptIdStr,
       paymentMethod: 'Chapa',
       message: 'ትዕዛዙ ወደ Telegram ተልጓል' 
     });
@@ -239,13 +241,13 @@ export const initiateChapaPayment = async (req, res) => {
     if (response.data && response.data.status === 'success') {
       return res.status(200).json({ checkout_url: response.data.data.checkout_url });
     } else {
-      return res.status(400).json({ success: false, message: 'የ Chapa ሊንክ መፈቀድ አልተቻለም' });
+      return res.status(400).json({ success: false, message: 'የ Chapa ሊንክ መፈጠር አልተቻለም' });
     }
 
   } catch (error) {
     console.error('Chapa Init Error:', error?.response?.data || error.message);
     if (!res.headersSent) {
-      return res.status(500).json({ success: false, message: 'Chapa ክፍያ ማሰመርመም አልተቻለም' });
+      return res.status(500).json({ success: false, message: 'Chapa ክፍያ መመዝገብ አልተቻለም' });
     }
   }
 };
@@ -265,7 +267,7 @@ export const submitOrderFormData = async (req, res) => {
       }
     }
 
-    const userNote = note || parsedCustomerInfo?.note || 'የለም';
+    const userNote = note || parsedCustomerInfo?.note || 'ለማድ';
     const currentOrderType = orderType || parsedCustomerInfo?.orderType || 'Dine-In';
 
     const inputTableNo = tableNo || parsedCustomerInfo?.tableNo;
@@ -276,7 +278,7 @@ export const submitOrderFormData = async (req, res) => {
         if (req.file && req.file.path) fs.unlink(req.file.path, () => {});
         return res.status(400).json({ 
           success: false, 
-          message: 'እባክዎን ማዘዝ እንዲችሉ ጠረጴዛው ላይ ያለውን QR Code ያንብቡ!' 
+          message: 'እባክዎ ማዘዝ ከመጀመርዎ በፊት ጠረጴዛዎ ላይ ያለውን QR Code ስካን ያድርጉ!' 
         });
       }
     }
@@ -291,7 +293,7 @@ export const submitOrderFormData = async (req, res) => {
       payMethodText = 'በስክሪንሾት/ ባንክ';
     }
 
-    const hasReceipt = file ? '✅ አዎ (ስክሪንሾት ተያይዟል)' : '❌ አልተያያዘም (በካሽ የሚከፈል)';
+    const hasReceipt = file ? '✅ አዎ (ስክሪንሾት ተለይቷል)' : '❌ አልተቀመጠም (በካሽ የሚከፈል)';
 
     const customerName = name || parsedCustomerInfo?.name;
     const customerPhone = phone || parsedCustomerInfo?.phone;
@@ -310,13 +312,13 @@ export const submitOrderFormData = async (req, res) => {
     const caption = `
 <b>🛒 አዲስ ትዕዛዝ ደርሷል!</b>
 
-<b>🆔 የደረሰኝ ቁጥር:</b> <code>${orderId}</code>
+<b>🆔 የድረሰድ ቁጥር:</b> <code>${orderId}</code>
 ${details}<b>📝 አስተያየት (Note):</b>
 <code>${userNote}</code>
 
 <b>📦 ዓይነት:</b> ${currentOrderType}
-<b>💳 የመክፈያ መንገድ:</b> <b>${payMethodText}</b>
-<b>🧾 የክፍያ ስክሪንሾት:</b> ${hasReceipt}
+<b>💳 የማስረከቢያ መንገድ:</b> <b>${payMethodText}</b>
+<b>🗂️ የክፍያ ስክሪንሾት:</b> ${hasReceipt}
 
 <b>🛒 የታዘዙ የምግብ ዓይነቶች:</b>
 ${formattedItems}
@@ -326,7 +328,7 @@ ${formattedItems}
 
     let screenshotCloudinaryUrl = "";
 
-    // 📸 1. ፎቶ ከተላከ ወደ Cloudinary Upload ማድረግ
+    // 📸 1. ፎቶ ካለ ወደ Cloudinary Upload ማድረግ
     if (file) {
       const filePath = file.path;
       const fileBuffer = file.buffer || (filePath ? fs.readFileSync(filePath) : null);
@@ -363,7 +365,7 @@ ${formattedItems}
 
     const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
 
-    // 💾 2. Database ላይ አዲሱን Order ከ socketId ጋር ሴቭ ማድረግ
+    // 💾 2. Database ላይ አዲስ Order ከ socketId ጋር ዱኝ ማድረግ
     let savedOrder = null;
     try {
       const finalSocketId = socketId || parsedCustomerInfo?.socketId || req.body.socketId || '';
@@ -417,14 +419,14 @@ ${formattedItems}
       receiptId: orderId,
       orderId, 
       order: orderData,
-      message: 'ትዕዛዝዎ በተሳካ ሁኔታ ተልኳል!' 
+      message: 'ትዕዛዝዎ በሳካ ሁኔታ ተልጓል!' 
     });
 
   } catch (error) {
     console.error('SERVER ERROR IN submitOrderFormData:', error);
     if (req.file && req.file.path) fs.unlink(req.file.path, () => {});
     if (!res.headersSent) {
-      return res.status(500).json({ success: false, message: 'ትዕዛዙን መላክ አልተቻለም', error: error.message });
+      return res.status(500).json({ success: false, message: 'ትዕዛዙን መልክ አልተቻለም', error: error.message });
     }
   }
 };
@@ -442,7 +444,7 @@ export const toggleAvailability = async (req, res) => {
 
     return res.status(200).json({ 
       success: true, 
-      message: "ሁኔታው በተሳካ ሁኔታ ተቀይሯል",
+      message: "ሁኔታው በሳካ ሁኔታ ተቀይሯል",
       id,
       isAvailable 
     });
