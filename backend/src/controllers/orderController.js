@@ -256,7 +256,7 @@ export const initiateChapaPayment = async (req, res) => {
 export const submitOrderFormData = async (req, res) => {
   try {
     const { name, phone, address, tableNo, time, orderType, totalPrice, items, paymentMethod, note, customerInfo, socketId } = req.body;
-    const file = req.file;
+    const file = req.file || (req.files && req.files[0]);
 
     let parsedCustomerInfo = {};
     if (customerInfo) {

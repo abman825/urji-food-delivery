@@ -30,8 +30,8 @@ export default function CheckoutModal({
       title: "ትዕዛዝዎን ማረጋገጥ",
       orderByTable: "በወንበር ቁጥር ለማዘዝ",
       orderByPayment: "ክፍያ በመፈጸም ለማዘዝ",
-      dineIn: "እዚህ (Dine-in)",
-      takeaway: "ይዘው ለመሄድ (Takeaway)",
+      dineIn: "እስሁ (Dine-in)",
+      takeaway: "ይዞ ለማሄድ (Takeaway)",
       tableNumber: "የወንበር/ጠረጴዛ ቁጥር",
       tablePlaceholder: "በ QR Code የተያዘ",
       phone: "ስልክ ቁጥር",
@@ -39,23 +39,23 @@ export default function CheckoutModal({
       requiredTag: "(ግዴታ ነው)",
       phonePlaceholder: "09...",
       uploadReceipt: "የክፍያ ስክሪንሾት",
-      uploadNote: "💡 በቴሌግራም ወይም ባንክ የክፍያሉበትን ድረሰድ/ስክሪንሾት እዚህ ማካፈል ይችላሉ።",
+      uploadNote: "💡 በቴሌግራም ወይም ባንክ የክፍያሉን ድረሰድ/ስክሪንሾት እዚህ ማክሰል ይችላሉ።",
       uploadBtn: "ስክሪንሾት አሳይድ",
       fullName: "ሙሉ ስም",
       namePlaceholder: "ስምዎን አስገባ",
       pickupTime: "የመቀበያ ሰዓት",
-      selfPickup: "መጥቼ እወስዳለሁ (Self Pick-up)",
+      selfPickup: "ራሴ መኃልሄ አለው (Self Pick-up)",
       address: "አድራሻ",
-      addressPlaceholder: "ቦታ/አድራሻ አስገባ",
+      addressPlaceholder: "ቤ/አድራሻ አስገባ",
       totalPrice: "ጠቅላላ ዋጋ",
-      submitOrder: "ትዕዛዝ ልክ",
+      submitOrder: "ትዕዛዝ ላክ",
       payChapa: "በ Chapa ክፍያ",
       paymentAccounts: "የክፍያ አካውንት ቁጥሮች",
       selectPaymentMethod: "የክፍያ መንገድ",
       payWithChapa: "በ Chapa (ኦንላይን)",
       orderNoteLabel: "ተጨማሪ አስተያየት / ማስታወሻ",
-      orderNotePlaceholder: "ምሳሌ፦ ሽንኩርት አያካቱበት፥ ጨው አያብዙበት፥ በረዶ ቀንሱበት...",
-      qrNotice: "ጠረጴዛዎ ላይ ያለውን QR Code ስካን በማድረግ የተመረጠው ወንበር ቁጥር፦"
+      orderNotePlaceholder: "ምሳሌ፦ ቀርፉዲ ዲማ ከሰ እንካይና፣ ሶጋ እንባይዚና...",
+      qrNotice: "ጠረጴዛው ላይ ያለውን QR Code ስካን በማድረግ የተመሰረተው ወንበር ቁጥር:"
     },
     om: {
       title: "Ajaja Keessan Xumuraa",
@@ -123,11 +123,11 @@ export default function CheckoutModal({
 
   const t = modalText[lang] || modalText.am;
 
-  
+  // 🛠️ Sirreeffama bakka kanaa: 'image' iddoo ture gara 'screenshot' jijjiirameera
   const uploadToCloudinary = async (file) => {
     try {
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('screenshot', file); // 👈 Asirratti maqaan field-ichaa screenshot ta'uu qaba
 
       const res = await fetch(`${BACKEND_URL}/api/upload-image`, {
         method: 'POST',
@@ -162,20 +162,18 @@ export default function CheckoutModal({
   const onSubmitClick = async () => {
     if (isSubmitting) return;
 
-    
     const isDineIn = checkoutType === 'table' || (checkoutType === 'online' && customerInfo.orderType === 'Dine-in');
     if (isDineIn) {
       if (!customerInfo.tableNo || !String(customerInfo.tableNo).trim()) {
         alert(
           lang === 'om' ? "Maaloo nagahee/tarree teessoo (Table No) QR code irraa scan godhaa!" :
           lang === 'en' ? "Please scan the QR code on your table to set the Table Number before ordering!" :
-          "እባክዎ ማዘዝ ከመጀመርዎ በፊት ጠረጴዛዎ ላይ ያለውን QR Code ስካን ያድርጉ!"
+          "እባክዎ ማዘዝ ከመጀመርዎ በፊት ጠረጴዛው ላይ ያለውን QR Code ስካን ያድርጉ!"
         );
         return;
       }
     }
 
-   
     if (checkoutType === 'online' && customerInfo.orderType === 'Takeaway') {
       if (!customerInfo.name || !customerInfo.name.trim()) {
         alert(lang === 'am' ? 'እባክዎ ሙሉ ስምዎን ያስገቡ!' : lang === 'om' ? 'Maaloo maqaa guutuu galchaa!' : 'Please enter your name!');
@@ -190,7 +188,7 @@ export default function CheckoutModal({
         return;
       }
       if (!isSelfPickUp && (!customerInfo.address || !customerInfo.address.trim())) {
-        alert(lang === 'am' ? 'እባክዎ አድራሻ ያስገቡ ወይም "መጥቼ እወስዳለሁ" የሚውን ይምረጡ!' : 'Please enter address or check self pick-up!');
+        alert(lang === 'am' ? 'እባክዎ አድራሻ ያስገቡ ወይም "ራሴ መኃልሄ አለው" የሚውን ይምረጡ!' : 'Please enter address or check self pick-up!');
         return;
       }
     }
@@ -223,7 +221,6 @@ export default function CheckoutModal({
         createdAt: new Date().toISOString()
       };
 
-     
       const existingOrders = JSON.parse(localStorage.getItem('myOrders') || '[]');
       localStorage.setItem('myOrders', JSON.stringify([newOrderObj, ...existingOrders]));
       localStorage.setItem('myPersonalOrder', JSON.stringify(newOrderObj));
@@ -241,7 +238,6 @@ export default function CheckoutModal({
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div className="relative w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
         
-        
         <button
           onClick={onClose}
           disabled={isSubmitting}
@@ -254,7 +250,6 @@ export default function CheckoutModal({
           {t.title}
         </h2>
 
-       
         <div className="grid grid-cols-2 gap-3 mb-6">
           <button
             type="button"
@@ -285,7 +280,6 @@ export default function CheckoutModal({
           </button>
         </div>
 
-        
         {checkoutType === 'table' && (
           <div className="space-y-4">
             <div className="bg-orange-950/40 border border-orange-500/30 rounded-2xl p-4 flex items-center gap-3">
@@ -295,7 +289,7 @@ export default function CheckoutModal({
               <div>
                 <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
                 <p className="text-lg font-black text-orange-400">
-                  {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተገኘም"}
+                  {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code scan "}
                 </p>
               </div>
             </div>
@@ -357,7 +351,6 @@ export default function CheckoutModal({
           </div>
         )}
 
-        
         {checkoutType === 'online' && (
           <div className="space-y-4">
             <div className="flex gap-2 p-1 bg-zinc-800 rounded-xl">
@@ -408,7 +401,7 @@ export default function CheckoutModal({
                   <div>
                     <p className="text-[11px] text-zinc-400 font-medium">{t.qrNotice}</p>
                     <p className="text-lg font-black text-orange-400">
-                      {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code አልተገኘም"}
+                      {customerInfo.tableNo ? `${t.tableNumber}: ${customerInfo.tableNo}` : "⚠️ QR Code scan"}
                     </p>
                   </div>
                 </div>
@@ -480,7 +473,7 @@ export default function CheckoutModal({
                     const nextVal = !isSelfPickUp;
                     setIsSelfPickUp(nextVal);
                     if (nextVal) {
-                      setCustomerInfo(prev => ({ ...prev, address: 'መጥቼ እወስዳለሁ' }));
+                      setCustomerInfo(prev => ({ ...prev, address: 'ራሴ መኃልሄ አለው' }));
                     } else {
                       setCustomerInfo(prev => ({ ...prev, address: '' }));
                     }
@@ -511,7 +504,6 @@ export default function CheckoutModal({
           </div>
         )}
 
-        
         <div className="mt-4 pt-3 border-t border-zinc-800">
           <label className="flex items-center gap-1.5 text-xs font-bold mb-1.5 text-zinc-300">
             <MessageSquare size={14} className="text-orange-500" />
@@ -528,7 +520,6 @@ export default function CheckoutModal({
           ></textarea>
         </div>
 
-        
         <div className="mt-6 pt-4 border-t border-zinc-800 flex items-center justify-between">
           <div>
             <p className="text-xs text-zinc-400">{t.totalPrice}</p>
